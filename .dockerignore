@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+.git/
+.github/
+.vs/
+.vscode/
+.claude/
+docs/
+tests/
+ai-service/
+web/
+lab/
+secrets/
+.env
+.env.*
