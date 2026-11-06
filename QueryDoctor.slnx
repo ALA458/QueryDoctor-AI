@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/QueryDoctor.Api/QueryDoctor.Api.csproj" />
+    <Project Path="src/QueryDoctor.Application/QueryDoctor.Application.csproj" />
+    <Project Path="src/QueryDoctor.Domain/QueryDoctor.Domain.csproj" />
+    <Project Path="src/QueryDoctor.Infrastructure/QueryDoctor.Infrastructure.csproj" />
+    <Project Path="src/QueryDoctor.Worker/QueryDoctor.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/QueryDoctor.ArchitectureTests/QueryDoctor.ArchitectureTests.csproj" />
+    <Project Path="tests/QueryDoctor.UnitTests/QueryDoctor.UnitTests.csproj" />
+  </Folder>
+</Solution>

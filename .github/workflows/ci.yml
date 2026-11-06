@@ -1,0 +1,41 @@
+name: CI
+
+on:
+    pull_request:
+        branches: [main]
+    push:
+        branches: [main]
+
+permissions:
+    contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+    dotnet:
+        name: .NET (build, format y pruebas)
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+
+        steps:
+            - name: Descargar codigo
+              uses: actions/checkout@v6
+            
+            - name: Setup de .NET
+              uses: actions/setup-dotnet@v5
+              with:
+                global-json-file: global.json
+                
+            - name: Restaurar paquetes (incluye NuGet Audit)
+              run: dotnet restore
+        
+            - name: Compilar
+              run: dotnet build --no-restore --configuration Release
+
+            - name: Verificar formato
+              run: dotnet format --no-restore --verify-no-changes
+
+            - name: Pruebas
+              run: dotnet test --no-build --configuration Release
