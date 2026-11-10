@@ -1,0 +1,140 @@
+name: querydoctor
+
+services:
+  # ------------------------------------------------------------------
+  # PostgreSQL 16 + pgvector: repositorio propio de la plataforma (ADR-03)
+  # ------------------------------------------------------------------
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-querydoctor}
+      POSTGRES_USER: ${POSTGRES_USER:-querydoctor}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  # ------------------------------------------------------------------
+  # SQL Server 2022 Developer: base de LABORATORIO que la plataforma analiza
+  # ------------------------------------------------------------------
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+    secrets:
+      - mssql_sa_password
+    # La imagen no lee la contraseÃ±a desde un archivo: la exportamos desde el secreto al arrancar.
+    entrypoint:
+      - /bin/bash
+      - -c
+      - export MSSQL_SA_PASSWORD="$$(cat /run/secrets/mssql_sa_password)" && exec /opt/mssql/bin/sqlservr
+    volumes:
+      - mssqldata:/var/opt/mssql
+    ports:
+      - "127.0.0.1:1433:1433"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$$(cat /run/secrets/mssql_sa_password)" -C -Q "SELECT 1" -b -o /dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - targets
+
+  # API: Identity, RBAC, REST y cliente de Hangfire. NO llega a bases objetivo ni al LLM.
+  api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${APP_ENV:-Development}
+    secrets:
+      - postgres_password
+    networks:
+      - frontend
+      - backend
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - 'exec 3<>/dev/tcp/127.0.0.1/8080 && printf "GET /health HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3 && head -n1 <&3 | grep -q " 200 "'
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Worker: servidor de Hangfire, Gateway, ingesta y motor. Ãšnico que llega a bases objetivo.
+  worker:
+    build:
+      context: .
+      target: worker
+    restart: unless-stopped
+    environment:
+      DOTNET_ENVIRONMENT: ${APP_ENV:-Development}
+    secrets:
+      - postgres_password
+    networks:
+      - backend
+      - targets
+    depends_on:
+      db:
+        condition: service_healthy
+
+
+  # Web: Nginx. Ãšnico servicio publicado. Sirve la SPA y hace de proxy hacia la API.
+  # Web: Nginx. Ãšnico servicio publicado. Sirve el front y hace de proxy hacia la API.
+  web:
+    build:
+      context: ./web/nginx
+    restart: unless-stopped
+    networks:
+      - frontend
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Servicio de IA: placeholder hasta S1-18. Ãšnica salida a Internet (egress-ai).
+  ai:
+    build:
+      context: ./ai-service
+    restart: unless-stopped
+    networks:
+      - backend
+      - egress-ai
+volumes:
+  pgdata:
+  mssqldata:
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  mssql_sa_password:
+    file: ./secrets/mssql_sa_password.txt
+
+networks:
+  frontend: # navegador -> web -> api
+  backend: # api, worker, ai, db
+  targets: # worker -> bases objetivo
+  egress-ai: # ai -> proveedor de LLM
