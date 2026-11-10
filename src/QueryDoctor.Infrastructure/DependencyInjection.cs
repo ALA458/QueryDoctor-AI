@@ -1,7 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using QueryDoctor.Application.Common.Security;
+using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Infrastructure.Security;
+using QueryDoctor.Infrastructure.Telemetry;
 
 namespace QueryDoctor.Infrastructure;
 
@@ -19,6 +22,10 @@ public static class DependencyInjection
             configuration.GetSection(SecretProtectorOptions.SectionName));
 
         services.AddSingleton<IFieldEncryptor, SecretProtector>();
+
+        // Telemetría e ingesta de SQL Server (S1-08, RNF-SEG-01, RF-TRZ-04)
+        services.TryAddSingleton<IStatementLogWriter, InMemoryStatementLogWriter>();
+        services.AddScoped<ITelemetrySource, QueryStoreGateway>();
 
         return services;
     }
