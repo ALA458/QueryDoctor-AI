@@ -17,6 +17,7 @@ public static partial class TelemetryStatementWhitelist
         public const string CheckUserPermissions = "CheckUserPermissions";
         public const string GetTopQueriesByTotalDuration = "GetTopQueriesByTotalDuration";
         public const string GetPlanXmlByPlanId = "GetPlanXmlByPlanId";
+        public const string GetQueryStoreViewColumns = "GetQueryStoreViewColumns";
     }
 
     /// <summary>
@@ -65,6 +66,16 @@ public static partial class TelemetryStatementWhitelist
     public const string GetPlanXmlByPlanIdSql =
         "SELECT p.plan_id, p.query_id, p.query_plan FROM sys.query_store_plan p WHERE p.plan_id = @PlanId;";
 
+    /// <summary>
+    /// Consulta para inspeccionar las columnas disponibles de las vistas de Query Store (RF-CFG-03, RF-CFG-04, RNF-COM-04).
+    /// Permite a CapabilityProbe generar el perfil de capacidades dinámico por versión.
+    /// </summary>
+    public const string GetQueryStoreViewColumnsSql =
+        "SELECT c.name AS column_name FROM sys.columns c " +
+        "JOIN sys.objects o ON c.object_id = o.object_id " +
+        "WHERE o.name = @ViewName AND SCHEMA_NAME(o.schema_id) = 'sys' " +
+        "ORDER BY c.column_id;";
+
     private static readonly FrozenDictionary<string, string> RegisteredStatements = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         [Keys.DetectEngineVersion] = DetectEngineVersionSql,
@@ -72,6 +83,7 @@ public static partial class TelemetryStatementWhitelist
         [Keys.CheckUserPermissions] = CheckUserPermissionsSql,
         [Keys.GetTopQueriesByTotalDuration] = GetTopQueriesByTotalDurationSql,
         [Keys.GetPlanXmlByPlanId] = GetPlanXmlByPlanIdSql,
+        [Keys.GetQueryStoreViewColumns] = GetQueryStoreViewColumnsSql,
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     private static readonly string[] ForbiddenTokens =

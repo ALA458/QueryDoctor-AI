@@ -14,7 +14,8 @@ public class TelemetryStatementWhitelistTests
             TelemetryStatementWhitelist.Keys.GetQueryStoreOptions,
             TelemetryStatementWhitelist.Keys.CheckUserPermissions,
             TelemetryStatementWhitelist.Keys.GetTopQueriesByTotalDuration,
-            TelemetryStatementWhitelist.Keys.GetPlanXmlByPlanId
+            TelemetryStatementWhitelist.Keys.GetPlanXmlByPlanId,
+            TelemetryStatementWhitelist.Keys.GetQueryStoreViewColumns
         };
 
         foreach (var key in registeredKeys)
