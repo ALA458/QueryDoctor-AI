@@ -11,12 +11,12 @@
 | A02 | Security Misconfiguration | Compose, `/hangfire`, cabeceras, Swagger en demo | Único puerto 443 en `web`; redes segmentadas (§10); `/hangfire` con filtro de autorización DBA (el filtro local por defecto no basta detrás de Nginx); CSP `script-src 'self'`; secretos como Docker secrets | S1-02, S1-10 | ⬜ |
 | A03 | Software Supply Chain Failures | NuGet, npm, pip, imágenes Docker, GitHub Actions | Dependabot, `--vulnerable`/`npm audit`/`pip-audit` en CI, acciones fijadas por SHA | CI | ⬜ |
 | A04 | Cryptographic Failures | Credenciales, SQL, planes, explicaciones; canal a SQL y al LLM | AES-256-GCM por campo (RNF-SEG-04/14); TLS 1.2+ con validación (RNF-SEG-03) | S1-05, S1-08 | ⬜ |
-| A05 | Injection | Consultas a Query Store; texto SQL/planes mostrados; XML | Sentencias constantes en lista blanca (RNF-SEG-01); XmlReader sin DTD y con límite (RF-MOT-16); render solo texto (RNF-SEG-07) | S1-08, S1-12, S2-11 | ⬜ |
+| A05 | Injection | Consultas a Query Store; texto SQL/planes mostrados; XML | Sentencias constantes en lista blanca (RNF-SEG-01); XmlReader sin DTD y con límite (RF-MOT-16); render solo texto (RNF-SEG-07) | S1-08, S1-12, S2-11 | 🟨 |
 | A06 | Insecure Design | Que la IA "diagnostique" sin evidencia | Validador (a)(b)(c), TRAZADA ≠ validada (RF-IA-03/10) | S2-03 | ⬜ |
 | A07 | Authentication Failures | Login, primer DBA | Identity, hash adaptativo, bloqueo por intentos, límite de tasa en login, cookie HttpOnly+Secure+SameSite=Strict, expiración 30 min †, antifalsificación; DBA inicial desde secreto con cambio obligatorio (RNF-SEG-11/13) | S1-06 | ⬜ |
 | A08 | Software or Data Integrity Failures | Traza y auditoría alterables | Rol de app sin UPDATE/DELETE en `audit.*`, trigger que rechaza cambios, `prev_hash` encadenado (RF-TRZ-01..03, §7) | S2-06 | ⬜ |
 | A09 | Security Logging & Alerting Failures | Logins, conexiones, ingestas, borrados | audit_event (RF-TRZ-05); logs sin secretos ni literales (RNF-SEG-09) | S2-06 | ⬜ |
-| A10 | Mishandling of Exceptional Conditions | XML inválido, versión sin capacidad, IA caída, corte de red | REG-11 sin detener el lote; omitir con aviso (RNF-COM-04); degradación (RNF-FIA-02); reanudar ingesta (RNF-FIA-01) | S1-11, S1-12, S2-05 | ⬜ |
+| A10 | Mishandling of Exceptional Conditions | XML inválido, versión sin capacidad, IA caída, corte de red | REG-11 sin detener el lote; omitir con aviso (RNF-COM-04); degradación (RNF-FIA-02); reanudar ingesta (RNF-FIA-01) | S1-11, S1-12, S2-05 | 🟨 |
 
 ## OWASP Top 10 for LLM Applications 2025
 | ID | Riesgo | Superficie | Control (requisito) | Prueba / tarea | Estado |
