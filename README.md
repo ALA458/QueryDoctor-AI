@@ -79,6 +79,16 @@ Navegador ──443──▶ web (Nginx + React SPA) ──▶ api (ASP.NET Core
    * Verificación de salud: `http://localhost:5277/health`
    * OpenAPI: `http://localhost:5277/openapi/v1.json`
 
+5. **Laboratorio SQL Server 2022 y protocolo empírico del Apéndice A (`S1-07`):**
+   ```powershell
+   docker compose up -d sqlserver
+   powershell -ExecutionPolicy Bypass -File .\lab\Run-Lab.ps1 -Step all
+   ```
+   * Documentación y guía de uso: [`lab/README.md`](./lab/README.md)
+   * Informe de verificación empírica F1–F8 (`RF-EVA-04`, `DA-07`): [`lab/results/S1-07-verificacion.md`](./lab/results/S1-07-verificacion.md)
+   * Fixtures de Showplan XML (`.sqlplan`): `tests/fixtures/plans/`
+   * *Nota (`RF-EVA-04`, Invariante 10):* La plataforma no afirma eficacia, precisión ni exhaustividad sin remitir al informe versionado del laboratorio.
+
 ---
 
 ## 🔒 Seguridad y Gestión de Secretos

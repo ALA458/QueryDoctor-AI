@@ -107,7 +107,9 @@ Endpoints API: `/connections`, `/ingestions`, `/queries`, `/plans/{id}`, `/findi
 | DA-13 | Resuelta como riesgo residual | Nombres de objetos viajan sin seudonimizar; seudonimización planificada después |
 | DA-01, 06, 10 | **Abiertas** | Ratificar con el tutor (S1-20) |
 | DA-02 | **Abierta** | Calibrar umbrales con el laboratorio (S3-01) |
-| DA-07 | **Abierta** | Laboratorio; bloquea afirmar eficacia (RF-EVA-04) |
+| DA-07 | **Propuesta de cierre lista (S1-07)** | Protocolo empírico F1–F8 ejecutado en SQL Server 2022 (`lab/results/S1-07-verificacion.md`); pendiente ratificación en S1-20 e informe final RF-EVA-04 (S3-05) |
+
+> **Nota sobre nomenclatura F#:** En `ARQUITECTURA_v0.1.md` §9 las siglas **F1–F4** denotan *fronteras de confianza*, mientras que en el SRS (Apéndice A) y en `lab/results/S1-07-verificacion.md` las siglas **F1–F8** denotan los *hallazgos documentales y empíricos de Query Store*.
 
 ## Riesgos que afectan al código (§14.1)
 - **RA-03:** si ScriptDom no puede tokenizar el SQL, se envía solo el contexto de hallazgos,
