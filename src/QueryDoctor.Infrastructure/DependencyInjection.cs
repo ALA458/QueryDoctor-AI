@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using QueryDoctor.Application.Common.Security;
+using QueryDoctor.Application.Engine.Parsing;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Infrastructure.Persistence;
 using QueryDoctor.Infrastructure.Security;
@@ -26,6 +27,10 @@ public static class DependencyInjection
             configuration.GetSection(SecretProtectorOptions.SectionName));
 
         services.AddSingleton<IFieldEncryptor, SecretProtector>();
+
+        // Motor determinístico: parser de Showplan XML en memoria sin E/S (S1-12, RF-MOT-01, RF-MOT-16)
+        services.TryAddSingleton<PlanParserOptions>();
+        services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
 
         // Telemetría e ingesta de SQL Server (S1-08, RNF-SEG-01, RF-TRZ-04)
         services.TryAddSingleton<IStatementLogWriter, InMemoryStatementLogWriter>();
