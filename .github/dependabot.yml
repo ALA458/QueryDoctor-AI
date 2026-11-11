@@ -20,3 +20,15 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "ci"
+
+
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/"
+      - "/web/nginx"
+      - "/ai-service"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"

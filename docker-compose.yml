@@ -36,7 +36,7 @@ services:
       MSSQL_PID: Developer
     secrets:
       - mssql_sa_password
-    # La imagen no lee la contraseÃ±a desde un archivo: la exportamos desde el secreto al arrancar.
+    # La imagen no lee la contraseña desde un archivo: la exportamos desde el secreto al arrancar.
     entrypoint:
       - /bin/bash
       - -c
@@ -83,7 +83,7 @@ services:
       db:
         condition: service_healthy
 
-  # Worker: servidor de Hangfire, Gateway, ingesta y motor. Ãšnico que llega a bases objetivo.
+  # Worker: servidor de Hangfire, Gateway, ingesta y motor. Único que llega a bases objetivo.
   worker:
     build:
       context: .
@@ -101,8 +101,7 @@ services:
         condition: service_healthy
 
 
-  # Web: Nginx. Ãšnico servicio publicado. Sirve la SPA y hace de proxy hacia la API.
-  # Web: Nginx. Ãšnico servicio publicado. Sirve el front y hace de proxy hacia la API.
+  # Web: Nginx. Único servicio publicado. Sirve el front y hace de proxy hacia la API.
   web:
     build:
       context: ./web/nginx
@@ -115,7 +114,7 @@ services:
       api:
         condition: service_healthy
 
-  # Servicio de IA: placeholder hasta S1-18. Ãšnica salida a Internet (egress-ai).
+  # Servicio de IA: placeholder hasta S1-18. Única salida a Internet (egress-ai).
   ai:
     build:
       context: ./ai-service
