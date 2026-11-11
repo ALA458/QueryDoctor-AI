@@ -36,7 +36,7 @@ ENTRYPOINT ["dotnet", "QueryDoctor.Api.dll"]
 # =====================================================================
 # Etapa 2b — worker: solo el resultado compilado, sobre el runtime mínimo
 # =====================================================================
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS worker
+FROM mcr.microsoft.com/dotnet/runtime:11.0 AS worker
 WORKDIR /app
 COPY --from=build /out/worker ./
 USER $APP_UID
