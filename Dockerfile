@@ -26,7 +26,7 @@ RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
 # =====================================================================
 # Etapa 2a — api: solo el resultado compilado, sobre la imagen ASP.NET
 # =====================================================================
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS api
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS api
 WORKDIR /app
 COPY --from=build /out/api ./
 USER $APP_UID
