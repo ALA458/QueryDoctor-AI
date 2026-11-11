@@ -3,7 +3,7 @@
 # =====================================================================
 # Etapa 1 — build: compila Api y Worker con el SDK completo
 # =====================================================================
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 WORKDIR /src
 
 # 1a. Solo lo necesario para restaurar paquetes.
