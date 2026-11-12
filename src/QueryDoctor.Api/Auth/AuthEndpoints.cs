@@ -29,12 +29,8 @@ internal static class AuthEndpoints
         UserManager<ApplicationUser> users,
         SignInManager<ApplicationUser> signIn)
     {
-        if (!request.HasFormContentType)
-        {
-            return Results.BadRequest();
-        }
-
-        var form = await request.ReadFormAsync();
+        // Sin cuerpo de formulario se trata como formulario vacío: más abajo cae en el mensaje de error normal.
+        IFormCollection form = request.HasFormContentType ? await request.ReadFormAsync() : FormCollection.Empty;
         // FRONT_PHP.md usa el campo "email"; la pantalla propia usa "usuario". Se aceptan ambos.
         var userName = (form.ContainsKey("usuario") ? form["usuario"] : form["email"]).ToString().Trim();
         var password = form["password"].ToString();
@@ -101,12 +97,8 @@ internal static class AuthEndpoints
         UserManager<ApplicationUser> users,
         SignInManager<ApplicationUser> signIn)
     {
-        if (!request.HasFormContentType)
-        {
-            return Results.BadRequest();
-        }
-
-        var form = await request.ReadFormAsync();
+        // Sin cuerpo de formulario se trata como formulario vacío: más abajo cae en el mensaje de error normal.
+        IFormCollection form = request.HasFormContentType ? await request.ReadFormAsync() : FormCollection.Empty;
         var current = form["actual"].ToString();
         var next = form["nueva"].ToString();
         var confirm = form["confirmar"].ToString();
