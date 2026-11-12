@@ -38,14 +38,16 @@ public class HangfireDashboardAuthorizationFilterTests
         Assert.False(result);
     }
 
-    [Fact]
-    public void IsAuthorizedReturnsFalseWhenDbaMustChangePassword()
+    [Theory]
+    [InlineData("1")]
+    [InlineData("true")]
+    public void IsAuthorizedReturnsFalseWhenDbaMustChangePassword(string claimValue)
     {
         var identity = new ClaimsIdentity(
             [
                 new Claim(ClaimTypes.Name, "dba_user"),
                 new Claim(ClaimTypes.Role, RoleNames.Dba),
-                new Claim(AuthConstants.MustChangePasswordClaim, "true")
+                new Claim(AuthConstants.MustChangePasswordClaim, claimValue)
             ],
             "TestAuth");
         var principal = new ClaimsPrincipal(identity);

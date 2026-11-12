@@ -31,8 +31,7 @@ public sealed class HangfireDashboardAuthorizationFilter : IDashboardAuthorizati
         }
 
         var isDba = user.IsInRole(RoleNames.Dba);
-        var mustChangePassword = user.HasClaim(
-            c => c.Type == AuthConstants.MustChangePasswordClaim && c.Value == "true");
+        var mustChangePassword = user.HasClaim(c => c.Type == AuthConstants.MustChangePasswordClaim);
 
         return isDba && !mustChangePassword;
     }
