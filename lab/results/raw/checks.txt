@@ -1,0 +1,222 @@
+##### sa: 06-checks-sa.sql
+Changed database context to 'QD_Lab'.
+=== F3: columnas de sys.query_store_runtime_stats (buscar spill / por operador)
+name
+----
+avg_dop
+last_dop
+min_dop
+max_dop
+stdev_dop
+avg_query_max_used_memory
+last_query_max_used_memory
+min_query_max_used_memory
+max_query_max_used_memory
+stdev_query_max_used_memory
+avg_rowcount
+last_rowcount
+min_rowcount
+max_rowcount
+stdev_rowcount
+avg_log_bytes_used
+last_log_bytes_used
+min_log_bytes_used
+max_log_bytes_used
+stdev_log_bytes_used
+avg_tempdb_space_used
+last_tempdb_space_used
+min_tempdb_space_used
+max_tempdb_space_used
+stdev_tempdb_space_used
+=== F3: filas de runtime_stats por plan e intervalo (ESC01..ESC06)
+escenario plan_id runtime_stats_interval_id execution_type_desc count_executions avg_rowcount avg_query_max_used_memory avg_dop avg_tempdb_space_used
+--------- ------- ------------------------- ------------------- ---------------- ------------ ------------------------- ------- ---------------------
+QD-LAB:ESC01 15 1 Regular 2 20.0 128.0 1.0 0.0
+QD-LAB:ESC01 15 2 Regular 2 20.0 128.0 1.0 0.0
+QD-LAB:ESC01 15 3 Regular 2 20.0 128.0 1.0 0.0
+QD-LAB:ESC01 15 4 Regular 2 20.0 128.0 1.0 0.0
+QD-LAB:ESC01 15 5 Regular 2 20.0 128.0 1.0 0.0
+QD-LAB:ESC01 15 6 Regular 2 20.0 128.0 1.0 0.0
+QD-LAB:ESC01 15 7 Regular 2 20.0 128.0 1.0 0.0
+QD-LAB:ESC01 15 8 Regular 4 20.0 128.0 1.0 0.0
+QD-LAB:ESC01 15 9 Regular 4 20.0 128.0 1.0 0.0
+QD-LAB:ESC02 16 1 Regular 2 20.0 0.0 1.0 0.0
+QD-LAB:ESC02 16 2 Regular 2 20.0 0.0 1.0 0.0
+QD-LAB:ESC02 16 5 Regular 2 20.0 0.0 1.0 0.0
+QD-LAB:ESC02 16 6 Regular 2 20.0 0.0 1.0 0.0
+QD-LAB:ESC02 16 7 Regular 2 20.0 0.0 1.0 0.0
+QD-LAB:ESC02 16 8 Regular 2 20.0 0.0 1.0 0.0
+QD-LAB:ESC02 16 9 Regular 4 20.0 0.0 1.0 0.0
+QD-LAB:ESC03 19 1 Regular 1 5000.0 25.0 12.0 0.0
+QD-LAB:ESC03 19 2 Regular 1 5000.0 25.0 12.0 0.0
+QD-LAB:ESC03 19 5 Regular 1 5000.0 25.0 12.0 0.0
+QD-LAB:ESC03 19 6 Regular 1 5000.0 25.0 12.0 0.0
+QD-LAB:ESC03 19 7 Regular 1 5000.0 25.0 12.0 0.0
+QD-LAB:ESC03 19 8 Regular 1 5000.0 25.0 12.0 0.0
+QD-LAB:ESC03 19 9 Regular 2 5000.0 25.0 12.0 0.0
+QD-LAB:ESC04 21 1 Regular 1 1.0 0.0 1.0 0.0
+QD-LAB:ESC04 21 2 Regular 1 1.0 0.0 1.0 0.0
+QD-LAB:ESC04 21 5 Regular 1 1.0 0.0 1.0 0.0
+QD-LAB:ESC04 21 6 Regular 1 1.0 0.0 1.0 0.0
+QD-LAB:ESC04 21 7 Regular 1 1.0 0.0 1.0 0.0
+QD-LAB:ESC04 21 8 Regular 1 1.0 0.0 1.0 0.0
+QD-LAB:ESC04 21 9 Regular 2 1.0 0.0 1.0 0.0
+QD-LAB:ESC04 22 1 Regular 1 990000.0 25.0 12.0 0.0
+QD-LAB:ESC04 22 2 Regular 1 990000.0 25.0 12.0 0.0
+QD-LAB:ESC04 22 6 Regular 2 990000.0 25.0 12.0 0.0
+QD-LAB:ESC04 22 7 Regular 1 990000.0 25.0 12.0 0.0
+QD-LAB:ESC04 22 8 Regular 1 990000.0 25.0 12.0 0.0
+QD-LAB:ESC04 22 9 Regular 1 990000.0 25.0 12.0 0.0
+QD-LAB:ESC04 22 10 Regular 1 990000.0 25.0 12.0 0.0
+QD-LAB:ESC04 25 2 Regular 2 495000.5 0.0 1.0 0.0
+QD-LAB:ESC04 25 3 Regular 2 495000.5 0.0 1.0 0.0
+QD-LAB:ESC04 25 6 Regular 2 495000.5 0.0 1.0 0.0
+QD-LAB:ESC04 25 7 Regular 4 495000.5 0.0 1.0 0.0
+QD-LAB:ESC04 25 9 Regular 4 495000.5 0.0 1.0 0.0
+QD-LAB:ESC04 25 10 Regular 2 495000.5 0.0 1.0 0.0
+QD-LAB:ESC05 23 2 Regular 1 1000000.0 912.0 12.0 27968.0
+QD-LAB:ESC05 23 3 Regular 1 1000000.0 912.0 12.0 27968.0
+QD-LAB:ESC05 23 6 Regular 1 1000000.0 912.0 12.0 27968.0
+QD-LAB:ESC05 23 7 Regular 2 1000000.0 912.0 12.0 27968.0
+QD-LAB:ESC05 23 9 Regular 2 1000000.0 912.0 12.0 27968.0
+QD-LAB:ESC05 23 10 Regular 1 1000000.0 912.0 12.0 28000.0
+QD-LAB:ESC06 24 2 Regular 1 3.0 0.0 1.0 0.0
+QD-LAB:ESC06 24 3 Regular 1 3.0 0.0 1.0 104.0
+QD-LAB:ESC06 24 6 Regular 1 3.0 0.0 1.0 0.0
+QD-LAB:ESC06 24 7 Regular 2 3.0 0.0 1.0 0.0
+QD-LAB:ESC06 24 9 Regular 2 3.0 0.0 1.0 0.0
+QD-LAB:ESC06 24 10 Regular 1 3.0 0.0 1.0 0.0
+=== F8: ESC06 como xml vs nvarchar(max)
+plan_id len_nvarchar como_xml
+------- ------------ --------
+24 304890 NULL (no convertible a xml)
+=== F8: ESC06 por sys.dm_exec_query_plan (cache)
+dm_exec_query_plan
+------------------
+con plan
+con plan
+con plan
+=== F6: LAST_QUERY_PLAN_STATS (estado inicial)
+name value
+---- -----
+LAST_QUERY_PLAN_STATS 0
+=== F6: opcion OFF, cache limpia, se ejecuta ESC01 una vez
+objtype usecounts plan_stats filas_reales
+------- --------- ---------- ------------
+Proc 1 plan no
+=== F6: opcion ON, cache limpia, se ejecuta ESC01 una vez
+objtype usecounts plan_stats filas_reales
+------- --------- ---------- ------------
+Proc 1 plan si
+=== F6: volatilidad. Se limpia la cache y se vuelve a consultar
+objtype usecounts plan_stats filas_reales
+------- --------- ---------- ------------
+=== H4: EstimateRows del plan QS (operador raiz) vs avg_rowcount, por plan
+escenario plan_id est_rows_sentencia avg_rowcount_ponderado
+--------- ------- ------------------ ----------------------
+QD-LAB:ESC01 15 20.0 20.0
+QD-LAB:ESC02 16 20.0 20.0
+QD-LAB:ESC03 19 16172.1 5000.0
+QD-LAB:ESC04 20 NULL NULL
+QD-LAB:ESC04 21 1.0 1.0
+QD-LAB:ESC04 22 990000.0 990000.0
+QD-LAB:ESC04 25 1.0 495000.5
+QD-LAB:ESC05 23 1000000.0 1000000.0
+=== Restaurar LAST_QUERY_PLAN_STATS = OFF
+##### qd_reader: 07-checks-reader.sql
+Changed database context to 'QD_Lab'.
+=== usuario actual y permisos efectivos en la BD
+usuario
+-------
+qd_reader
+permission_name
+---------------
+CONNECT
+VIEW ANY COLUMN ENCRYPTION KEY DEFINITION
+VIEW ANY COLUMN MASTER KEY DEFINITION
+VIEW DATABASE PERFORMANCE STATE
+VIEW DATABASE SECURITY STATE
+VIEW DATABASE STATE
+=== F4(a): lectura de las vistas de Query Store con VIEW DATABASE STATE
+queries plans runtime_stats texts
+------- ----- ------------- -----
+54 59 142 48
+actual_state_desc query_capture_mode_desc interval_length_minutes
+----------------- ----------------------- -----------------------
+READ_WRITE ALL 1
+=== F4(d): una escritura debe fallar
+error_numero error_mensaje
+------------ -------------
+229 The INSERT permission was denied on the object 'Tiny', database 'QD_Lab', schema 'dbo'.
+=== F4(a): lectura de planes como nvarchar(max) (sentencia de la whitelist GetPlanXmlByPlanId)
+plan_id query_id len
+------- -------- ---
+1 1 25651
+2 2 5664
+3 3 4428
+=== F6: dm_exec_query_plan_stats requiere permiso de servidor (se espera error)
+error_numero error_mensaje
+------------ -------------
+300 VIEW SERVER PERFORMANCE STATE permission was denied on object 'server', database 'master'.
+##### qd_noperm (sin permisos): 08-checks-noperm.sql
+Changed database context to 'QD_Lab'.
+=== Lectura de sys.query_store_plan con el usuario actual
+usuario plans
+------- -----
+qd_noperm 59
+##### F4(c): GRANT VIEW DATABASE PERFORMANCE STATE a qd_noperm y repetir lectura
+Changed database context to 'QD_Lab'.
+Changed database context to 'QD_Lab'.
+=== Lectura de sys.query_store_plan con el usuario actual
+usuario plans
+------- -----
+qd_noperm 59
+##### S1-08 Whitelist (6 sentencias con qd_reader): 10-whitelist-validation.sql
+Changed database context to 'QD_Lab'.
+=== 1. DetectEngineVersionSql
+ProductVersion ProductLevel Edition EngineEdition
+-------------- ------------ ------- -------------
+16.0.4315.2 RTM Developer Edition (64-bit) 3
+=== 2. GetQueryStoreOptionsSql
+actual_state actual_state_desc readonly_reason current_storage_size_mb max_storage_size_mb query_capture_mode_desc size_based_cleanup_mode_desc
+------------ ----------------- --------------- ----------------------- ------------------- ----------------------- ----------------------------
+2 READ_WRITE 0 1 512 ALL AUTO
+=== 3. CheckUserPermissionsSql
+permission_name
+---------------
+CONNECT
+VIEW ANY COLUMN ENCRYPTION KEY DEFINITION
+VIEW ANY COLUMN MASTER KEY DEFINITION
+VIEW DATABASE SECURITY STATE
+VIEW DATABASE PERFORMANCE STATE
+VIEW DATABASE STATE
+=== 4. GetTopQueriesByTotalDurationSql (@TopCount=10, @MinExecutionTime hace 1 dia)
+query_id query_text_id sql_preview total_executions total_duration_us total_cpu_time_us total_logical_reads
+-------- ------------- ----------- ---------------- ----------------- ----------------- -------------------
+19 15 SELECT /* QD-LAB:ESC05 */ OrderId, Note, Amount
+    FROM dbo.Orde 8 199235593.0 155179998.0 616905.0
+18 18 (@k int)SELECT /* QD-LAB:ESC04 */ OrderId, Amount, CreatedAt
+     8 33502355.0 16148566.0 253428.0
+21 17 (@k int)SELECT /* QD-LAB:ESC04B */ OrderId, Amount, CreatedAt
+    16 28355769.0 17423659.0 23773804.0
+1 1 WITH n AS
+(
+    SELECT TOP (1000000) ROW_NUMBER() OVER (ORDER BY  1 22796435.0 20429641.0 1463076.0
+11 8 (@code nvarchar(20))SELECT /* QD-LAB:ESC01 */ OrderId, Amount
+    24 3165884.0 3165415.0 64628.0
+8 5 UPDATE STATISTICS dbo.Orders WITH FULLSCAN 5 1148244.0 1148190.0 37532.0
+27 24 INSERT #sink EXEC dbo.usp_ESC01 @code = N'C000042' 8 1112228.0 1112180.0 22190.0
+7 4 CREATE INDEX IX_Orders_SkewKey ON dbo.Orders (SkewKey) 1 1064203.0 2254035.0 36170.0
+3 2 CREATE INDEX IX_Orders_CustomerCode ON dbo.Orders (CustomerCode) 1 999404.0 5511370.0 43607.0
+5 3 CREATE INDEX IX_Orders_CustomerId ON dbo.Orders (CustomerId) 1 860398.0 4052323.0 40970.0
+=== 5. GetPlanXmlByPlanIdSql (@PlanId = primer plan de ESC01)
+plan_id query_id plan_len_chars
+------- -------- --------------
+15 11 5657
+=== 6. GetQueryStoreViewColumnsSql (@ViewName = query_store_runtime_stats)
+column_name
+-----------
+=== 6b. Comparacion: sys.all_columns vs sys.columns para vistas de sistema
+filas_con_sys_columns filas_con_sys_all_columns
+--------------------- -------------------------
+0 74

@@ -389,6 +389,8 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("QueryId");
 
+                    b.HasIndex("ConnectionId", "QueryPlanHash");
+
                     b.HasIndex("ConnectionId", "QueryStorePlanId")
                         .IsUnique();
 
@@ -431,6 +433,8 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("QueryTextId");
+
+                    b.HasIndex("ConnectionId", "QueryHash");
 
                     b.HasIndex("ConnectionId", "QueryStoreQueryId")
                         .IsUnique();
