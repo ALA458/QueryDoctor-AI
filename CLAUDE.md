@@ -7,7 +7,7 @@ con IA **trazada** a los hallazgos del motor. Proyecto de Ingeniería I, UTB 202
 **Fuentes de verdad (cada una manda en su terreno):**
 | Pregunta | Manda |
 |---|---|
-| Qué debe hacer el sistema / qué está prohibido | SRS v1.0 + Adenda v1.1 (`docs/srs/`) — **siempre gana** |
+| Qué debe hacer el sistema / qué está prohibido | SRS v1.0 + Adenda v1.1 (`docs/SRS_Query_Doctor_AI (2).pdf`) — **siempre gana** |
 | Quién, cuándo, qué se recorta | Plan de sprints (`docs/sprints/SPRINTS.md`, exportado del .xlsx) |
 | Cómo se construye | `docs/arquitectura/ARQUITECTURA_v0.1.md` |
 
@@ -72,13 +72,14 @@ plan real (Podría), exportar PDF, umbrales desde la UI.
 - Logs: Serilog JSON con `correlation_id` por trabajo, propagado al servicio de IA.
 - Plataformas de aceptación: SQL Server 2019, 2022 y Azure SQL Database (2016 sin pruebas).
 
-## Comandos (ajustar cuando S1-01 cree la solución)
+## Comandos
 ```bash
 dotnet build -warnaserror && dotnet test                     # backend + NetArchTest
 dotnet format --verify-no-changes
 cd ai-service && ruff check . && ruff format --check . && pyright && pytest
 cd web && npm run lint && npx tsc --noEmit && npm test
 docker compose up -d                                         # entorno completo
+powershell -ExecutionPolicy Bypass -File lab/Run-Lab.ps1     # laboratorio SQL Server 2022 (S1-07)
 ```
 
 ## Reglas de trabajo para el agente

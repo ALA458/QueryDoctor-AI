@@ -36,7 +36,7 @@ services:
       MSSQL_PID: Developer
     secrets:
       - mssql_sa_password
-    # La imagen no lee la contraseña desde un archivo: la exportamos desde el secreto al arrancar.
+    # La imagen no lee la contraseÃ±a desde un archivo: la exportamos desde el secreto al arrancar.
     entrypoint:
       - /bin/bash
       - -c
@@ -64,8 +64,19 @@ services:
     restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: ${APP_ENV:-Development}
+      # La contraseña de PostgreSQL llega como secreto (archivo), no en la cadena de conexión.
+      Postgres__Host: db
+      Postgres__Database: ${POSTGRES_DB:-querydoctor}
+      Postgres__Username: ${POSTGRES_USER:-querydoctor}
+      Postgres__PasswordFile: /run/secrets/postgres_password
+      # Desarrollo: aplica las migraciones al arrancar. En producción se desactiva.
+      Database__MigrateOnStartup: ${MIGRATE_ON_STARTUP:-true}
+      # Primer DBA (S1-06): contraseña desde secreto, cambio obligatorio en el primer ingreso.
+      InitialDba__UserName: dba
+      InitialDba__PasswordFile: /run/secrets/initial_dba_password
     secrets:
       - postgres_password
+      - initial_dba_password
     networks:
       - frontend
       - backend
@@ -83,7 +94,7 @@ services:
       db:
         condition: service_healthy
 
-  # Worker: servidor de Hangfire, Gateway, ingesta y motor. Único que llega a bases objetivo.
+  # Worker: servidor de Hangfire, Gateway, ingesta y motor. Ãšnico que llega a bases objetivo.
   worker:
     build:
       context: .
@@ -101,10 +112,12 @@ services:
         condition: service_healthy
 
 
-  # Web: Nginx. Único servicio publicado. Sirve el front y hace de proxy hacia la API.
+  # Web: Nginx. Ãšnico servicio publicado. Sirve la SPA y hace de proxy hacia la API.
+  # Web: Nginx. Ãšnico servicio publicado. Sirve el front y hace de proxy hacia la API.
   web:
     build:
-      context: ./web/nginx
+      context: ./web
+      dockerfile: nginx/Dockerfile
     restart: unless-stopped
     networks:
       - frontend
@@ -114,7 +127,7 @@ services:
       api:
         condition: service_healthy
 
-  # Servicio de IA: placeholder hasta S1-18. Única salida a Internet (egress-ai).
+  # Servicio de IA: placeholder hasta S1-18. Ãšnica salida a Internet (egress-ai).
   ai:
     build:
       context: ./ai-service
@@ -131,6 +144,8 @@ secrets:
     file: ./secrets/postgres_password.txt
   mssql_sa_password:
     file: ./secrets/mssql_sa_password.txt
+  initial_dba_password:
+    file: ./secrets/initial_dba_password.txt
 
 networks:
   frontend: # navegador -> web -> api

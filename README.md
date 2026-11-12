@@ -7,7 +7,7 @@ Base normativa: **SRS v1.0 + Adenda v1.1** · Documento de Arquitectura **v0.1**
 
 ---
 
-## 🎯 Visión General
+## Visión General
 
 Query Doctor AI es una herramienta de observabilidad y diagnóstico no invasiva orientada a DBAs y desarrolladores. Analiza el rendimiento de consultas a partir de los datos históricos agregados de **Query Store** y los planes de ejecución (**Showplan XML**), identificando patrones ineficientes sin ejecutar código DDL/DML ni forzar planes en los entornos de producción.
 
@@ -21,7 +21,7 @@ Query Doctor AI es una herramienta de observabilidad y diagnóstico no invasiva 
 
 ---
 
-## 🏗️ Arquitectura
+## Arquitectura
 
 El sistema está diseñado como un **Monolito Modular** distribuido en 5 contenedores independientes con redes segmentadas:
 
@@ -49,7 +49,7 @@ Navegador ──443──▶ web (Nginx + React SPA) ──▶ api (ASP.NET Core
 
 ---
 
-## 🚀 Requisitos y Ejecución Local
+## Requisitos y Ejecución Local
 
 ### Prerrequisitos
 * [.NET 10 SDK](https://dotnet.microsoft.com/download) (verificado con SDK 10.0.100 o superior).
@@ -79,9 +79,19 @@ Navegador ──443──▶ web (Nginx + React SPA) ──▶ api (ASP.NET Core
    * Verificación de salud: `http://localhost:5277/health`
    * OpenAPI: `http://localhost:5277/openapi/v1.json`
 
+5. **Laboratorio SQL Server 2022 y protocolo empírico del Apéndice A (`S1-07`):**
+   ```powershell
+   docker compose up -d sqlserver
+   powershell -ExecutionPolicy Bypass -File .\lab\Run-Lab.ps1 -Step all
+   ```
+   * Documentación y guía de uso: [`lab/README.md`](./lab/README.md)
+   * Informe de verificación empírica F1–F8 (`RF-EVA-04`, `DA-07`): [`lab/results/S1-07-verificacion.md`](./lab/results/S1-07-verificacion.md)
+   * Fixtures de Showplan XML (`.sqlplan`): `tests/fixtures/plans/`
+   * *Nota (`RF-EVA-04`, Invariante 10):* La plataforma no afirma eficacia, precisión ni exhaustividad sin remitir al informe versionado del laboratorio.
+
 ---
 
-## 🔒 Seguridad y Gestión de Secretos
+## Seguridad y Gestión de Secretos
 
 El sistema implementa el servicio `SecretProtector` para cifrar datos sensibles en reposo mediante **AES-256-GCM**:
 * Requiere una clave maestra de 256 bits (32 bytes) codificada en Base64 o Hexadecimal (64 caracteres).
@@ -89,7 +99,7 @@ El sistema implementa el servicio `SecretProtector` para cifrar datos sensibles 
 
 ---
 
-## 👥 Equipo de Desarrollo
+## Equipo de Desarrollo
 
 * **Álvaro Ayala:** Ingesta y persistencia.
 * **Joel González:** Motor de reglas, parser de planes y cálculo de score.

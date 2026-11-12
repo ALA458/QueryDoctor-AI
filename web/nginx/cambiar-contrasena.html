@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="same-origin">
+  <title>Define tu contraseña · Query Doctor AI</title>
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/auth.css">
+  <script src="/assets/js/auth.js" defer></script>
+</head>
+<body data-page="change">
+  <div class="shell">
+    <section class="stage" aria-label="Query Doctor AI">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 34 34" fill="none" aria-hidden="true">
+          <circle class="ring" cx="17" cy="17" r="15.5" stroke-width="1.5"/>
+          <path class="beat" d="M4 18h7l3-7 5 14 3-9 2 2h8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>Query Doctor AI<small>Proyecto de Ingeniería I · UTB</small></div>
+      </div>
+      <div class="stage-body">
+        <p class="eyebrow">Primer ingreso</p>
+        <h1 class="headline">Tu llave,<br>no la <em>de todos</em>.</h1>
+        <p class="lede">La contraseña inicial vino de un secreto de despliegue. Antes de entrar, elige una que solo tú conozcas.</p>
+        <svg class="plan-art" viewBox="0 0 560 350" role="img" aria-label="Ilustración: un latido que baja hasta el plan de ejecución de una consulta y marca un operador como señal">
+        <path class="ecg-ghost" d="M0 70h120l12-26 14 58 14-84 16 62 14-10h80l12-14 14 24 12-10h250"/>
+        <path class="ecg" pathLength="1" d="M0 70h120l12-26 14 58 14-84 16 62 14-10h80l12-14 14 24 12-10h250"/>
+        <path class="drop" d="M270 74v50"/>
+        <path class="link" d="M270 160v34"/>
+        <path class="link" d="M270 230v20h-140v28M270 250h140v28"/>
+        <g class="node"><rect x="200" y="124" width="140" height="36" rx="2"/><text x="270" y="147" text-anchor="middle">Sort</text></g>
+        <g class="node"><rect x="200" y="194" width="140" height="36" rx="2"/><text x="270" y="217" text-anchor="middle">Nested Loops</text></g>
+        <g class="node"><rect x="60" y="278" width="140" height="36" rx="2"/><text x="130" y="301" text-anchor="middle">Index Seek</text></g>
+        <g class="node signal"><rect x="340" y="278" width="140" height="36" rx="2"/><text x="410" y="301" text-anchor="middle">Key Lookup</text></g>
+        <rect class="halo" x="340" y="278" width="140" height="36" rx="2"/>
+        <text class="tag" x="340" y="336">SEÑAL</text>
+      </svg>
+      </div>
+      <div class="stage-foot"><span>Solo lectura sobre tu base</span><span>Sesión con expiración</span></div>
+    </section>
+    <main class="panel">
+      <div class="card">
+        <h2>Define tu contraseña</h2>
+        <p class="sub">Es tu primer ingreso. La contraseña inicial era temporal: elige una propia para continuar.</p>
+        <div id="notice" class="notice" role="alert" aria-live="polite"></div>
+        <form method="post" action="/api/auth/change-password" id="change-form">
+          <input type="hidden" name="returnUrl" id="returnUrl" value="/">
+          <div class="field">
+            <label for="actual">Contraseña actual</label>
+            <div class="control"><input id="actual" name="actual" type="password" autocomplete="current-password" required autofocus></div>
+          </div>
+          <div class="field">
+            <label for="nueva">Contraseña nueva</label>
+            <div class="control">
+              <input id="nueva" name="nueva" type="password" autocomplete="new-password" minlength="12" required>
+              <button type="button" class="reveal" data-reveal="nueva" aria-pressed="false">Mostrar</button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="confirmar">Repite la contraseña nueva</label>
+            <div class="control"><input id="confirmar" name="confirmar" type="password" autocomplete="new-password" required></div>
+          </div>
+          <ul class="rules" id="rules" aria-label="Requisitos de la contraseña">
+            <li data-rule="len">12 caracteres o más</li>
+            <li data-rule="upper">Una mayúscula</li>
+            <li data-rule="lower">Una minúscula</li>
+            <li data-rule="digit">Un número</li>
+            <li data-rule="symbol">Un símbolo</li>
+            <li data-rule="match">Las dos coinciden</li>
+          </ul>
+          <button class="btn" type="submit" id="submit"><span>Guardar y continuar</span><span class="arrow" aria-hidden="true">→</span></button>
+        </form>
+        <p class="fine">Al guardar se cierra esta sesión y entras de nuevo con la contraseña nueva.</p>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
