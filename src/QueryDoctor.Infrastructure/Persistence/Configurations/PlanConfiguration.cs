@@ -19,6 +19,10 @@ public sealed class PlanConfiguration : IEntityTypeConfiguration<Plan>
 
         builder.HasIndex(p => new { p.ConnectionId, p.QueryStorePlanId }).IsUnique();
 
+        // Deduplicar sin descifrar el plan (arquitectura §7). NO único: varios planes
+        // pueden compartir el mismo query_plan_hash.
+        builder.HasIndex(p => new { p.ConnectionId, p.QueryPlanHash });
+
         builder.HasOne<Connection>()
             .WithMany()
             .HasForeignKey(p => p.ConnectionId)

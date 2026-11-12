@@ -9,6 +9,7 @@ secrets/
 *.pfx
 *.key
 .claude/settings.local.json
+.vscode/
 .venv/
 __pycache__/
 *.pyc
