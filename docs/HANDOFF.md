@@ -3,52 +3,49 @@
 > **Se sobrescribe, no se acumula.** Máximo ~50 líneas. Lo escribe quien cierra una
 > sesión (humano o agente). La historia vive en los PR y en git.
 
-**Actualizado:** 2026-11-05 · **Por:** Álvaro · **Rama:** `feat/S1-01-solucion-ci`
+**Actualizado:** 2026-11-11 · **Por:** agente · **Rama:** `chore/S1-04-seguimiento`
 
-## S1-01 (Álvaro) — en curso
-- ✅ Parte 1: `QueryDoctor.slnx` con 5 proyectos (`src/`) + 2 de pruebas (`tests/`) y
-  referencias Domain ← Application ← Infrastructure ← Api/Worker.
-- ✅ Parte 2: `Directory.Build.props` (net10.0, nullable, **warnings = errores**, analizadores
-  `latest-recommended`), `global.json`, `.editorconfig`, `.gitattributes`. Plantillas limpiadas;
-  la Api solo expone `/health` y OpenAPI.
-- ✅ Parte 3: NetArchTest con 2 reglas mínimas (Domain sin otras capas ni frameworks;
-  SqlClient prohibido fuera de Infrastructure).
-- ⬜ Parte 4: CI en GitHub Actions (build, format, pruebas, paquetes vulnerables, CodeQL).
-- ⬜ Parte 5: protección de `main` (PR + 1 revisión + CI en verde).
-- Nota: `Microsoft.OpenApi` fijado a 2.7.5 en la Api por GHSA-v5pm-xwqc-g5wc (venía 2.0.0
-  transitivo). Quitar la referencia cuando `Microsoft.AspNetCore.OpenApi` traiga ≥ 2.7.5.
+## S1-04 — cerrada (#26) + seguimiento en esta rama
+- ✅ Esquemas `core` y `ops` con migración `Inicial` (en `main`).
+- ✅ Migración `IndicesDeHashes`: IX no únicos `(connection_id, query_hash)` en `core.query` y
+  `(connection_id, query_plan_hash)` en `core.plan` (arquitectura §7).
+- ✅ `docs/arquitectura/MODELO_DATOS_v0.2.md` describe el esquema real; su §6 dice qué
+  decisiones MD-01..MD-11 quedaron aplicadas. **Si cambias el esquema, actualízalo.**
+- `AppDbContext` solo se registra si existe `ConnectionStrings:QueryDoctor`.
+  `dotnet ef` usa `QD_DB_CONNECTION` (nunca contraseñas en el repo).
 
-## Lo que necesita saber cada uno
-**Joel**
-- S1-03: ya existe `tests/QueryDoctor.ArchitectureTests/LayerDependencyTests.cs`. Extiéndelo,
-  no empieces de cero. Pendiente: motor sin E/S, Api sin referencias al Gateway ni al cliente
-  de IA, y afinar la regla de SqlClient al namespace del Gateway cuando exista (S1-08).
-- Los analizadores tratan warnings como errores: el código del motor debe compilar limpio.
+## Lo que S1-04 deja para cada tarea
+**S1-06 (Identity, Daniel)**
+- Tablas de Identity en `ops` (`users`, `roles`, `user_roles`…). `ops.users` trae
+  `must_change_password` (primer ingreso, RNF-SEG-13) y `created_at`.
+- Roles `DBA` y `Desarrollador` ya sembrados con Id fijo; usa `RoleNames`, no cadenas sueltas.
+- `EmailIndex` **no** es único (MD-09 no aplicada): decidir `RequireUniqueEmail`.
+- Falta registrar Identity (`AddIdentityCore` + stores de EF) en la Api.
 
-**Maykol**
-- S1-08: el Gateway vive en `Infrastructure` (único lugar con `Microsoft.Data.SqlClient`).
-  Acordar con Álvaro la interfaz `ITelemetrySource` en `Application` **antes** de implementarla:
-  S1-09 la consume.
-- S1-10: el Worker hoy es un host vacío (`Program.cs` sin servicios). Ahí se monta el servidor
-  de Hangfire; en la Api, solo el cliente.
-- S1-18: integrar en `ai-service/` el prototipo del adaptador LLM (S0-08) **con sus 13 pruebas**.
+**S1-09 (registro de conexión + CapabilityProbe, Álvaro)**
+- `core.connection`: credenciales en `encrypted_credentials` vía `IFieldEncryptor`;
+  `encryption` es `Mandatory|Strict` (RNF-SEG-03).
+- UK `(server, database_name)` **distingue mayúsculas**: normalizar aquí (ver pendientes).
+- `core.capability_profile` tiene UK `(connection_id)`: el sondeo **sobrescribe** el perfil.
 
-**Daniel**
-- S1-04: las migraciones salen de las entidades de `core`. Ver "Por decidir" (quién las escribe).
+**S1-11 (IngestionService, Álvaro)**
+- Upsert idempotente sobre las UK: `(connection_id, query_store_text_id|query_id|plan_id)` y
+  `(connection_id, plan_id, execution_type, interval_id)` en `runtime_stat` (RF-ING-05).
+- Marca de agua en `connection.last_consolidated_interval_id`; `ingestion_run` no la copia.
+- No hay índice que impida dos ingestas `Running` a la vez (MD-11): el bloqueo consultivo
+  por conexión (§6.2) es la única barrera.
+- `query.query_text_id` es nulo y la FK es `SET NULL` (la purga borra el texto, no la consulta).
 
-**Todos**
-- Instalar la extensión EditorConfig de VS Code.
-- `dotnet format` antes de cada commit; la CI corre `--verify-no-changes`.
+## Pendientes
+1. **Prueba de integración contra PostgreSQL** que demuestre que las UK rechazan duplicados
+   (hoy solo hay pruebas unitarias y de arquitectura).
+2. **Mayúsculas en `connection(server, database_name)`**: `SRV01/Ventas` y `srv01/ventas`
+   pasan la UK. Se resuelve en **S1-09** (normalizar al registrar o índice sobre `lower(...)`).
 
-## Por decidir en la reunión del equipo
-1. **Entidades del esquema `core`** (Connection, CapabilityProfile, Query, QueryText, Plan,
-   RuntimeStat, IngestionRun): ninguna tarea las asigna y S1-04 depende de ellas.
-   Propuesta: las escribe Álvaro (ingesta y persistencia), Daniel genera la migración encima.
-2. **Warnings como errores** en local (propuesta actual) o solo en la CI.
-3. **Commits con Conventional Commits** `tipo(S?-??): descripción` (propuesta).
-4. Replanificar S1+S2 con la columna "Si no alcanza" (S1 cerró con 0/16; quedan ~10 días).
-5. S1-20 con el tutor: ratificar DA-01/06/10, el recorte y ADR-05/06/11 (el documento de
-   arquitectura aún los marca "Propuesta").
+## Por decidir (heredado; no verificado en esta sesión si ya se cerró)
+- Warnings como errores en local o solo en la CI.
+- Replanificar S1+S2 con la columna "Si no alcanza".
+- S1-20 con el tutor: ratificar DA-01/06/10, el recorte y ADR-05/06/11.
 
 ## Siguiente paso
-Partes 4 y 5 de S1-01 → PR → merge. Hasta entonces nadie más debería abrir PR.
+PR de `chore/S1-04-seguimiento` → revisión → merge. Luego S1-06 y S1-09 pueden arrancar.
