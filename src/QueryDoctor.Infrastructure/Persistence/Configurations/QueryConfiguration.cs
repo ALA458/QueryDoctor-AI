@@ -16,6 +16,10 @@ public sealed class QueryConfiguration : IEntityTypeConfiguration<Query>
 
         builder.HasIndex(q => new { q.ConnectionId, q.QueryStoreQueryId }).IsUnique();
 
+        // Deduplicar sin descifrar el texto (arquitectura §7). NO único: en Query Store
+        // varias consultas distintas pueden compartir el mismo query_hash.
+        builder.HasIndex(q => new { q.ConnectionId, q.QueryHash });
+
         builder.HasOne<Connection>()
             .WithMany()
             .HasForeignKey(q => q.ConnectionId)
