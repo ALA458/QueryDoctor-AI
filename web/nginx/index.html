@@ -1,8 +1,58 @@
 <!doctype html>
 <html lang="es">
-<head><meta charset="utf-8"><title>Query Doctor AI</title></head>
-<body>
-  <h1>Query Doctor AI</h1>
-  <p>Placeholder de S1-02. La SPA llega en S1-15. Estado de la API: <a href="/api/health">/api/health</a></p>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="same-origin">
+  <title>Inicio · Query Doctor AI</title>
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/auth.css">
+  <script src="/assets/js/auth.js" defer></script>
+</head>
+<body data-page="home">
+  <div class="shell">
+    <section class="stage" aria-label="Query Doctor AI">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 34 34" fill="none" aria-hidden="true">
+          <circle class="ring" cx="17" cy="17" r="15.5" stroke-width="1.5"/>
+          <path class="beat" d="M4 18h7l3-7 5 14 3-9 2 2h8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>Query Doctor AI<small>Proyecto de Ingeniería I · UTB</small></div>
+      </div>
+      <div class="stage-body">
+        <p class="eyebrow">Sesión</p>
+        <h1 class="headline">Lee el plan.<br><em>Encuentra</em> la señal.</h1>
+        <p class="lede">Diagnóstico de consultas SQL Server a partir de Query Store, con explicaciones que remiten a la evidencia del motor.</p>
+        <svg class="plan-art" viewBox="0 0 560 350" role="img" aria-label="Ilustración: un latido que baja hasta el plan de ejecución de una consulta y marca un operador como señal">
+        <path class="ecg-ghost" d="M0 70h120l12-26 14 58 14-84 16 62 14-10h80l12-14 14 24 12-10h250"/>
+        <path class="ecg" pathLength="1" d="M0 70h120l12-26 14 58 14-84 16 62 14-10h80l12-14 14 24 12-10h250"/>
+        <path class="drop" d="M270 74v50"/>
+        <path class="link" d="M270 160v34"/>
+        <path class="link" d="M270 230v20h-140v28M270 250h140v28"/>
+        <g class="node"><rect x="200" y="124" width="140" height="36" rx="2"/><text x="270" y="147" text-anchor="middle">Sort</text></g>
+        <g class="node"><rect x="200" y="194" width="140" height="36" rx="2"/><text x="270" y="217" text-anchor="middle">Nested Loops</text></g>
+        <g class="node"><rect x="60" y="278" width="140" height="36" rx="2"/><text x="130" y="301" text-anchor="middle">Index Seek</text></g>
+        <g class="node signal"><rect x="340" y="278" width="140" height="36" rx="2"/><text x="410" y="301" text-anchor="middle">Key Lookup</text></g>
+        <rect class="halo" x="340" y="278" width="140" height="36" rx="2"/>
+        <text class="tag" x="340" y="336">SEÑAL</text>
+      </svg>
+      </div>
+      <div class="stage-foot"><span>Solo lectura sobre tu base</span><span>Sesión con expiración</span></div>
+    </section>
+    <main class="panel">
+      <div class="card" id="home" hidden>
+        <h2>Sesión activa</h2>
+        <p class="sub">Página provisional hasta que llegue el panel de conexiones (S1-15).</p>
+        <dl class="whoami">
+          <dt>Usuario</dt><dd id="who-user">—</dd>
+          <dt>Rol</dt><dd id="who-roles">—</dd>
+        </dl>
+        <form method="post" action="/api/auth/logout">
+          <button class="btn btn-quiet" type="submit"><span>Cerrar sesión</span><span class="arrow" aria-hidden="true">→</span></button>
+        </form>
+      </div>
+    </main>
+  </div>
 </body>
 </html>

@@ -1,7 +1,9 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Npgsql;
 using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Infrastructure.Persistence;
@@ -31,12 +33,35 @@ public static class DependencyInjection
 
         // Persistencia en PostgreSQL (S1-04). Solo se registra si hay cadena de conexión,
         // así los hosts que aún no la necesitan siguen arrancando igual.
-        var connectionString = configuration.GetConnectionString("QueryDoctor");
+        // En Docker la contraseña llega como secreto (archivo), nunca dentro de una cadena versionada (RNF-SEG-04).
+        var connectionString = configuration.GetConnectionString("QueryDoctor")
+            ?? BuildConnectionStringFromSecret(configuration);
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
             services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
         }
 
         return services;
+    }
+
+    private static string? BuildConnectionStringFromSecret(IConfiguration configuration)
+    {
+        var section = configuration.GetSection("Postgres");
+        var passwordFile = section["PasswordFile"];
+        if (string.IsNullOrWhiteSpace(passwordFile) || !File.Exists(passwordFile))
+        {
+            return null;
+        }
+
+        var builder = new NpgsqlConnectionStringBuilder
+        {
+            Host = section["Host"] ?? "db",
+            Port = int.TryParse(section["Port"], CultureInfo.InvariantCulture, out var port) ? port : 5432,
+            Database = section["Database"] ?? "querydoctor",
+            Username = section["Username"] ?? "querydoctor",
+            Password = File.ReadAllText(passwordFile).Trim(),
+        };
+
+        return builder.ConnectionString;
     }
 }

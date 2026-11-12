@@ -1,0 +1,51 @@
+/*
+ * Query Doctor AI — TOKENS DE DISEÑO (el único archivo que hay que tocar para cambiar el aspecto).
+ *
+ * Todas las páginas del front enlazan este archivo ANTES que su propio CSS:
+ *   <link rel="stylesheet" href="/assets/css/tokens.css">
+ * Ningún otro CSS del proyecto debe escribir colores, fuentes ni radios a mano: usa var(--...).
+ * Así, cambiar la paleta aquí cambia login, conexiones, dashboard, explicaciones (S1-15, S1-16, S2-09..S2-11).
+ *
+ * Los nombres dicen el ROL del color, no el color: --color-accent es "el acento", sea bermellón o verde.
+ */
+:root {
+  /* ---- Superficies claras (formularios, listados, tablas) ---- */
+  --color-bg: #f2ede3;             /* fondo de página */
+  --color-surface: #e7e0d1;        /* tarjetas, avisos, filas alternas */
+  --color-text: #14110f;           /* texto principal */
+  --color-text-muted: #6d655a;     /* etiquetas, ayudas */
+  --color-border-strong: #14110f;  /* líneas de campos y cabeceras */
+
+  /* ---- Superficies oscuras (panel de marca, barra lateral) ---- */
+  --color-stage-bg: #14110f;
+  --color-stage-surface: #1d1916;
+  --color-stage-line: #34302a;       /* cuadrícula de fondo */
+  --color-stage-stroke: #5a5347;     /* contornos de nodos y enlaces */
+  --color-stage-ghost: #3d372f;      /* trazos de fondo */
+  --color-stage-text: #f2ede3;
+  --color-stage-text-soft: #cfc7b8;
+  --color-stage-text-muted: #a49b8c;
+
+  /* ---- Acento de marca ---- */
+  --color-accent: #d9402a;           /* "la señal": énfasis, foco, hallazgos */
+  --color-accent-strong: #b22f1b;    /* acento en estado pulsado/oscuro */
+  --color-on-accent: #14110f;        /* texto sobre el acento */
+
+  /* ---- Acción principal (botones) ---- */
+  --color-primary: #14110f;
+  --color-on-primary: #f2ede3;
+
+  /* ---- Estados (para dashboards y avisos) ---- */
+  --color-success: #2f6f5e;
+  --color-warning: #b7791f;
+  --color-danger: #b22f1b;
+  --color-info: #35607a;
+
+  /* ---- Tipografía (archivos en /assets/fonts, declarados en auth.css) ---- */
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* ---- Forma ---- */
+  --radius: 2px;
+}
