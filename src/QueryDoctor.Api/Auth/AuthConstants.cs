@@ -1,7 +1,7 @@
 namespace QueryDoctor.Api.Auth;
 
 /// <summary>Nombres de políticas y claims de autenticación.</summary>
-internal static class AuthConstants
+public static class AuthConstants
 {
     /// <summary>Solo usuarios con rol DBA y sin cambio de contraseña pendiente (RNF-SEG-12).</summary>
     public const string DbaOnlyPolicy = "DbaOnly";

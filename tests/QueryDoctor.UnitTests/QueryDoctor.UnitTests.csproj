@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\src\QueryDoctor.Domain\QueryDoctor.Domain.csproj" />
     <ProjectReference Include="..\..\src\QueryDoctor.Application\QueryDoctor.Application.csproj" />
     <ProjectReference Include="..\..\src\QueryDoctor.Infrastructure\QueryDoctor.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\QueryDoctor.Api\QueryDoctor.Api.csproj" />
   </ItemGroup>
 
 </Project>

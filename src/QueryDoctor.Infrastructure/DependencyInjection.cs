@@ -1,4 +1,6 @@
 using System.Globalization;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,14 +36,52 @@ public static class DependencyInjection
         // Persistencia en PostgreSQL (S1-04). Solo se registra si hay cadena de conexión,
         // así los hosts que aún no la necesitan siguen arrancando igual.
         // En Docker la contraseña llega como secreto (archivo), nunca dentro de una cadena versionada (RNF-SEG-04).
-        var connectionString = configuration.GetConnectionString("QueryDoctor")
-            ?? BuildConnectionStringFromSecret(configuration);
+        var connectionString = GetPostgresConnectionString(configuration);
         if (!string.IsNullOrWhiteSpace(connectionString))
         {
             services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
         }
 
         return services;
+    }
+
+    /// <summary>
+    /// Configura el almacenamiento de Hangfire sobre PostgreSQL (ADR-04, DA-03).
+    /// </summary>
+    public static IServiceCollection AddQueryDoctorHangfire(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = GetPostgresConnectionString(configuration);
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            services.AddHangfire(config =>
+            {
+                config.SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                      .UseSimpleAssemblyNameTypeSerializer()
+                      .UseRecommendedSerializerSettings()
+                      .UsePostgreSqlStorage(options =>
+                      {
+                          options.UseNpgsqlConnection(connectionString);
+                      }, new PostgreSqlStorageOptions
+                      {
+                          SchemaName = "hangfire",
+                          PrepareSchemaIfNecessary = true,
+                          QueuePollInterval = TimeSpan.FromSeconds(15)
+                      });
+            });
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Obtiene la cadena de conexión hacia PostgreSQL a partir de configuración o secretos (RNF-SEG-04).
+    /// </summary>
+    public static string? GetPostgresConnectionString(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        return configuration.GetConnectionString("QueryDoctor")
+            ?? BuildConnectionStringFromSecret(configuration);
     }
 
     private static string? BuildConnectionStringFromSecret(IConfiguration configuration)

@@ -1,3 +1,4 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using QueryDoctor.Api.Auth;
 using QueryDoctor.Infrastructure;
@@ -7,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddQueryDoctorHangfire(builder.Configuration);
 builder.Services.AddQueryDoctorAuth(builder.Configuration);
 
 var app = builder.Build();
@@ -26,6 +28,17 @@ using (var seedScope = app.Services.CreateScope())
 app.UseSameOriginForms();
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Panel Hangfire (S1-10, ADR-04, RNF-SEG-12): solo DBA con contraseña activa
+var postgresConn = DependencyInjection.GetPostgresConnectionString(app.Configuration);
+if (!string.IsNullOrWhiteSpace(postgresConn))
+{
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = [new HangfireDashboardAuthorizationFilter()],
+        DashboardTitle = "Query Doctor AI - Panel Hangfire"
+    });
+}
 
 if (app.Environment.IsDevelopment())
 {
