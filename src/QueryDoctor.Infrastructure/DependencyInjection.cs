@@ -30,10 +30,15 @@ public static class DependencyInjection
 
         services.AddSingleton<IFieldEncryptor, SecretProtector>();
 
-        // Motor determinístico: parser de Showplan XML, catálogo versionado y motor de reglas sin E/S (S1-12, S1-13, RF-MOT-01..17)
+        // Motor determinístico: parser de Showplan XML, catálogo versionado y motor de reglas sin E/S (S1-12, S1-13, S1-14, RF-MOT-01..17, RNF-MAN-01)
         services.TryAddSingleton<PlanParserOptions>();
         services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
         services.TryAddSingleton(_ => BindRuleThresholds(configuration));
+        foreach (var builtInRule in VersionedRuleCatalog.DiscoverBuiltInRules())
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IRule>(builtInRule));
+        }
+
         services.TryAddSingleton<IRuleCatalog, VersionedRuleCatalog>();
         services.TryAddSingleton<IRuleEngine, DeterministicRuleEngine>();
 

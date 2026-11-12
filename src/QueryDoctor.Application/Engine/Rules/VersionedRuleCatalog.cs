@@ -13,13 +13,16 @@ public sealed class VersionedRuleCatalog : IRuleCatalog
     private static readonly IReadOnlyList<RuleDescriptor> CanonicalDescriptors = BuildCanonicalDescriptors();
     private static readonly IReadOnlyDictionary<string, RuleDescriptor> DescriptorsById =
         CanonicalDescriptors.ToDictionary(d => d.RuleId, StringComparer.OrdinalIgnoreCase);
+    private static readonly IReadOnlyList<IRule> BuiltInRuleInstances = DiscoverBuiltInRulesCore();
 
     private readonly IReadOnlyList<IRule> _activeRules;
 
     public VersionedRuleCatalog(IEnumerable<IRule>? activeRules = null)
     {
+        var sourceRules = activeRules ?? BuiltInRuleInstances;
+
         // Orden determinista por RuleId y versión para que la salida nunca dependa del orden de registro en DI (RF-MOT-02).
-        _activeRules = (activeRules ?? [])
+        _activeRules = sourceRules
             .OrderBy(r => r.Descriptor.RuleId, StringComparer.Ordinal)
             .ThenBy(r => r.Descriptor.Version, StringComparer.Ordinal)
             .ToArray();
@@ -28,6 +31,12 @@ public sealed class VersionedRuleCatalog : IRuleCatalog
     public string CatalogVersion => CurrentCatalogVersion;
 
     public static IReadOnlyList<RuleDescriptor> BuiltInDescriptors => CanonicalDescriptors;
+
+    /// <summary>
+    /// Descubre por reflexión todas las reglas públicas y concretas que implementan <see cref="IRule"/> en el ensamblado del motor,
+    /// de modo que agregar una regla nueva no requiera modificar otras reglas ni el flujo de análisis (RNF-MAN-01, Arquitectura §9).
+    /// </summary>
+    public static IReadOnlyList<IRule> DiscoverBuiltInRules() => BuiltInRuleInstances;
 
     public IReadOnlyList<RuleDescriptor> GetAllDescriptors() => CanonicalDescriptors;
 
@@ -205,5 +214,22 @@ public sealed class VersionedRuleCatalog : IRuleCatalog
                 Priority: RulePriority.Must,
                 DefaultThresholds: defaults.GetThresholdsForRule("REG-11")),
         ];
+    }
+
+    private static IRule[] DiscoverBuiltInRulesCore()
+    {
+        var ruleType = typeof(IRule);
+        var discovered = ruleType.Assembly
+            .GetTypes()
+            .Where(t =>
+                t is { IsClass: true, IsAbstract: false, IsPublic: true } &&
+                ruleType.IsAssignableFrom(t) &&
+                t.GetConstructor(Type.EmptyTypes) is not null)
+            .Select(t => (IRule)Activator.CreateInstance(t)!)
+            .OrderBy(r => r.Descriptor.RuleId, StringComparer.Ordinal)
+            .ThenBy(r => r.Descriptor.Version, StringComparer.Ordinal)
+            .ToArray();
+
+        return discovered;
     }
 }
