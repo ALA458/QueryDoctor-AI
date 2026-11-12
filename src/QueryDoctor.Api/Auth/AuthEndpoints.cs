@@ -8,6 +8,7 @@ namespace QueryDoctor.Api.Auth;
 /// <summary>
 /// Login, logout y cambio de contraseña. Aceptan formularios HTML y responden con redirecciones,
 /// para que el front (HTML estático o PHP) no maneje contraseñas ni sesiones (FRONT_PHP.md §5).
+/// La verificación de origen (CSRF) se hace antes, en <see cref="SameOriginFormsExtensions"/>.
 /// </summary>
 internal static class AuthEndpoints
 {
@@ -28,11 +29,6 @@ internal static class AuthEndpoints
         UserManager<ApplicationUser> users,
         SignInManager<ApplicationUser> signIn)
     {
-        if (!IsSameOrigin(request))
-        {
-            return Results.StatusCode(StatusCodes.Status403Forbidden);
-        }
-
         if (!request.HasFormContentType)
         {
             return Results.BadRequest();
@@ -88,11 +84,6 @@ internal static class AuthEndpoints
         UserManager<ApplicationUser> users,
         SignInManager<ApplicationUser> signIn)
     {
-        if (!IsSameOrigin(request))
-        {
-            return Results.StatusCode(StatusCodes.Status403Forbidden);
-        }
-
         var user = await users.GetUserAsync(principal);
         if (user is not null)
         {
@@ -110,11 +101,6 @@ internal static class AuthEndpoints
         UserManager<ApplicationUser> users,
         SignInManager<ApplicationUser> signIn)
     {
-        if (!IsSameOrigin(request))
-        {
-            return Results.StatusCode(StatusCodes.Status403Forbidden);
-        }
-
         if (!request.HasFormContentType)
         {
             return Results.BadRequest();
@@ -173,12 +159,6 @@ internal static class AuthEndpoints
             mustChangePassword = user.MustChangePassword,
         });
     }
-
-    private static bool IsSameOrigin(HttpRequest request) =>
-        OriginCheck.IsAllowed(
-            request.Headers.Origin.ToString(),
-            request.Host.Host,
-            request.Headers["Sec-Fetch-Site"].ToString());
 
     private static IResult Redirect(string page, string? key, string? value, string returnUrl)
     {

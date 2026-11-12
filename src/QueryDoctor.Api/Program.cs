@@ -23,6 +23,7 @@ using (var seedScope = app.Services.CreateScope())
     await InitialDbaSeeder.SeedAsync(seedScope.ServiceProvider, app.Configuration);
 }
 
+app.UseSameOriginForms();
 app.UseAuthentication();
 app.UseAuthorization();
 
