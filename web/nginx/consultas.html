@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="same-origin">
+  <title>Consultas · Query Doctor AI</title>
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/auth.css">
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="/assets/css/consultas.css">
+  <script src="/assets/js/consultas.js" defer></script>
+</head>
+<body data-page="queries">
+  <div class="app">
+    <aside class="side">
+      <div>
+        <div class="brand">
+          <svg class="brand-mark" viewBox="0 0 34 34" fill="none" aria-hidden="true">
+            <circle class="ring" cx="17" cy="17" r="15.5" stroke-width="1.5"/>
+            <path class="beat" d="M4 18h7l3-7 5 14 3-9 2 2h8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div>Query Doctor AI<small>Proyecto de Ingeniería I · UTB</small></div>
+        </div>
+        <nav class="nav" aria-label="Principal">
+          <a class="nav-item" href="/">Conexiones</a>
+          <a class="nav-item is-active" href="/consultas" aria-current="page">Consultas</a>
+        </nav>
+      </div>
+      <div class="side-foot">
+        <div class="who"><strong id="who-user">—</strong><span id="who-role"></span></div>
+        <form method="post" action="/api/auth/logout"><button class="link-btn" type="submit">Cerrar sesión</button></form>
+      </div>
+    </aside>
+
+    <main class="main" id="main" hidden>
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Diagnóstico</p>
+          <h1>Consultas</h1>
+          <p class="sub">Consultas ordenadas por su participación en el consumo total de la ventana, con los hallazgos que las reglas del motor detectaron en su plan. Un hallazgo es una señal con evidencia, no un diagnóstico confirmado.</p>
+        </div>
+      </header>
+
+      <form class="filters" id="filters" aria-label="Filtros del listado">
+        <div class="field">
+          <label for="f-connection">Conexión</label>
+          <div class="control"><select id="f-connection"><option value="">Todas</option></select></div>
+        </div>
+        <div class="field">
+          <label for="f-window">Ventana de tiempo</label>
+          <div class="control">
+            <select id="f-window">
+              <option value="24h">Últimas 24 horas</option>
+              <option value="7d">Últimos 7 días</option>
+              <option value="30d">Últimos 30 días</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-severity">Severidad</label>
+          <div class="control">
+            <select id="f-severity">
+              <option value="">Todas</option>
+              <option value="High">Alta</option>
+              <option value="Medium">Media</option>
+              <option value="Low">Baja</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-sort">Orden</label>
+          <div class="control">
+            <select id="f-sort" disabled>
+              <option value="consumption">Porcentaje de consumo</option>
+            </select>
+          </div>
+        </div>
+      </form>
+
+      <div id="notice" class="notice" role="status" aria-live="polite"></div>
+      <section id="list" aria-live="polite"></section>
+    </main>
+  </div>
+</body>
+</html>
