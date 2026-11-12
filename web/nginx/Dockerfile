@@ -1,6 +1,8 @@
-# Placeholder de S1-02: Nginx sirve una página de prueba y hace de proxy hacia la API.
-# En S1-15 se agrega una etapa de build con Node (Vite) que reemplaza index.html por la SPA.
+# S1-02/S1-06: Nginx sirve las páginas de acceso y los assets (CSS, JS, fuentes) y hace de proxy hacia la API.
+# Contexto de build: ./web (ver docker-compose.yml). Cuando llegue el contenedor php (S1-15), las páginas pasan a PHP
+# y /assets sigue igual.
 FROM nginxinc/nginx-unprivileged:1.27-alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY index.html /usr/share/nginx/html/index.html
+COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx/index.html nginx/login.html nginx/cambiar-contrasena.html /usr/share/nginx/html/
+COPY assets/ /usr/share/nginx/html/assets/
 EXPOSE 8080

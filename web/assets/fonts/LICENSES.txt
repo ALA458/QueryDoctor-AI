@@ -1,0 +1,5 @@
+Fuentes autoalojadas (sin CDN, por la CSP del proyecto). Todas con licencia SIL Open Font License 1.1.
+- Fraunces (The Fraunces Project Authors)
+- Instrument Sans (The Instrument Sans Project Authors)
+- IBM Plex Mono (IBM Corp.)
+Obtenidas de los paquetes npm @fontsource-variable/fraunces, @fontsource-variable/instrument-sans y @fontsource/ibm-plex-mono.
