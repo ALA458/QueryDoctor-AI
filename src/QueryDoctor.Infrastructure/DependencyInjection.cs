@@ -6,7 +6,9 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Engine.Parsing;
+using QueryDoctor.Application.Engine.Rules;
 using QueryDoctor.Application.Telemetry;
+using QueryDoctor.Domain.Analysis;
 using QueryDoctor.Infrastructure.Persistence;
 using QueryDoctor.Infrastructure.Security;
 using QueryDoctor.Infrastructure.Telemetry;
@@ -28,9 +30,12 @@ public static class DependencyInjection
 
         services.AddSingleton<IFieldEncryptor, SecretProtector>();
 
-        // Motor determinístico: parser de Showplan XML en memoria sin E/S (S1-12, RF-MOT-01, RF-MOT-16)
+        // Motor determinístico: parser de Showplan XML, catálogo versionado y motor de reglas sin E/S (S1-12, S1-13, RF-MOT-01..17)
         services.TryAddSingleton<PlanParserOptions>();
         services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
+        services.TryAddSingleton(_ => BindRuleThresholds(configuration));
+        services.TryAddSingleton<IRuleCatalog, VersionedRuleCatalog>();
+        services.TryAddSingleton<IRuleEngine, DeterministicRuleEngine>();
 
         // Telemetría e ingesta de SQL Server (S1-08, RNF-SEG-01, RF-TRZ-04)
         services.TryAddSingleton<IStatementLogWriter, InMemoryStatementLogWriter>();
@@ -69,4 +74,35 @@ public static class DependencyInjection
 
         return builder.ConnectionString;
     }
+
+    private static RuleThresholds BindRuleThresholds(IConfiguration configuration)
+    {
+        var section = configuration.GetSection(RuleThresholds.SectionName);
+        if (!section.Exists())
+        {
+            return RuleThresholds.Default;
+        }
+
+        return new RuleThresholds
+        {
+            Reg03MinEstimatedRows = ReadDouble(section, nameof(RuleThresholds.Reg03MinEstimatedRows), RuleThresholds.DefaultReg03MinEstimatedRows),
+            Reg03RowsReadToReturnedRatio = ReadDouble(section, nameof(RuleThresholds.Reg03RowsReadToReturnedRatio), RuleThresholds.DefaultReg03RowsReadToReturnedRatio),
+            MinQueryConsumptionPct = ReadDouble(section, nameof(RuleThresholds.MinQueryConsumptionPct), RuleThresholds.DefaultMinQueryConsumptionPct),
+            Reg04MinEstimatedExecutions = ReadDouble(section, nameof(RuleThresholds.Reg04MinEstimatedExecutions), RuleThresholds.DefaultReg04MinEstimatedExecutions),
+            Reg07CardinalityRatio = ReadDouble(section, nameof(RuleThresholds.Reg07CardinalityRatio), RuleThresholds.DefaultReg07CardinalityRatio),
+            Reg08RegressionIncreasePct = ReadDouble(section, nameof(RuleThresholds.Reg08RegressionIncreasePct), RuleThresholds.DefaultReg08RegressionIncreasePct),
+            Reg08MinExecutionsPerPlan = ReadLong(section, nameof(RuleThresholds.Reg08MinExecutionsPerPlan), RuleThresholds.DefaultReg08MinExecutionsPerPlan),
+            Reg10DurationMaxMinRatio = ReadDouble(section, nameof(RuleThresholds.Reg10DurationMaxMinRatio), RuleThresholds.DefaultReg10DurationMaxMinRatio),
+        };
+    }
+
+    private static double ReadDouble(IConfigurationSection section, string key, double fallback) =>
+        double.TryParse(section[key], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : fallback;
+
+    private static long ReadLong(IConfigurationSection section, string key, long fallback) =>
+        long.TryParse(section[key], NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : fallback;
 }

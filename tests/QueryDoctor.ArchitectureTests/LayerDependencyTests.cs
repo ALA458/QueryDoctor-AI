@@ -43,6 +43,23 @@ public class LayerDependencyTests
         }
     }
 
+    [Fact]
+    public void MotorDeterministicoEsPuroYNoDependeDeFrameworksDeEntradaSalida()
+    {
+        var result = Types.InAssembly(Application)
+            .That()
+            .ResideInNamespace("QueryDoctor.Application.Engine")
+            .ShouldNot()
+            .HaveDependencyOnAny(
+                "QueryDoctor.Infrastructure",
+                "Microsoft.EntityFrameworkCore",
+                "Microsoft.Data.SqlClient",
+                "System.Net.Http")
+            .GetResult();
+
+        Assert.True(result.IsSuccessful, Describe(result));
+    }
+
     private static string Describe(TestResult result) =>
         result.IsSuccessful
             ? string.Empty
