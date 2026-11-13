@@ -127,18 +127,22 @@ HTTP en `docs/CONTRATO_API_CONEXIONES.md`.
 **Mecánica que conviene conocer:**
 - `probe_connection` va en la cola `probe`, atendida por un servidor Hangfire propio del Worker con sondeo de
   1 s (las demás colas, 15 s). El argumento es solo el id de la conexión (invariante 2).
+- Los fallos del sondeo terminan en `Failed` sin reintento. Un fallo de persistencia marca `Failed`/`Unknown` con un
+  `UPDATE` condicional y, si no puede, Hangfire reintenta 3 veces: nunca queda `Pending` (auditoría M1).
 - Límite total del sondeo `Probe:TimeoutSeconds` (15 por defecto). SqlClient recibe 2/3 de ese valor como
   Connect Timeout, para que un fallo de red llegue con su causa real y no como `Timeout`.
 - El Gateway ya no se registra en `AddInfrastructure`: la Api usa `AddConnectionRegistration` y el Worker
   `AddTargetTelemetry`. El Gateway traduce los fallos a `TelemetrySourceException` con un código, sin texto.
 - **Excepción de TLS del laboratorio (invariante 3):** solo en `docker-compose.lab.yml`
   (`Probe__LabTrustedCertificateServers__0: sqlserver`). `LabCertificateGuard` impide arrancar el Worker con
-  ella fuera de `Development`.
+  ella fuera de `Development`, con `APP_ENV=prod` o con un servidor distinto de `sqlserver`.
+- El Gateway solo admite autenticación SQL: sin usuario rechaza, nunca usa `IntegratedSecurity`.
 - La clave maestra de `SecretProtector` es el Docker secret `master_encryption_key` (api y worker).
 - `UseSameOriginForms` (CSRF) cubre todo POST/PUT/PATCH/DELETE.
 
 **Riesgo abierto (OWASP A01, SSRF):** un DBA puede registrar cualquier host:puerto, y la diferencia entre
-`ServerUnreachable` e `InvalidCredentials` revela qué puertos están abiertos. Hoy lo mitigan dos cosas: solo un
+`ServerUnreachable` e `InvalidCredentials` revela qué puertos están abiertos, también en la red `backend`
+(`db`, `api`, `ai`), donde está el Worker. Hoy lo mitigan dos cosas: solo un
 DBA puede registrar y solo el Worker sale a la red `targets`. Pero esa red no es `internal`. Queda por proponer
 una lista de hosts permitidos o una red restringida.
 

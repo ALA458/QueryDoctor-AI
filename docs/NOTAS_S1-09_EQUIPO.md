@@ -24,13 +24,16 @@
 | `68e1996` | fix | Connect Timeout = 2/3 del límite del sondeo; error 258 = servidor inalcanzable | P8 |
 | `ff02473` | test | `tests/QueryDoctor.LabTests` (11 pruebas contra SQL Server 2022) y `lab/sql/11-probe-fixtures.sql` | P8 |
 | `e9345ff` | feat | Compose: Worker con PostgreSQL, clave maestra como secreto, `docker-compose.lab.yml` con candado | P9 |
+| `7f088d2` | docs | Esta nota: changelog y guía de punta a punta | — |
+| `2980842` | docs | Cierre: CA-HU02.2 a S1-11, HANDOFF, decisiones D1–D8 en ARCHITECTURE_PLAN | P10 |
+| `f7a2ca0` | fix | Hallazgos de la auditoría: M1, B2, B4, B5 y B6 | Auditoría |
 
 ## Resumen por persona
 
 | Quién | Lo que tienes que saber | Partes |
 |---|---|---|
-| **Maykol** | Agregué al compose las variables `Postgres__*` del worker y el secreto `master_encryption_key` (P9). Cambié dos sentencias de tu lista blanca (aprobadas); el Gateway ahora lanza `TelemetrySourceException` tipada en vez de `SqlException`; el Gateway solo se registra en el Worker y la cola `probe` tiene su propio servidor Hangfire; SqlClient reintenta 10 s ante 4060 y un puerto cerrado tarda todo el `Connect Timeout` (medido en el laboratorio) | P0, P5, P6, P8, P9 |
-| **Daniel** | Toqué 4 archivos tuyos de S1-04 (estados, columnas, UK, prueba del modelo); hay contrato nuevo para el PR #35; **arreglé un fallo de seguridad de S1-06** (la sesión con cambio de contraseña pendiente perdía la restricción) y el CSRF ahora cubre todo método que cambia estado | P2, P4, P7 |
+| **Maykol** | El Gateway rechaza conectar sin usuario en vez de usar `IntegratedSecurity` (auditoría B5) y el worker recibe `APP_ENV` (B6). Agregué al compose las variables `Postgres__*` del worker y el secreto `master_encryption_key` (P9). Cambié dos sentencias de tu lista blanca (aprobadas); el Gateway ahora lanza `TelemetrySourceException` tipada en vez de `SqlException`; el Gateway solo se registra en el Worker y la cola `probe` tiene su propio servidor Hangfire; SqlClient reintenta 10 s ante 4060 y un puerto cerrado tarda todo el `Connect Timeout` (medido en el laboratorio) | P0, P5, P6, P8, P9 |
+| **Daniel** | `Connection.Status` ahora vale `Pending` por defecto (auditoría B5). Toqué 4 archivos tuyos de S1-04 (estados, columnas, UK, prueba del modelo); hay contrato nuevo para el PR #35; **arreglé un fallo de seguridad de S1-06** (la sesión con cambio de contraseña pendiente perdía la restricción) y el CSRF ahora cubre todo método que cambia estado | P2, P4, P7 |
 | **Joel** | `lab/sql/10-whitelist-validation.sql` quedó desactualizado frente a P0; la matriz de soporte y `CanIngest` son funciones puras de Domain; agregué `lab/sql/11-probe-fixtures.sql` (base sin Query Store y login `qd_perf`) y hay que correrlo después de `build` y `login` | P0, P3, P8 |
 | **Todos** | Application ya no puede depender de EF Core, Npgsql, Hangfire ni de Infrastructure (NetArchTest); en Windows usen `127.0.0.1`, no `localhost`, para llegar al SQL Server del compose; **generen `secrets/master_encryption_key.txt`** o el compose no arranca | P1, P8, P9 |
 
@@ -465,4 +468,36 @@ Para comprobar que la búsqueda sí funciona, busca algo que tiene que aparecer,
   la red `targets` no es `internal`.
 - Unicidad sin resolver DNS · RF-CFG-05 en el Sprint 2 · `statement_log` en memoria hasta S2-06.
 
-**Falta antes de fusionar:** revisión por ejes en otra sesión (`/audit`) y revisión humana del PR.
+**Falta antes de fusionar:** revisión humana del PR (la auditoría por ejes ya se hizo, ver abajo).
+
+---
+
+## Auditoría por ejes · `fix(S1-09)` `f7a2ca0` · afecta a **Daniel**, **Maykol** y a quien haga **S1-11**
+
+La hizo **otra sesión**, que solo leyó el código, como pide la Definition of Done. Veredicto: **APROBABLE con una
+condición** (corregir M1). Corregimos M1 y cuatro hallazgos bajos.
+
+| Hallazgo | Qué pasaba | Corrección |
+|---|---|---|
+| **M1** (media) | Si PostgreSQL fallaba fuera del `try` del sondeo, el trabajo (sin reintentos) terminaba y la conexión quedaba en `Pending` **para siempre**. Además, el alta responde 409 a una `Pending`, así que el DBA no podía reintentar | `ProbeConnectionJob` marca la conexión `Failed`/`Unknown` en un scope nuevo, con `UPDATE … WHERE status = 'Pending'`. Si ni eso funciona, Hangfire reintenta (3 veces); el reintento solo sondea lo que siga en `Pending`. Los fallos del sondeo en sí siguen sin reintentarse (bloqueo de cuentas). Log nuevo: EventId 3004, solo el tipo de excepción |
+| **B2** | La búsqueda de duplicados usaba `ToLowerInvariant()` de C#, pero la UK usa `lower()` de PostgreSQL; con nombres no ASCII podían discrepar y el 409 salía sin id | La búsqueda calcula `lower()` en PostgreSQL (`FromSql`, parametrizado) |
+| **B4** | Un error `Unknown` al leer Query Store se mostraba como `QueryStoreUnavailable` | Solo `PermissionDenied` es `QueryStoreUnavailable`; `Unknown` queda `Unknown` |
+| **B5** | `Connection.Status` valía `Active` por defecto, y el Gateway usaba `IntegratedSecurity` (la identidad del Worker) si faltaba el usuario | `Pending` por defecto; el Gateway lanza `SecurityException` sin usuario |
+| **B6** | El candado de TLS solo miraba el nombre del entorno, y el compose pone `Development` si falta `APP_ENV` | También se niega con `APP_ENV=prod`, y solo admite el servidor exacto `sqlserver` |
+
+**Ten en cuenta**
+- **Daniel:** si en algún lado se creaba un `Connection` contando con que naciera `Active`, ahora nace `Pending`.
+  No había ninguno en el repo.
+- **Maykol / S1-11:** el Gateway ya no acepta conexiones sin usuario: el MVP solo tiene autenticación SQL.
+- **Todos:** el compose pasa `APP_ENV` al worker. En producción tiene que ser `APP_ENV=prod`.
+
+**Queda como deuda (baja severidad, con el PR):**
+- **B1, SSRF (OWASP A01):** el Worker está en `targets` **y en `backend`**, así que un DBA puede sondear también
+  `db`, `api` o `ai` y deducir qué puertos están abiertos por el `failureCause`. Falta una lista de hosts permitidos
+  que niegue también la red interna.
+- **B3:** el error 4060 aparece igual si la base no existe o si no hay acceso, y se muestra como `MissingPermission`.
+  Para S1-15: que el mensaje diga "no existe o sin acceso".
+- **B7 (Daniel):** `OriginCheck` compara solo el host del `Origin`, no el esquema ni el puerto. Mitiga que la cookie
+  sea `SameSite=Strict`.
+- **B8 (S2-06):** el alta y el reemplazo de una conexión no dejan registro de auditoría.
+- **B9 (S2-06):** el `statement_log` en memoria no tiene límite de tamaño.
