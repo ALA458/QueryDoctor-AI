@@ -16,7 +16,7 @@
 | A07 | Authentication Failures | Login, primer DBA | Identity, hash adaptativo, bloqueo por intentos, límite de tasa en login, cookie HttpOnly+Secure+SameSite=Strict, expiración 30 min †, antifalsificación; DBA inicial desde secreto con cambio obligatorio (RNF-SEG-11/13) | S1-06 | ⬜ |
 | A08 | Software or Data Integrity Failures | Traza y auditoría alterables | Rol de app sin UPDATE/DELETE en `audit.*`, trigger que rechaza cambios, `prev_hash` encadenado (RF-TRZ-01..03, §7) | S2-06 | ⬜ |
 | A09 | Security Logging & Alerting Failures | Logins, conexiones, ingestas, borrados | audit_event (RF-TRZ-05); logs sin secretos ni literales (RNF-SEG-09) | S2-06 | ⬜ |
-| A10 | Mishandling of Exceptional Conditions | XML inválido, versión sin capacidad, IA caída, corte de red | REG-11 sin detener el lote; omitir con aviso (RNF-COM-04); degradación (RNF-FIA-02); reanudar ingesta (RNF-FIA-01) | S1-11, S1-12, S2-05 | ⬜ |
+| A10 | Mishandling of Exceptional Conditions | XML inválido, versión sin capacidad, IA caída, corte de red | REG-11 sin detener el lote; omitir con aviso (RNF-COM-04); degradación (RNF-FIA-02); reanudar ingesta (RNF-FIA-01) | S1-11 (hecho: plan irrecuperable → `NotAnalyzable` sin detener la ingesta; fallo a mitad no avanza la marca de agua, `IngestionPersistenceTests`; reintento exponencial de fallos transitorios; corte de red real en el Sprint 2), S1-12, S2-05 | ⬜ |
 
 ## OWASP Top 10 for LLM Applications 2025
 | ID | Riesgo | Superficie | Control (requisito) | Prueba / tarea | Estado |

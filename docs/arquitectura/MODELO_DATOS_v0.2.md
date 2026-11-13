@@ -287,7 +287,11 @@ como `ACTIVA`, `PENDIENTE`…; `query.query_text_id` es nulo (por `SET NULL` en 
   pasan la UK. Se resuelve en **S1-09** (normalizar al registrar o índice sobre `lower(...)`).
 - **Prueba de integración contra PostgreSQL** que demuestre que las UK rechazan duplicados
   (hoy no hay pruebas contra una base real).
-- Verificar contra la documentación de Microsoft los tipos de Query Store citados
-  (`execution_type`, tamaño de los hashes) al implementar S1-11.
+- ~~Verificar los tipos de Query Store al implementar S1-11.~~ **Hecho en S1-11:** `execution_type` es `tinyint`
+  (0 Regular, 3 Aborted, 4 Exception; otro valor se descarta con aviso); `query_hash` y `query_plan_hash` son
+  `binary(8)` y se guardan como 16 caracteres hexadecimales en mayúsculas, sin `0x`. La memoria máxima se lee de
+  `avg_query_max_used_memory` (S1-07). S1-11 no cambió el esquema: no hay migración.
+- `query.origin_context` queda `NULL` con la cuenta de mínimo privilegio: SQL Server oculta `OBJECT_NAME` sin
+  `VIEW DEFINITION` (medido en el laboratorio, S1-11).
 - Si aparece el diagrama original de S0-07, compararlo con este documento.
 - Agregar este modelo como Figura 7.1 del documento de arquitectura.
