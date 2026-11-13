@@ -171,8 +171,15 @@ public sealed class ProbeConnection
             connection.Encryption == ConnectionEncryption.Strict ? TargetEncryptionMode.Strict : TargetEncryptionMode.Mandatory,
             trustServerCertificate: labCertificate,
             allowLocalTestCertificates: labCertificate,
-            connectionTimeoutSeconds: _options.TimeoutSeconds);
+            connectionTimeoutSeconds: ConnectTimeoutSeconds(_options.TimeoutSeconds));
     }
+
+    /// <summary>
+    /// 2/3 del límite total para abrir la conexión (mínimo 1 s). Ante un error de red SqlClient reintenta hasta agotar
+    /// su Connect Timeout; con margen, el fallo llega con su causa real (ServerUnreachable) y Timeout queda para un
+    /// sondeo que de verdad superó Probe:TimeoutSeconds (hallazgo de laboratorio de P8).
+    /// </summary>
+    private static int ConnectTimeoutSeconds(int probeTimeoutSeconds) => Math.Max(1, probeTimeoutSeconds * 2 / 3);
 
     private async Task SaveProfileAsync(Guid connectionId, ProfileData data, DateTimeOffset now, CancellationToken cancellationToken)
     {

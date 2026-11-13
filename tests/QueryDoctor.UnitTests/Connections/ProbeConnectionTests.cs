@@ -224,15 +224,21 @@ public class ProbeConnectionTests
         Assert.Equal(1, _repository.SaveCount);
     }
 
-    [Fact]
-    public async Task ElTiempoLimiteTambienAcotaElTimeoutDeConexionDelGateway()
+    // P8 (laboratorio): con un puerto cerrado SqlClient reintenta hasta agotar su Connect Timeout. Si fuera igual al
+    // límite del sondeo, ServerUnreachable o Timeout dependería de qué reloj gana; por eso SqlClient tiene 2/3 del total.
+    [Theory]
+    [InlineData(15, 10)]
+    [InlineData(7, 4)]
+    [InlineData(2, 1)]
+    [InlineData(1, 1)]
+    public async Task ElTimeoutDeConexionDelGatewayEsMenorQueElLimiteDelSondeo(int probeSeconds, int expectedConnectSeconds)
     {
-        _options.TimeoutSeconds = 7;
+        _options.TimeoutSeconds = probeSeconds;
         var connection = Pending();
 
         await UseCase().ExecuteAsync(connection.Id);
 
-        Assert.Equal(7, _probe.LastTarget!.ConnectionTimeoutSeconds);
+        Assert.Equal(expectedConnectSeconds, _probe.LastTarget!.ConnectionTimeoutSeconds);
     }
 
     [Fact]

@@ -53,8 +53,9 @@ public static class SqlErrorClassifier
             // Tiempo de espera de SqlClient.
             -2 => TelemetryFailureKind.Timeout,
 
-            // Red, instancia no encontrada, Azure SQL no disponible.
-            2 or 26 or 40 or 53 or 121 or 1225 or 10053 or 10054 or 10060 or 10061 or 11001 or 11004
+            // Red, instancia no encontrada, Azure SQL no disponible. 258 (WAIT_TIMEOUT) es el mismo puerto cerrado que
+            // 10061 cuando SqlClient agota su Connect Timeout reintentando: medido en el laboratorio (P8).
+            2 or 26 or 40 or 53 or 121 or 258 or 1225 or 10053 or 10054 or 10060 or 10061 or 11001 or 11004
                 or 40613 or 40197 or 40501 => TelemetryFailureKind.ServerUnreachable,
 
             _ => (TelemetryFailureKind?)null,

@@ -21,6 +21,8 @@ public class SqlErrorClassifierTests
     [InlineData(53, TelemetryFailureKind.ServerUnreachable)]
     [InlineData(26, TelemetryFailureKind.ServerUnreachable)]
     [InlineData(40613, TelemetryFailureKind.ServerUnreachable)]  // Azure: base no disponible
+    [InlineData(10061, TelemetryFailureKind.ServerUnreachable)]  // laboratorio P8: conexión rechazada (puerto cerrado)
+    [InlineData(258, TelemetryFailureKind.ServerUnreachable)]    // laboratorio P8: el mismo puerto cerrado al agotar Connect Timeout
     [InlineData(208, TelemetryFailureKind.Unknown)]              // objeto inexistente
     [InlineData(null, TelemetryFailureKind.Unknown)]
     public void ClasificaPorNumeroDeError(int? number, TelemetryFailureKind expected)
