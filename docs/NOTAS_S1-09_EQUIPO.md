@@ -8,7 +8,7 @@
 
 | Quién | Lo que tienes que saber | Partes |
 |---|---|---|
-| **Maykol** | Cambié dos sentencias de tu lista blanca (aprobadas); el Gateway ahora lanza `TelemetrySourceException` tipada en vez de `SqlException` | P0, P5 |
+| **Maykol** | Cambié dos sentencias de tu lista blanca (aprobadas); el Gateway ahora lanza `TelemetrySourceException` tipada en vez de `SqlException`; el Gateway solo se registra en el Worker y la cola `probe` tiene su propio servidor Hangfire | P0, P5, P6 |
 | **Daniel** | Toqué 4 archivos tuyos de S1-04 (estados, columnas, UK, prueba del modelo); hay contrato nuevo para el PR #35 | P2, P4 |
 | **Joel** | `lab/sql/10-whitelist-validation.sql` quedó desactualizado frente a P0; la matriz de soporte y `CanIngest` son funciones puras de Domain | P0, P3 |
 | **Todos** | Application ya no puede depender de EF Core, Npgsql, Hangfire ni de Infrastructure (NetArchTest) | P1 |
@@ -155,8 +155,40 @@ Nuevos: `Application/Telemetry/TelemetrySourceException.cs`, `Infrastructure/Tel
 - `Probe:LabTrustedCertificateServers` es la **única** vía para aceptar el certificado autofirmado del laboratorio
   (invariante 3). Vacía por defecto; el Worker la rechaza fuera de Development (P9).
 
+## P6 — Repositorio EF, trabajo Hangfire y Worker · `feat(S1-09)` · afecta a **Maykol** (S1-10) y a **todos** (DI)
+
+Archivos de Maykol modificados: `Infrastructure/DependencyInjection.cs`, `Worker/Program.cs`.
+Nuevos: `Infrastructure/Persistence/EfConnectionRepository.cs`, `Infrastructure/Connections/ProbeConnectionJob.cs`
+(+ `HangfireProbeJobScheduler`), proyecto `tests/QueryDoctor.IntegrationTests` (Testcontainers.PostgreSql 4.16.0).
+
+- **`AddInfrastructure` ya no registra el Gateway** (`ITelemetrySource`). La Api también lo llama y nunca debe
+  poder conectarse a bases objetivo (invariante 2). Ahora hay dos métodos por host:
+  - `AddConnectionRegistration()` → **Api**: `RegisterConnection` + `HangfireProbeJobScheduler`.
+  - `AddTargetTelemetry(config)` → **Worker**: Gateway, `CapabilityProbe`, `ProbeOptions` (sección `Probe`),
+    `ProbeConnection` y `ProbeConnectionJob`.
+- `AddInfrastructure` registra `IConnectionRepository` (EF) y `TimeProvider.System`.
+- **Trabajo `probe_connection`:** `ProbeConnectionJob.RunAsync(Guid connectionId, CancellationToken)`, cola `probe`,
+  **sin reintentos automáticos** (`AutomaticRetry(Attempts = 0)`): un fallo ya quedó registrado con su causa, y
+  reintentar con una contraseña mala solo bloquea la cuenta. Registra solo id, estado y código (EventId 3001–3003).
+- **Dos servidores Hangfire en el Worker:** el de siempre atiende todas las colas **menos** `probe` (sondeo 15 s);
+  uno nuevo, `QueryDoctor.Worker.Probe`, atiende **solo** `probe` con `QueuePollInterval` de **1 s** y 2 hilos,
+  sobre las mismas tablas (`hangfire`). Así el sondeo cabe en los 15 s de RF-CFG-02.
+- `EfConnectionRepository` busca por `server` + `database_name_key` y traduce la violación de la UK
+  (`23505` en `IX_connection_server_database_name_key`) a `DuplicateConnectionException`.
+
+**Ten en cuenta**
+- **Maykol (S1-10):** si agregas una cola o cambias `JobQueues.AllInPriorityOrder`, el servidor principal excluye
+  `probe` a propósito; no la vuelvas a meter ahí o dos servidores competirán por ella.
+- **S1-11 (ingesta):** para el trabajo `ingest` usa el mismo patrón: el trabajo vive en Infrastructure, el caso de
+  uso en Application, y se registra en `AddTargetTelemetry` (Worker), nunca en `AddInfrastructure`.
+- Si un host necesita `ITelemetrySource` y no lo encuentra en DI: es porque solo el Worker lo tiene. Es intencional.
+- **Pruebas de integración:** `tests/QueryDoctor.IntegrationTests` levanta `pgvector/pgvector:pg16` con
+  Testcontainers y aplica las migraciones. **Necesitan Docker** (en CI hay, `ubuntu-latest`). Las del PR #35 / S2
+  que toquen la base pueden reutilizar `PostgresFixture` con `[Collection(PostgresGroup.Name)]`.
+- Hangfire guarda los argumentos en claro: hay una prueba que lee `hangfire.job` y comprueba que el trabajo solo
+  lleva el `Guid` y no la contraseña.
+
 ---
 
 ## Pendiente de completar en esta nota
-P6 (repositorio EF, trabajo Hangfire, Worker, Testcontainers), P7 (endpoints, CSRF),
-P8 (pruebas de laboratorio), P9 (compose), P10 (cierre).
+P7 (endpoints, CSRF), P8 (pruebas de laboratorio), P9 (compose), P10 (cierre).
