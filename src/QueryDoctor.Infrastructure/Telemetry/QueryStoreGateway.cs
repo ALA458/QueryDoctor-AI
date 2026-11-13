@@ -215,15 +215,9 @@ public sealed partial class QueryStoreGateway : ITelemetrySource
             TrustServerCertificate = connection.TrustServerCertificate
         };
 
-        if (!string.IsNullOrWhiteSpace(connection.UserId))
-        {
-            builder.UserID = connection.UserId;
-            builder.Password = connection.Password ?? string.Empty;
-        }
-        else
-        {
-            builder.IntegratedSecurity = true;
-        }
+        // Auditoría B5 (S1-09): ValidateSecurityPolicies ya exige usuario; aquí nunca se cae a IntegratedSecurity.
+        builder.UserID = connection.UserId;
+        builder.Password = connection.Password ?? string.Empty;
 
         builder.Encrypt = connection.EncryptionMode switch
         {
@@ -240,6 +234,14 @@ public sealed partial class QueryStoreGateway : ITelemetrySource
     public static void ValidateSecurityPolicies(TargetDatabaseConnection connection)
     {
         ArgumentNullException.ThrowIfNull(connection);
+
+        // Auditoría B5 (S1-09): el MVP solo tiene autenticación SQL. Sin usuario, SqlClient usaría la identidad del
+        // propio Worker (IntegratedSecurity) contra la base objetivo: se rechaza en vez de fallar abierto.
+        if (string.IsNullOrWhiteSpace(connection.UserId))
+        {
+            throw new SecurityException(
+                "Conexión rechazada: falta el usuario de autenticación SQL; la autenticación integrada no está soportada.");
+        }
 
         // RNF-SEG-03: Rechazo estricto de TrustServerCertificate=true a menos que sea entorno de prueba local autorizado
         if (connection.TrustServerCertificate && !connection.AllowLocalTestCertificates)

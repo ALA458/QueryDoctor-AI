@@ -75,6 +75,20 @@ public class QueryStoreGatewaySecurityTests
         Assert.Contains("Trust Server Certificate=False", connectionString, StringComparison.OrdinalIgnoreCase);
     }
 
+    // Auditoría B5 (S1-09): sin usuario no se cae a la identidad del Worker (IntegratedSecurity).
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void BuildConnectionStringRejectsMissingUserInsteadOfIntegratedSecurity(string? userId)
+    {
+        var connection = new TargetDatabaseConnection("sqlserver.corp.local", "SalesDB", userId, "x");
+
+        var ex = Assert.Throws<SecurityException>(() => QueryStoreGateway.BuildConnectionString(connection));
+
+        Assert.Contains("autenticación integrada no está soportada", ex.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void TargetDatabaseConnectionRejectsEmptyServerOrDatabase()
     {

@@ -140,8 +140,10 @@ public sealed class ProbeConnection
         {
             options = await _probe.GetQueryStoreOptionsAsync(target, cancellationToken);
         }
-        catch (TelemetrySourceException ex) when (ex.Kind is TelemetryFailureKind.PermissionDenied or TelemetryFailureKind.Unknown)
+        catch (TelemetrySourceException ex) when (ex.Kind is TelemetryFailureKind.PermissionDenied)
         {
+            // Auditoría B4: solo la falta de permiso sobre la vista es "Query Store no disponible". Un Unknown sigue
+            // como Unknown (lo mapea el catch exterior) para no esconder un error inesperado tras un diagnóstico válido.
             return ProbeResult.Fail(ProbeFailureCause.QueryStoreUnavailable);
         }
 

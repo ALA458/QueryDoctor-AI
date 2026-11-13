@@ -168,6 +168,19 @@ public class ProbeConnectionTests
         Assert.Equal(ProbeFailureCause.QueryStoreUnavailable, (await UseCase().ExecuteAsync(connection.Id)).FailureCause);
     }
 
+    // Auditoría B4: un error inesperado al leer Query Store no se disfraza de "Query Store no disponible".
+    [Fact]
+    public async Task UnErrorDesconocidoAlLeerQueryStoreSigueComoUnknown()
+    {
+        var connection = Pending();
+        _probe.QueryStoreError = new TelemetrySourceException(TelemetryFailureKind.Unknown, 50000);
+
+        var outcome = await UseCase().ExecuteAsync(connection.Id);
+
+        Assert.Equal(ConnectionStatus.Failed, outcome.Status);
+        Assert.Equal(ProbeFailureCause.Unknown, outcome.FailureCause);
+    }
+
     [Fact]
     public async Task SiLaVistaDeQueryStoreNoDevuelveFilasFallaConQueryStoreUnavailable()
     {

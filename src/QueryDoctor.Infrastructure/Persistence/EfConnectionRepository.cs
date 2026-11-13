@@ -23,13 +23,12 @@ public sealed class EfConnectionRepository : IConnectionRepository
 
     public Task<Connection?> FindByAddressAsync(string normalizedServer, string databaseName, CancellationToken cancellationToken)
     {
-        // Misma regla que la UK: server exacto y database_name_key = lower(database_name).
-        var key = ConnectionAddress.DatabaseNameKey(databaseName);
-
-        return _db.Connections.FirstOrDefaultAsync(
-            c => c.Server == normalizedServer
-                && EF.Property<string>(c, ConnectionConfiguration.DatabaseNameKeyProperty) == key,
-            cancellationToken);
+        // Misma regla que la UK, y calculada por el MISMO motor: database_name_key = lower(@db) en PostgreSQL.
+        // Auditoría B2: con ToLowerInvariant() de C# la búsqueda y la UK podían discrepar en nombres no ASCII (según
+        // la intercalación de la base), y el 409 salía sin encontrar la fila que lo causó. Consulta parametrizada.
+        return _db.Connections
+            .FromSql($"SELECT * FROM core.connection WHERE server = {normalizedServer} AND database_name_key = lower({databaseName})")
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     public async Task<Connection?> GetAsync(Guid id, CancellationToken cancellationToken) =>
@@ -41,6 +40,26 @@ public sealed class EfConnectionRepository : IConnectionRepository
         _db.CapabilityProfiles.FirstOrDefaultAsync(p => p.ConnectionId == connectionId, cancellationToken);
 
     public void AddProfile(CapabilityProfile profile) => _db.CapabilityProfiles.Add(profile);
+
+    public async Task<bool> MarkProbeFailedIfPendingAsync(
+        Guid id,
+        ProbeFailureCause cause,
+        DateTimeOffset now,
+        CancellationToken cancellationToken)
+    {
+        // UPDATE ... WHERE id = @id AND status = 'Pending': atómico, no pisa un resultado que otro proceso ya guardó.
+        var rows = await _db.Connections
+            .Where(c => c.Id == id && c.Status == ConnectionStatus.Pending)
+            .ExecuteUpdateAsync(
+                s => s
+                    .SetProperty(c => c.Status, ConnectionStatus.Failed)
+                    .SetProperty(c => c.ProbeFailureCause, cause)
+                    .SetProperty(c => c.LastProbedAt, now)
+                    .SetProperty(c => c.UpdatedAt, now),
+                cancellationToken);
+
+        return rows > 0;
+    }
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken)
     {

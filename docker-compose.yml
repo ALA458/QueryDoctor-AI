@@ -105,6 +105,8 @@ services:
     restart: unless-stopped
     environment:
       DOTNET_ENVIRONMENT: ${APP_ENV:-Development}
+      # Auditoría B6: el candado de TLS del laboratorio también se niega con APP_ENV=prod.
+      APP_ENV: ${APP_ENV:-}
       # S1-09: sin esta conexión el Worker no registra servidores Hangfire y probe_connection nunca corre.
       Postgres__Host: db
       Postgres__Database: ${POSTGRES_DB:-querydoctor}

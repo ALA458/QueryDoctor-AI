@@ -44,8 +44,36 @@ internal sealed class InMemoryConnectionRepository : IConnectionRepository
             c.Server == normalizedServer
             && ConnectionAddress.DatabaseNameKey(c.DatabaseName) == ConnectionAddress.DatabaseNameKey(databaseName)));
 
+    /// <summary>Simula PostgreSQL caído al leer (auditoría M1).</summary>
+    public bool FailReads { get; set; }
+
+    /// <summary>Simula PostgreSQL caído también para el UPDATE de respaldo (auditoría M1).</summary>
+    public bool FailMarks { get; set; }
+
     public Task<Connection?> GetAsync(Guid id, CancellationToken cancellationToken) =>
-        Task.FromResult(Stored.FirstOrDefault(c => c.Id == id));
+        FailReads
+            ? throw new InvalidOperationException("PostgreSQL no disponible")
+            : Task.FromResult(Stored.FirstOrDefault(c => c.Id == id));
+
+    public Task<bool> MarkProbeFailedIfPendingAsync(Guid id, ProbeFailureCause cause, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (FailMarks)
+        {
+            throw new InvalidOperationException("PostgreSQL no disponible");
+        }
+
+        var connection = Stored.FirstOrDefault(c => c.Id == id && c.Status == ConnectionStatus.Pending);
+        if (connection is null)
+        {
+            return Task.FromResult(false);
+        }
+
+        connection.Status = ConnectionStatus.Failed;
+        connection.ProbeFailureCause = cause;
+        connection.LastProbedAt = now;
+        connection.UpdatedAt = now;
+        return Task.FromResult(true);
+    }
 
     public void Add(Connection connection) => _pending.Add(connection);
 

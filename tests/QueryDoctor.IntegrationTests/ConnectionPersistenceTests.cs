@@ -172,6 +172,60 @@ public sealed class ConnectionPersistenceTests(PostgresFixture postgres) : IDisp
         Assert.Equal(JobQueues.Probe, reader.GetString(2));
     }
 
+    // Auditoría B2: la búsqueda usa el mismo lower() que la UK, así que el 409 apunta a la fila real también
+    // con nombres no ASCII.
+    [Fact]
+    public async Task UnNombreNoAsciiConOtraCapitalizacionDa409ConLaConexionReal()
+    {
+        Guid firstId;
+        await using (var db = postgres.CreateContext())
+        {
+            var first = Assert.IsType<RegisterConnectionResult.Accepted>(
+                await Register(db).ExecuteAsync(Command("srv-b2", "Ärger_Ñandú")));
+            firstId = first.ConnectionId;
+        }
+
+        await using (var db = postgres.CreateContext())
+        {
+            var conflict = Assert.IsType<RegisterConnectionResult.Conflict>(
+                await Register(db).ExecuteAsync(Command("srv-b2", "äRGER_ñANDÚ")));
+            Assert.Equal(firstId, conflict.ExistingConnectionId);
+            Assert.Equal(ConnectionStatus.Pending, conflict.ExistingStatus);
+        }
+    }
+
+    // Auditoría M1: el UPDATE de respaldo es condicional y real (ExecuteUpdate en PostgreSQL).
+    [Fact]
+    public async Task ElRespaldoMarcaFailedSoloLasConexionesPendientes()
+    {
+        var pending = NewConnection("srv-m1-pending", "QD_Lab");
+        var active = NewConnection("srv-m1-active", "QD_Lab");
+        active.Status = ConnectionStatus.Active;
+        await using (var db = postgres.CreateContext())
+        {
+            db.Connections.AddRange(pending, active);
+            await db.SaveChangesAsync();
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        await using (var db = postgres.CreateContext())
+        {
+            var repository = new EfConnectionRepository(db);
+            Assert.True(await repository.MarkProbeFailedIfPendingAsync(pending.Id, ProbeFailureCause.Unknown, now, default));
+            Assert.False(await repository.MarkProbeFailedIfPendingAsync(active.Id, ProbeFailureCause.Unknown, now, default));
+            Assert.False(await repository.MarkProbeFailedIfPendingAsync(pending.Id, ProbeFailureCause.Unknown, now, default));
+        }
+
+        await using var check = postgres.CreateContext();
+        var marked = await check.Connections.FindAsync(pending.Id);
+        Assert.Equal(ConnectionStatus.Failed, marked!.Status);
+        Assert.Equal(ProbeFailureCause.Unknown, marked.ProbeFailureCause);
+        Assert.NotNull(marked.LastProbedAt);
+        var untouched = await check.Connections.FindAsync(active.Id);
+        Assert.Equal(ConnectionStatus.Active, untouched!.Status);
+        Assert.Null(untouched.ProbeFailureCause);
+    }
+
     private async Task RunProbeAsync(Guid id, string version, Exception? failure = null)
     {
         await using var db = postgres.CreateContext();

@@ -23,6 +23,14 @@ public interface IConnectionRepository
 
     void AddProfile(CapabilityProfile profile);
 
+    /// <summary>
+    /// Marca el sondeo como fallido solo si la conexión sigue en Pending, con un único UPDATE condicional e
+    /// independiente del rastreador de cambios (auditoría M1: el sondeo se cayó por persistencia y la conexión
+    /// no puede quedar en Pending para siempre, RF-CFG-02).
+    /// </summary>
+    /// <returns>true si la marcó; false si ya no estaba en Pending (o no existe).</returns>
+    Task<bool> MarkProbeFailedIfPendingAsync(Guid id, ProbeFailureCause cause, DateTimeOffset now, CancellationToken cancellationToken);
+
     /// <summary>Confirma los cambios pendientes.</summary>
     /// <exception cref="DuplicateConnectionException">Otra solicitud registró la misma base al mismo tiempo.</exception>
     Task SaveChangesAsync(CancellationToken cancellationToken);
