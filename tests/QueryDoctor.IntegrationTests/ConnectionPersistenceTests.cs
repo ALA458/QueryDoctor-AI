@@ -148,6 +148,10 @@ public sealed class ConnectionPersistenceTests(PostgresFixture postgres) : IDisp
     [Fact]
     public async Task ElTrabajoHangfireLlevaSoloElIdDeLaConexionYVaALaColaProbe()
     {
+        // Hangfire guarda su proveedor de logs en un estático; si antes corrió un ApiFactory, apunta a un LoggerFactory
+        // ya desechado y BackgroundJobClient falla según el orden de las pruebas.
+        Hangfire.Logging.LogProvider.SetCurrentLogProvider(new SilentHangfireLogProvider());
+
         var options = new PostgreSqlStorageOptions { SchemaName = "hangfire", PrepareSchemaIfNecessary = true };
         var storage = new PostgreSqlStorage(new NpgsqlConnectionFactory(postgres.ConnectionString, options), options);
         var scheduler = new HangfireProbeJobScheduler(new BackgroundJobClient(storage));
@@ -269,5 +273,15 @@ public sealed class ConnectionPersistenceTests(PostgresFixture postgres) : IDisp
 
         public Task<IReadOnlyList<string>> GetRuntimeStatsColumnsAsync(TargetDatabaseConnection target, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<string>>(["avg_tempdb_space_used", "avg_log_bytes_used"]);
+    }
+
+    private sealed class SilentHangfireLogProvider : Hangfire.Logging.ILogProvider
+    {
+        public Hangfire.Logging.ILog GetLogger(string name) => new SilentLog();
+
+        private sealed class SilentLog : Hangfire.Logging.ILog
+        {
+            public bool Log(Hangfire.Logging.LogLevel logLevel, Func<string>? messageFunc, Exception? exception = null) => false;
+        }
     }
 }

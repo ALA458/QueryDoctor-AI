@@ -17,6 +17,9 @@ builder.Services.AddQueryDoctorAuth(builder.Configuration);
 // S1-09: alta de conexiones. La Api guarda y encola; NO registra el Gateway (invariante 2).
 builder.Services.AddConnectionRegistration();
 
+// S1-11: ingesta manual. La Api valida y encola ingest_connection; la ingesta corre en el Worker (invariante 2).
+builder.Services.AddIngestionRequests();
+
 // Enumerados como texto en las respuestas (contrato de S1-15), nunca como número.
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
