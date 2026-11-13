@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using QueryDoctor.Domain.Ai;
 using QueryDoctor.Domain.Core;
 using QueryDoctor.Domain.Ops;
 
@@ -32,6 +33,10 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser, Applicatio
     public DbSet<IngestionRun> IngestionRuns => Set<IngestionRun>();
 
     public DbSet<UserConnection> UserConnections => Set<UserConnection>();
+
+    public DbSet<KbFragment> KbFragments => Set<KbFragment>();
+
+    public DbSet<KbCausalRelation> KbCausalRelations => Set<KbCausalRelation>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -143,6 +143,242 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                     b.ToTable("user_tokens", "ops");
                 });
 
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.KbCausalRelation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("FragmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fragment_id");
+
+                    b.Property<string>("RelationType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("relation_type");
+
+                    b.Property<string>("RuleId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("rule_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FragmentId");
+
+                    b.HasIndex("RuleId");
+
+                    b.HasIndex("RuleId", "FragmentId", "RelationType")
+                        .IsUnique();
+
+                    b.ToTable("kb_causal_relation", "ai");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("b1010001-0001-0000-0000-000000000001"),
+                            FragmentId = new Guid("a1010001-0001-0000-0000-000000000001"),
+                            RelationType = "Interpretacion",
+                            RuleId = "REG-01"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010001-0001-0000-0000-000000000002"),
+                            FragmentId = new Guid("a1010001-0001-0000-0000-000000000002"),
+                            RelationType = "Recomendacion",
+                            RuleId = "REG-01"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010002-0002-0000-0000-000000000001"),
+                            FragmentId = new Guid("a1010002-0002-0000-0000-000000000001"),
+                            RelationType = "Interpretacion",
+                            RuleId = "REG-02"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010002-0002-0000-0000-000000000002"),
+                            FragmentId = new Guid("a1010002-0002-0000-0000-000000000002"),
+                            RelationType = "Recomendacion",
+                            RuleId = "REG-02"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010003-0003-0000-0000-000000000001"),
+                            FragmentId = new Guid("a1010003-0003-0000-0000-000000000001"),
+                            RelationType = "Interpretacion",
+                            RuleId = "REG-03"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010003-0003-0000-0000-000000000002"),
+                            FragmentId = new Guid("a1010003-0003-0000-0000-000000000002"),
+                            RelationType = "Recomendacion",
+                            RuleId = "REG-03"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010004-0004-0000-0000-000000000001"),
+                            FragmentId = new Guid("a1010004-0004-0000-0000-000000000001"),
+                            RelationType = "Interpretacion",
+                            RuleId = "REG-04"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010004-0004-0000-0000-000000000002"),
+                            FragmentId = new Guid("a1010004-0004-0000-0000-000000000002"),
+                            RelationType = "Recomendacion",
+                            RuleId = "REG-04"
+                        });
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.KbFragment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("RuleId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("rule_id");
+
+                    b.Property<string>("SourceCitation")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("source_citation");
+
+                    b.Property<string>("SourceTitle")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("source_title");
+
+                    b.Property<string>("SourceUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("source_url");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RuleId");
+
+                    b.ToTable("kb_fragment", "ai");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a1010001-0001-0000-0000-000000000001"),
+                            Content = "En SQL Server, cuando un operador combina expresiones con tipos de datos diferentes, la precedencia de tipos determina que el tipo con menor precedencia se convierta al de mayor precedencia (por ejemplo, varchar a nvarchar). Si una columna indexada tiene menor precedencia que el parámetro o literal evaluado, el motor aplica la función escalar CONVERT_IMPLICIT sobre la columna. Esta transformación anula la sargabilidad del predicado, impidiendo que el optimizador realice una búsqueda puntual (Index Seek) y forzando un recorrido completo del índice (Index Scan), lo que incrementa notablemente el consumo de CPU y las lecturas lógicas.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-01",
+                            SourceCitation = "Sección 'Precedencia de los operadores' y 'Conversión de tipos de datos en el motor de base de datos'.",
+                            SourceTitle = "Microsoft Learn: Precedencia de tipo de datos (Transact-SQL)",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/t-sql/data-types/data-type-precedence-transact-sql",
+                            Title = "Precedencia de tipos de datos y degradación a Index Scan por CONVERT_IMPLICIT"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010001-0001-0000-0000-000000000002"),
+                            Content = "Para solucionar la advertencia de conversión implícita, alinee el tipo de datos del parámetro o variable con el tipo exacto definido en la columna de la tabla. En clientes y capas de datos (como SqlClient, EF Core o Dapper), evite enviar parámetros Unicode (nvarchar con prefijo N) cuando la columna destino sea varchar o char, o altere la columna subyacente para unificar tipos. Al eliminar CONVERT_IMPLICIT sobre la columna indexada, el optimizador recupera la sargabilidad y puede generar un operador Index Seek con predicado puntual eficiente.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-01",
+                            SourceCitation = "Sección 'Recomendaciones de diseño de índices' y 'Predicados sargables'.",
+                            SourceTitle = "Microsoft Learn: Guía de arquitectura y diseño de índices de SQL Server",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/sql-server-index-design-guide",
+                            Title = "Alineación de tipos de datos entre parámetros y columnas para habilitar Index Seek"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010002-0002-0000-0000-000000000001"),
+                            Content = "Durante la fase de optimización basada en costos, el procesador de consultas evalúa los índices existentes frente a los predicados de filtro y unión. Si determina que un predicado carece de un índice que cubra las columnas evaluadas, genera una sugerencia en el elemento MissingIndexes del Showplan XML con un porcentaje de impacto estimado (Impact). Dicho porcentaje cuantifica la reducción teórica del costo total del plan si existiera un índice no agrupado óptimo con las columnas de igualdad (EqualityColumns), desigualdad (InequalityColumns) e inclusión (IncludeColumns).",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-02",
+                            SourceCitation = "Sección 'Uso de la característica de índices faltantes para ajustar índices no agrupados'.",
+                            SourceTitle = "Microsoft Learn: Optimización de índices no agrupados con sugerencias de índices que faltan",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/indexes/tune-nonclustered-missing-index-suggestions",
+                            Title = "Detección de índices faltantes por el optimizador basado en costos"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010002-0002-0000-0000-000000000002"),
+                            Content = "Antes de crear un índice sugerido por MissingIndexes, examine si un índice existente puede adaptarse incorporando columnas en la cláusula INCLUDE, en lugar de crear un índice nuevo. Cada índice adicional consume almacenamiento y penaliza las operaciones DML (INSERT, UPDATE, DELETE), ya que el motor debe mantener actualizadas todas las páginas del árbol B. Diseñe el índice colocando las columnas de igualdad al inicio de la clave, seguidas por las columnas de desigualdad, y asigne las columnas proyectadas a la cláusula INCLUDE para no engrosar los niveles intermedios.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-02",
+                            SourceCitation = "Sección 'Costo de mantenimiento de índices frente a beneficio en consultas de lectura'.",
+                            SourceTitle = "Microsoft Learn: Directrices generales para el diseño de índices",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/sql-server-index-design-guide#general-index-design-guidelines",
+                            Title = "Diseño ponderado de índices no agrupados y evaluación del costo de escritura"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010003-0003-0000-0000-000000000001"),
+                            Content = "Un Clustered Index Scan o Table Scan obliga al motor de base de datos a leer secuencialmente todas las páginas de datos asignadas a la tabla. Cuando la consulta especifica una cláusula WHERE selectiva pero no existe un índice ordenado que permita recorrer el árbol B hasta las filas requeridas, el procesador evalúa el filtro fila por fila como un predicado residual (Predicate) tras cargar cada página en el buffer pool, lo que satura la memoria intermedia, multiplica las lecturas lógicas y eleva el uso de CPU.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-03",
+                            SourceCitation = "Sección 'Operadores lógicos y físicos de Showplan: Recorrido de índice agrupado y Recorrido de tabla'.",
+                            SourceTitle = "Microsoft Learn: Guía de arquitectura de procesamiento de consultas",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/query-processing-architecture-guide",
+                            Title = "Lectura secuencial completa de páginas por falta de acceso indexado sargable"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010003-0003-0000-0000-000000000002"),
+                            Content = "Para sustituir un escaneo completo de tabla por un Index Seek altamente eficiente, determine las columnas del predicado de búsqueda más selectivo y cree un índice no agrupado adecuado. Si las consultas filtran con frecuencia sobre un subconjunto conocido de filas (por ejemplo, registros con estado activo o pedidos pendientes), implemente un índice filtrado (Filtered Index) con una cláusula WHERE. Los índices filtrados tienen menor tamaño, requieren menos mantenimiento en operaciones DML y garantizan búsquedas directas en el árbol B.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-03",
+                            SourceCitation = "Sección 'Uso de índices no agrupados para optimizar consultas con predicados selectivos'.",
+                            SourceTitle = "Microsoft Learn: Crear índices no agrupados",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/indexes/create-nonclustered-indexes",
+                            Title = "Creación de índice no agrupado selectivo o índice filtrado para reemplazar escaneos"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010004-0004-0000-0000-000000000001"),
+                            Content = "Un operador Key Lookup (Clustered) ocurre cuando una consulta aprovecha un índice no agrupado para localizar filas mediante un Index Seek, pero la lista de selección (SELECT) o condiciones posteriores requieren columnas que no están presentes en dicho índice. Por cada fila recuperada en el Index Seek, el operador Nested Loops realiza una búsqueda puntual individual en el índice agrupado base para recuperar las columnas faltantes. Cuando la cardinalidad resultante es alta, la multiplicación de búsquedas puntuales supera ampliamente el costo de un escaneo completo y dispara las lecturas lógicas.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-04",
+                            SourceCitation = "Operador físico 'Clustered Index Seek' con Lookup='true' / 'Key Lookup'.",
+                            SourceTitle = "Microsoft Learn: Referencia de operadores lógicos y físicos de Showplan",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/showplan-logical-and-physical-operators-reference",
+                            Title = "Sobrecarga de lecturas por saltos al índice agrupado base en Key Lookup"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010004-0004-0000-0000-000000000002"),
+                            Content = "Para eliminar de forma definitiva un Key Lookup costoso, convierta el índice no agrupado en un índice de cobertura (Covering Index) agregando las columnas proyectadas faltantes a la cláusula INCLUDE de la instrucción CREATE INDEX. Las columnas en INCLUDE se almacenan exclusivamente en las páginas del nivel hoja del índice y no participan en las claves de ordenación, permitiendo que la consulta se resuelva íntegramente desde el índice no agrupado sin incrementar la profundidad del árbol B ni sobrecargar los costos de mantenimiento de las claves.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-04",
+                            SourceCitation = "Sección 'Directrices de diseño para columnas incluidas'.",
+                            SourceTitle = "Microsoft Learn: Crear índices con columnas incluidas",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/indexes/create-indexes-with-included-columns",
+                            Title = "Cobertura de índice mediante cláusula INCLUDE para erradicar Key Lookups"
+                        });
+                });
+
             modelBuilder.Entity("QueryDoctor.Domain.Core.CapabilityProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -791,6 +1027,17 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.KbCausalRelation", b =>
+                {
+                    b.HasOne("QueryDoctor.Domain.Ai.KbFragment", "Fragment")
+                        .WithMany("CausalRelations")
+                        .HasForeignKey("FragmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Fragment");
+                });
+
             modelBuilder.Entity("QueryDoctor.Domain.Core.CapabilityProfile", b =>
                 {
                     b.HasOne("QueryDoctor.Domain.Core.Connection", null)
@@ -875,6 +1122,11 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.KbFragment", b =>
+                {
+                    b.Navigation("CausalRelations");
                 });
 #pragma warning restore 612, 618
         }

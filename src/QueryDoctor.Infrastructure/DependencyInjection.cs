@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Connections;
+using QueryDoctor.Application.KnowledgeBase;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Infrastructure.Connections;
 using QueryDoctor.Infrastructure.Persistence;
@@ -46,6 +47,7 @@ public static class DependencyInjection
             services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
             services.AddScoped<IConnectionRepository, EfConnectionRepository>();
             services.AddScoped<IConnectionQueries, EfConnectionQueries>();
+            services.AddScoped<IKnowledgeBaseRepository, EfKnowledgeBaseRepository>();
         }
 
         return services;
