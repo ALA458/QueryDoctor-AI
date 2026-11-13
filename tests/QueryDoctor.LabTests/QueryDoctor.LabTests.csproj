@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    S1-09 / P8 (D7): pruebas contra el SQL Server 2022 del laboratorio (contenedor sqlserver del compose).
+    Sin la variable QD_LAB_SQL se reportan como Skipped. Un Skipped NO es evidencia: la evidencia es la corrida
+    local con QD_LAB_SQL definida. Mismas versiones de paquetes que los otros proyectos de prueba: ninguno nuevo.
+  -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="10.1.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Los mismos dobles de repositorio y cifrado que las pruebas unitarias, sin copiarlos. -->
+  <ItemGroup>
+    <Compile Include="..\QueryDoctor.UnitTests\Connections\ConnectionTestDoubles.cs" Link="Doubles\ConnectionTestDoubles.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\QueryDoctor.Infrastructure\QueryDoctor.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

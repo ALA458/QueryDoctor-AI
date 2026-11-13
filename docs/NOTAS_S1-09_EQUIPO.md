@@ -8,10 +8,10 @@
 
 | Quién | Lo que tienes que saber | Partes |
 |---|---|---|
-| **Maykol** | Cambié dos sentencias de tu lista blanca (aprobadas); el Gateway ahora lanza `TelemetrySourceException` tipada en vez de `SqlException`; el Gateway solo se registra en el Worker y la cola `probe` tiene su propio servidor Hangfire | P0, P5, P6 |
+| **Maykol** | Cambié dos sentencias de tu lista blanca (aprobadas); el Gateway ahora lanza `TelemetrySourceException` tipada en vez de `SqlException`; el Gateway solo se registra en el Worker y la cola `probe` tiene su propio servidor Hangfire; SqlClient reintenta 10 s ante 4060 y un puerto cerrado tarda todo el `Connect Timeout` (medido en el laboratorio) | P0, P5, P6, P8 |
 | **Daniel** | Toqué 4 archivos tuyos de S1-04 (estados, columnas, UK, prueba del modelo); hay contrato nuevo para el PR #35; **arreglé un fallo de seguridad de S1-06** (la sesión con cambio de contraseña pendiente perdía la restricción) y el CSRF ahora cubre todo método que cambia estado | P2, P4, P7 |
-| **Joel** | `lab/sql/10-whitelist-validation.sql` quedó desactualizado frente a P0; la matriz de soporte y `CanIngest` son funciones puras de Domain | P0, P3 |
-| **Todos** | Application ya no puede depender de EF Core, Npgsql, Hangfire ni de Infrastructure (NetArchTest) | P1 |
+| **Joel** | `lab/sql/10-whitelist-validation.sql` quedó desactualizado frente a P0; la matriz de soporte y `CanIngest` son funciones puras de Domain; agregué `lab/sql/11-probe-fixtures.sql` (base sin Query Store y login `qd_perf`) y hay que correrlo después de `build` y `login` | P0, P3, P8 |
+| **Todos** | Application ya no puede depender de EF Core, Npgsql, Hangfire ni de Infrastructure (NetArchTest); en Windows usen `127.0.0.1`, no `localhost`, para llegar al SQL Server del compose | P1, P8 |
 
 ---
 
@@ -234,5 +234,49 @@ Archivos de Daniel modificados: `Api/Auth/AuthEndpoints.cs`, `Api/Auth/AuthServi
 
 ---
 
+## P8 — Pruebas contra el laboratorio · `test(S1-09)` + `fix(S1-09)` · afecta a **Joel**, **Maykol** y **todos**
+
+Proyecto nuevo `tests/QueryDoctor.LabTests`: el sondeo real del Worker (`ProbeConnection` → `CapabilityProbe` →
+`QueryStoreGateway` → SqlClient) contra el SQL Server 2022 del compose. Solo el repositorio y el cifrado son dobles.
+
+**Cómo correrlas**
+1. `docker compose up -d sqlserver`, `Run-Lab.ps1 -Step build` y `-Step login` (si no lo hiciste ya).
+2. `lab/sql/11-probe-fixtures.sql` como `sa`, con `READER_PASSWORD` (igual que el 04). **Hay que repetirlo
+   cada vez que se corre `build`**, porque `01-database.sql` recrea `QD_Lab` y borra sus usuarios.
+3. `$env:QD_LAB_SQL = "127.0.0.1"` y `dotnet test tests/QueryDoctor.LabTests`.
+
+Sin `QD_LAB_SQL` las 11 pruebas salen **Omitidas** (así corren en CI). **Omitida no es evidencia** (D7): la
+evidencia es la corrida local. Si `QD_LAB_SQL` está definida pero falta el archivo de contraseña, la prueba
+**falla**, no se omite. El skip es un `[LabFact]` propio (xUnit 2): no se agregó ningún paquete.
+
+**Qué cubre (11 pruebas)**: `qd_reader` → `Active` con perfil 16.x / Developer / `Tested` / `READ_WRITE` / nada
+omitido; las 4 sentencias del sondeo son las de la lista blanca, todas `SELECT`, y quedan en `statement_log`; la
+configuración de Query Store es idéntica antes y después; `qd_perf` (solo `VIEW DATABASE PERFORMANCE STATE`) →
+`Active`; contraseña mala → `InvalidCredentials`; `qd_noperm` → `MissingPermission`; base inexistente →
+`MissingPermission` (SQL Server da 4060 en ambos casos, no los distingue a propósito); **sin la excepción de TLS
+del laboratorio el certificado autofirmado se rechaza** (`TlsCertificateInvalid`, invariante 3 probado de verdad);
+puerto cerrado → `ServerUnreachable`; `QD_Lab_NoQS` → `Active` con `OFF`, `CanIngest` falso y sin activarlo;
+versión 12.x sustituida sobre el sondeo real → `Rejected`, credenciales borradas y una sola sentencia ejecutada.
+
+### Lo que el laboratorio encontró (y no habrían encontrado los dobles)
+1. **`localhost` en Windows se cuelga.** Resuelve primero a `::1` y el compose publica `127.0.0.1:1433`; SqlClient
+   espera en IPv6 hasta agotar el tiempo. Usen `127.0.0.1`. Dentro del compose (`sqlserver`) no pasa.
+2. **Carrera entre dos relojes** (corregido en `ProbeConnection`, código mío). Ante un puerto cerrado SqlClient
+   reintenta hasta agotar su `Connect Timeout`, que era igual al límite del sondeo: salía `ServerUnreachable` o
+   `Timeout` según qué reloj ganara. Ahora SqlClient recibe **2/3 de `Probe:TimeoutSeconds`** (15 → 10 s).
+3. **Error 258** (`WAIT_TIMEOUT`): es lo que devuelve ese puerto cerrado cuando SqlClient corta por su propio
+   tiempo (antes era 10061). Agregado a `SqlErrorClassifier` como `ServerUnreachable`.
+4. **Para Maykol (S1-10/S1-11):** SqlClient trata 4060 como transitorio y reintenta tras `ConnectRetryInterval`
+   (10 s). En el sondeo ya no ocurre porque no le queda tiempo, pero en la ingesta un 4060 tardará 10 s más.
+   En Azure ese reintento es útil; no lo toqué.
+
+**Ten en cuenta**
+- Si alguien corre `lab/sql/09-grant-perf-state.sql`, `qd_noperm` gana permiso y su prueba falla. Vuelve a
+  correr `-Step login` para dejarlo sin permisos.
+- La lectura de Query Store para comparar antes y después la hace **la prueba** con SqlClient, no la plataforma;
+  no es una sentencia nueva de la lista blanca.
+
+---
+
 ## Pendiente de completar en esta nota
-P8 (pruebas de laboratorio), P9 (compose), P10 (cierre).
+P9 (compose), P10 (cierre).
