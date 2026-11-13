@@ -1,6 +1,6 @@
 # Notas de S1-09 para el equipo (conexiones + CapabilityProbe)
 
-> **De:** Álvaro · **Rama:** `feat/S1-09-conexiones` · Se va completando por partes (P0…P10).
+> **De:** Álvaro · **Rama:** `feat/S1-09-conexiones` · Completa (P0…P10).
 > Qué cambió en S1-09 que **te afecta**, por persona y por parte. Si algo de aquí choca con tu tarea,
 > avísame antes de cambiarlo. El contrato HTTP completo está en `docs/CONTRATO_API_CONEXIONES.md`.
 > Empieza por el **changelog** (qué entró en cada commit) y el **resumen por persona**. Para probarlo tú mismo,
@@ -450,5 +450,19 @@ Para comprobar que la búsqueda sí funciona, busca algo que tiene que aparecer,
 
 ---
 
-## Pendiente de completar en esta nota
-P10 (cierre).
+## P10 — Cierre · `docs(S1-09)` · afecta a **todos**
+
+- `/verify` **VERDE** (2026-11-13): build y format limpios; 265 unitarias, 3 de arquitectura, 18 de integración y
+  **11 de laboratorio contra SQL Server 2022 real**, además del alta de punta a punta en compose.
+- **S1-09 cierra 5 de 6 criterios.** CA-HU02.2 pasa a **S1-11** (ya está en `docs/sprints/SPRINTS.md`). Daniel:
+  sincroniza el `.xlsx` y lleva el traslado al tutor en S1-20.
+- `docs/HANDOFF.md` y `docs/ARCHITECTURE_PLAN.md` (sección "Decisiones de implementación de S1-09", D1–D8)
+  están actualizados.
+
+**Deuda que queda abierta**
+- D4: Azure SQL Database y SQL Server 2025 figuran `Tested` sin pruebas ejecutadas contra ellos.
+- OWASP A01 (SSRF): un DBA puede registrar cualquier host:puerto y el sondeo revela qué puertos están abiertos;
+  la red `targets` no es `internal`.
+- Unicidad sin resolver DNS · RF-CFG-05 en el Sprint 2 · `statement_log` en memoria hasta S2-06.
+
+**Falta antes de fusionar:** revisión por ejes en otra sesión (`/audit`) y revisión humana del PR.

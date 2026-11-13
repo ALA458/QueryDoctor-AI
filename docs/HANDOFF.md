@@ -3,30 +3,50 @@
 > **Se sobrescribe, no se acumula.** Máximo ~50 líneas. Lo escribe quien cierra una
 > sesión (humano o agente). La historia vive en los PR y en git.
 
-**Actualizado:** 2026-11-11 · **Por:** Joel · **Rama:** `feat/S1-07-laboratorio`
+**Actualizado:** 2026-11-13 · **Por:** Álvaro · **Rama:** `feat/S1-09-conexiones`
 
-## Estado de tareas en `main` + rama actual
-- ✅ **S1-01** (Álvaro): Solución .NET 10, reglas de build, NetArchTest base y CI.
-- ✅ **S1-02** (Maykol): Docker Compose con redes segmentadas, `sqlserver` 2022 y Docker secrets.
-- ✅ **S1-04** (Daniel): Entidades y migración inicial EF Core de los esquemas `core` y `ops`.
-- ✅ **S1-05** (Maykol): `SecretProtector` AES-256-GCM por campo.
-- ✅ **S1-08** (Maykol): `QueryStoreGateway` + `TelemetryStatementWhitelist` + `statement_log`.
-- ✅ **S1-07 / S0-10** (Joel, en esta rama): Laboratorio SQL Server 2022 (`lab/`), 7 escenarios sembrados (`ESC01`..`ESC06` + `ESC04B`), 16 fixtures `.sqlplan` en `tests/fixtures/plans/`, validación empírica de F1–F8 y H1–H5 en `lab/results/S1-07-verificacion.md` (3 corridas idénticas).
+## Estado
+- ✅ En `main`: S1-01, S1-02, S1-04, S1-05, S1-06, S1-07, S1-08 y S1-10.
+- 🔄 **S1-09** (Álvaro, esta rama, PR por abrir): alta de conexiones y CapabilityProbe. `/verify` VERDE con una
+  corrida real del laboratorio (11 pruebas) y un alta de punta a punta en compose. **Cierra 5 de 6 criterios**:
+  CA-HU01.1–01.3, CA-HU02.1 y CA-HU02.3. **CA-HU02.2 pasa a S1-11** (D5; SPRINTS.md ya actualizado).
+- Detalle por persona, changelog y guía de punta a punta: `docs/NOTAS_S1-09_EQUIPO.md`.
+
+## Antes de levantar el compose (todos)
+- Crea `secrets/master_encryption_key.txt` (comando en las notas, P9) y **no la regeneres** si ya cifraste datos.
+- `secrets/initial_dba_password.txt` debe ser un **archivo** con 12+ caracteres (mayúscula, minúscula, número,
+  símbolo). Si Docker lo creó como directorio, bórralo y créalo.
+- Laboratorio: `docker compose -f docker-compose.yml -f docker-compose.lab.yml up -d --build`. En Windows usa
+  `127.0.0.1`, no `localhost`, para llegar al SQL Server desde el host.
 
 ## Lo que necesita saber cada uno
-**Joel**
-- **S1-12 (`PlanParser`) y S1-14 (`REG-01/02/04`):** Ya tienes los fixtures reales en `tests/fixtures/plans/` (`ESC01.qs.1.sqlplan`..`ESC06.qs.1.sqlplan` y sus pares `.actual.sqlplan`).
-- **Gotcha descubierto en S1-07 para `PlanParser`:** En compatibilidad 160 (PSP optimization), SQL Server genera planes *Dispatcher* (`ESC04.qs.1.sqlplan`) con `<Dispatcher><ParameterSensitivePredicate>` y **0 nodos `<RelOp>`**. `PlanParser` debe aceptarlos sin fallar.
-- **S1-03:** Extender `tests/QueryDoctor.ArchitectureTests/LayerDependencyTests.cs` (motor sin E/S, Api sin Gateway ni cliente IA, SqlClient restringido al namespace del Gateway).
-
-**Maykol y Álvaro**
-- **Hallazgo en `TelemetryStatementWhitelist.GetQueryStoreViewColumnsSql` (S1-08 / S1-09):** Probadas las 6 sentencias contra SQL Server 2022 real con `qd_reader` (`VIEW DATABASE STATE`), 5 funcionan y **`GetQueryStoreViewColumns` devuelve 0 filas** porque las vistas `sys.query_store_*` no están en `sys.objects`/`sys.columns` sino en `sys.all_objects`/`sys.all_columns` (74 columnas). Corregir en S1-09 o PR puntual de `TelemetryStatementWhitelist`.
-- **S1-09 / S1-11 (Álvaro):** El script `lab/sql/04-readonly-login.sql` ya crea `qd_reader` (solo `VIEW DATABASE STATE`) y `qd_noperm` (caso negativo) para probar `CapabilityProbe` e `IngestionService` contra `QD_Lab`.
-- **S1-19 (Maykol):** Usar `lab/results/S1-07-verificacion.md` para pasar el Apéndice A.5 a "verificado" en SQL Server 2022 y anotar que `avg_query_max_used_memory` es el nombre real de la columna de memoria en `sys.query_store_runtime_stats`, y que `VIEW DATABASE PERFORMANCE STATE` basta en SQL Server 2022.
-
 **Daniel**
-- **S1-20 (reunión con el tutor):** Llevar la propuesta de cierre de **DA-07** respaldada por `lab/results/S1-07-verificacion.md`, además de ratificar DA-01/06/10 y actualizar el estado de ADR-05/06/11 en `ARQUITECTURA_v0.1.md`.
-- Sincronizar `docs/QueryDoctor_Sprints (1).xlsx` con los estados actualizados en `docs/sprints/SPRINTS.md`.
+- Fix de seguridad de S1-06 (`8cc1413`): la sesión con cambio de contraseña pendiente perdía la restricción desde
+  la segunda petición. Un claim propio va en `MustChangePasswordClaimsPrincipalFactory`, no en el login.
+- S1-15: contrato en `docs/CONTRATO_API_CONEXIONES.md` (202 + `Pending`, estados nuevos, `failureCause`).
+- Sincronizar `docs/QueryDoctor_Sprints (1).xlsx` con SPRINTS.md (S1-09 Hecho, CA-HU02.2 en S1-11).
+- S1-20: pedir al tutor que ratifique el traslado de CA-HU02.2 a S1-11.
+
+**Maykol**
+- Compose: el worker ya tiene `Postgres__*` y el secreto `master_encryption_key`; la excepción de TLS vive solo en
+  `docker-compose.lab.yml`, con candado (`LabCertificateGuard`).
+- Gateway: lanza `TelemetrySourceException` con un código; solo se registra en el Worker (`AddTargetTelemetry`).
+- S1-10/S1-11: SqlClient reintenta 4060 tras 10 s (`ConnectRetryInterval`).
+
+**Joel**
+- `lab/sql/11-probe-fixtures.sql` se corre después de `-Step build` y `-Step login`.
+  `lab/sql/10-whitelist-validation.sql` quedó desactualizado frente a P0.
+
+**Álvaro (S1-11)**
+- Usar `QueryStoreState.CanIngest` para cerrar CA-HU02.2 con una prueba de laboratorio sobre `QD_Lab_NoQS`.
+
+## Deuda y límites conocidos
+- D4: Azure SQL Database y SQL Server 2025 figuran `Tested` según la matriz, sin pruebas ejecutadas contra ellos.
+- Unicidad de conexión sin resolver DNS: un nombre y su IP cuentan como dos conexiones.
+- RF-CFG-05 (advertencia de permisos de escritura) pasa al Sprint 2: `hasExcessivePermissions` es siempre `null`.
+- OWASP A01 (SSRF): el sondeo revela qué puertos están abiertos y la red `targets` no es `internal`. Falta proponer
+  una lista de hosts permitidos.
+- `statement_log` sigue en memoria hasta S2-06.
 
 ## Siguiente paso
-Ejecutar `/verify`, abrir PR de `feat/S1-07-laboratorio` → `main` y continuar con **S1-03** y **S1-12**.
+Revisión por ejes de S1-09 en otra sesión (`/audit`), abrir el PR `feat/S1-09-conexiones` → `main` y seguir con S1-11.
