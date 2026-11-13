@@ -118,7 +118,9 @@ public sealed class QueryStoreReader : IQueryStoreReader
             stat);
     }
 
-    // Nombre del objeto que contiene la consulta (procedimiento, función...). Ad hoc: null. DA-13: nombres sin seudonimizar.
+    // Nombre del objeto que contiene la consulta (procedimiento, función...). Ad hoc o SQL dinámico: null. Con la cuenta
+    // de mínimo privilegio (solo VIEW DATABASE STATE, RNF-SEG-02) SQL Server oculta los metadatos y OBJECT_NAME devuelve
+    // NULL: se acepta (medido en el laboratorio, S1-11) en vez de pedir VIEW DEFINITION. DA-13: nombres sin seudonimizar.
     private static string? OriginContext(string? schema, string? name)
     {
         if (string.IsNullOrEmpty(name))
