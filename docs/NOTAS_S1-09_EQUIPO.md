@@ -9,7 +9,7 @@
 | Quién | Lo que tienes que saber | Partes |
 |---|---|---|
 | **Maykol** | Cambié dos sentencias de tu lista blanca (aprobadas); el Gateway ahora lanza `TelemetrySourceException` tipada en vez de `SqlException`; el Gateway solo se registra en el Worker y la cola `probe` tiene su propio servidor Hangfire | P0, P5, P6 |
-| **Daniel** | Toqué 4 archivos tuyos de S1-04 (estados, columnas, UK, prueba del modelo); hay contrato nuevo para el PR #35 | P2, P4 |
+| **Daniel** | Toqué 4 archivos tuyos de S1-04 (estados, columnas, UK, prueba del modelo); hay contrato nuevo para el PR #35; **arreglé un fallo de seguridad de S1-06** (la sesión con cambio de contraseña pendiente perdía la restricción) y el CSRF ahora cubre todo método que cambia estado | P2, P4, P7 |
 | **Joel** | `lab/sql/10-whitelist-validation.sql` quedó desactualizado frente a P0; la matriz de soporte y `CanIngest` son funciones puras de Domain | P0, P3 |
 | **Todos** | Application ya no puede depender de EF Core, Npgsql, Hangfire ni de Infrastructure (NetArchTest) | P1 |
 
@@ -188,7 +188,51 @@ Nuevos: `Infrastructure/Persistence/EfConnectionRepository.cs`, `Infrastructure/
 - Hangfire guarda los argumentos en claro: hay una prueba que lee `hangfire.job` y comprueba que el trabajo solo
   lleva el `Guid` y no la contraseña.
 
+## P7 — Endpoints `/connections`, CSRF y un fix de S1-06 · `fix(S1-09)` + `feat(S1-09)` · afecta a **Daniel**
+
+Archivos de Daniel modificados: `Api/Auth/AuthEndpoints.cs`, `Api/Auth/AuthServiceCollectionExtensions.cs`,
+`Api/Auth/SameOriginFormsExtensions.cs`, `Api/Program.cs`. Nuevos: `Api/Auth/MustChangePasswordClaimsPrincipalFactory.cs`,
+`Api/Connections/ConnectionEndpoints.cs`, `Application/Connections/ConnectionViews.cs`,
+`Infrastructure/Persistence/EfConnectionQueries.cs`, `tests/QueryDoctor.IntegrationTests/ConnectionEndpointsTests.cs`.
+
+### ⚠️ Fix de seguridad en S1-06 (RNF-SEG-13)
+- **El fallo:** un DBA con `MustChangePassword = true` (el DBA inicial) quedaba restringido solo en la **primera**
+  petición. Con `SecurityStampValidatorOptions.ValidationInterval = 0`, Identity reconstruye el principal en cada
+  petición con el `UserClaimsPrincipalFactory` estándar, y el claim `qd:must_change_password`, que solo se agregaba
+  al iniciar sesión, se perdía. Desde la segunda petición la sesión pasaba `DbaOnly`, la `FallbackPolicy` y el
+  panel de Hangfire **sin haber cambiado la contraseña**.
+- **El arreglo:** `MustChangePasswordClaimsPrincipalFactory` agrega el claim siempre que `user.MustChangePassword`
+  es `true` en la base. El login ya no usa `SignInWithClaimsAsync` (sería un claim duplicado).
+- **Cómo lo detectamos:** una prueba de integración con la Api real. Las pruebas unitarias de S1-06 arman el
+  `ClaimsPrincipal` a mano y por eso no lo veían. La prueba repite la petición 3 veces a propósito.
+
+**Ten en cuenta (Daniel)**
+- Si agregas otro claim propio de la sesión, va en `MustChangePasswordClaimsPrincipalFactory.GenerateClaimsAsync`,
+  no en el login: todo lo que solo se agrega al iniciar sesión se pierde en la siguiente petición.
+- Para probar autorización usa `ApiFactory` (en `ConnectionEndpointsTests.cs`): levanta la Api real sobre
+  PostgreSQL con Testcontainers, crea usuarios con rol e inicia sesión por `/auth/login`. Usa `https://localhost`
+  porque la cookie es `Secure`.
+
+### CSRF
+- `UseSameOriginForms` ahora cubre **todo** `POST`, `PUT`, `PATCH` y `DELETE`, no solo `/auth/*`. Un endpoint nuevo
+  queda protegido por defecto. Las peticiones sin `Origin` ni `Sec-Fetch-Site` (curl) siguen permitidas, como antes.
+- El panel de Hangfire (`/hangfire`) también hace POST desde el mismo origen: sigue funcionando.
+
+### Endpoints
+- `POST /connections` → 202 + `Location` / 400 por campo / 409 / 401 / 403. `GET /connections` y
+  `GET /connections/{id}` → 200 / 404. Todo con `DbaOnly`. Contrato: `docs/CONTRATO_API_CONEXIONES.md`.
+- Las respuestas usan `JsonStringEnumConverter` (enumerados como texto) y `AddProblemDetails`.
+- `capabilities`, `supportLevel`, `engineVersion` y `queryStoreState` solo se muestran si la conexión está
+  `Active` o `Disabled`: tras un reemplazo (D3) puede quedar un perfil viejo en la base.
+- `hasExcessivePermissions` siempre es `null` (no evaluado; RF-CFG-05 va al Sprint 2).
+- Hay una prueba que comprueba que la Api **no puede resolver** `ITelemetrySource` ni `ICapabilityProbe`.
+
+**Ten en cuenta**
+- **S2-12 (Desarrollador):** hoy todo `/connections` es solo DBA. El filtro por conexión asignada va en
+  `IConnectionQueries` (en la consulta, RNF-SEG-12), no en la UI ni en el endpoint.
+- `Program` de la Api ahora es `public partial` para `WebApplicationFactory`. No lo quites.
+
 ---
 
 ## Pendiente de completar en esta nota
-P7 (endpoints, CSRF), P8 (pruebas de laboratorio), P9 (compose), P10 (cierre).
+P8 (pruebas de laboratorio), P9 (compose), P10 (cierre).

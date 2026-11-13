@@ -10,6 +10,7 @@
   <!-- S1-09: pruebas contra PostgreSQL real con Testcontainers (D6). Necesitan Docker; corren en CI (ubuntu-latest). -->
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="10.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
@@ -22,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\QueryDoctor.Infrastructure\QueryDoctor.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\QueryDoctor.Api\QueryDoctor.Api.csproj" />
   </ItemGroup>
 
 </Project>
