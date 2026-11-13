@@ -3,30 +3,34 @@
 > **Se sobrescribe, no se acumula.** Máximo ~50 líneas. Lo escribe quien cierra una
 > sesión (humano o agente). La historia vive en los PR y en git.
 
-**Actualizado:** 2026-11-11 · **Por:** Joel · **Rama:** `feat/S1-07-laboratorio`
+**Actualizado:** 2026-11-13 · **Por:** Joel · **Rama:** `feat/S1-03-pruebas-arquitectura`
 
 ## Estado de tareas en `main` + rama actual
 - ✅ **S1-01** (Álvaro): Solución .NET 10, reglas de build, NetArchTest base y CI.
 - ✅ **S1-02** (Maykol): Docker Compose con redes segmentadas, `sqlserver` 2022 y Docker secrets.
 - ✅ **S1-04** (Daniel): Entidades y migración inicial EF Core de los esquemas `core` y `ops`.
 - ✅ **S1-05** (Maykol): `SecretProtector` AES-256-GCM por campo.
+- ✅ **S1-06** (Daniel): Identity mínimo, login, bloqueo por intentos y cambio obligatorio de contraseña.
+- ✅ **S1-07 / S0-10** (Joel): Laboratorio SQL Server 2022 (`lab/`), 16 fixtures `.sqlplan` y validación empírica F1–F8.
 - ✅ **S1-08** (Maykol): `QueryStoreGateway` + `TelemetryStatementWhitelist` + `statement_log`.
-- ✅ **S1-07 / S0-10** (Joel, en esta rama): Laboratorio SQL Server 2022 (`lab/`), 7 escenarios sembrados (`ESC01`..`ESC06` + `ESC04B`), 16 fixtures `.sqlplan` en `tests/fixtures/plans/`, validación empírica de F1–F8 y H1–H5 en `lab/results/S1-07-verificacion.md` (3 corridas idénticas).
+- ✅ **S1-10** (Maykol): Hangfire sobre PostgreSQL con cliente en `Api` y servidor en `Worker`.
+- ✅ **S1-12 / S1-13 / S1-14** (Joel, en PR): `ShowplanXmlParser`, `DeterministicRuleEngine`, esquema `analysis` y reglas `REG-01`, `REG-02`, `REG-04`.
+- ✅ **S1-03** (Joel, en esta rama): Suite completa de `NetArchTest` en `QueryDoctor.ArchitectureTests` (`LayerDependencyTests` + `ArchitectureRuleCanaryTests`):
+  1. Pureza de `Domain` y del motor determinista (`Engine` / `Scoring` / `Validation`) sin EF Core, `SqlClient`, ASP.NET ni E/S, y dirección estricta de capas.
+  2. Aislamiento entre módulos verticales de `Application` e `Infrastructure` (`RNF-MAN-01`) y separación de procesos en `Api` (sin acceso al Gateway ni al cliente de IA).
+  3. Exclusividad de `Microsoft.Data.SqlClient` restringida únicamente a `QueryStoreGateway` (`RNF-SEG-01`, `HU-15`).
+  4. Pruebas negativas con tipos canario que demuestran automáticamente que cada una de las 3 reglas falla cuando se rompe a propósito.
 
 ## Lo que necesita saber cada uno
 **Joel**
-- **S1-12 (`PlanParser`) y S1-14 (`REG-01/02/04`):** Ya tienes los fixtures reales en `tests/fixtures/plans/` (`ESC01.qs.1.sqlplan`..`ESC06.qs.1.sqlplan` y sus pares `.actual.sqlplan`).
-- **Gotcha descubierto en S1-07 para `PlanParser`:** En compatibilidad 160 (PSP optimization), SQL Server genera planes *Dispatcher* (`ESC04.qs.1.sqlplan`) con `<Dispatcher><ParameterSensitivePredicate>` y **0 nodos `<RelOp>`**. `PlanParser` debe aceptarlos sin fallar.
-- **S1-03:** Extender `tests/QueryDoctor.ArchitectureTests/LayerDependencyTests.cs` (motor sin E/S, Api sin Gateway ni cliente IA, SqlClient restringido al namespace del Gateway).
+- **S2-01 (`REG-03`) y S2-02 (`HealthScoreCalculator`):** Siguientes tareas del motor y score sobre la base de `S1-14`.
+- Las reglas de `NetArchTest` en `S1-03` ya vigilan `QueryDoctor.Application.Engine`, `QueryDoctor.Application.Scoring` y `QueryDoctor.Application.Validation`.
 
 **Maykol y Álvaro**
-- **Hallazgo en `TelemetryStatementWhitelist.GetQueryStoreViewColumnsSql` (S1-08 / S1-09):** Probadas las 6 sentencias contra SQL Server 2022 real con `qd_reader` (`VIEW DATABASE STATE`), 5 funcionan y **`GetQueryStoreViewColumns` devuelve 0 filas** porque las vistas `sys.query_store_*` no están en `sys.objects`/`sys.columns` sino en `sys.all_objects`/`sys.all_columns` (74 columnas). Corregir en S1-09 o PR puntual de `TelemetryStatementWhitelist`.
-- **S1-09 / S1-11 (Álvaro):** El script `lab/sql/04-readonly-login.sql` ya crea `qd_reader` (solo `VIEW DATABASE STATE`) y `qd_noperm` (caso negativo) para probar `CapabilityProbe` e `IngestionService` contra `QD_Lab`.
-- **S1-19 (Maykol):** Usar `lab/results/S1-07-verificacion.md` para pasar el Apéndice A.5 a "verificado" en SQL Server 2022 y anotar que `avg_query_max_used_memory` es el nombre real de la columna de memoria en `sys.query_store_runtime_stats`, y que `VIEW DATABASE PERFORMANCE STATE` basta en SQL Server 2022.
+- **S1-09 / S1-11 (Álvaro):** Cualquier nuevo servicio en `Infrastructure` (p. ej. `CapabilityProbe` o `IngestionService`) debe consumir `ITelemetrySource` y **nunca** referenciar `Microsoft.Data.SqlClient` directamente, ya que `SoloQueryStoreGatewayUsaSqlClientEnTodaLaSolucion` bloqueará el build si otro tipo importa `Microsoft.Data.SqlClient`.
 
 **Daniel**
-- **S1-20 (reunión con el tutor):** Llevar la propuesta de cierre de **DA-07** respaldada por `lab/results/S1-07-verificacion.md`, además de ratificar DA-01/06/10 y actualizar el estado de ADR-05/06/11 en `ARQUITECTURA_v0.1.md`.
-- Sincronizar `docs/QueryDoctor_Sprints (1).xlsx` con los estados actualizados en `docs/sprints/SPRINTS.md`.
+- **S1-15 / S1-16 y S1-20:** Los endpoints de `QueryDoctor.Api` nunca deben referenciar `QueryDoctor.Infrastructure.Telemetry`, `QueryDoctor.Application.Telemetry` ni clientes de IA (`EvaluateApiProcessSeparation`).
 
 ## Siguiente paso
-Ejecutar `/verify`, abrir PR de `feat/S1-07-laboratorio` → `main` y continuar con **S1-03** y **S1-12**.
+Abrir y fusionar PR de `feat/S1-03-pruebas-arquitectura` → `main` y continuar con **S2-01** (`REG-03`) y **S2-02** (`HealthScoreCalculator`).

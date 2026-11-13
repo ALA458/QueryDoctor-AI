@@ -10,7 +10,7 @@
 - Sprint · Fechas · Meta · Tareas · Hechas · % avance
 - Sprint 0 (hecho) · 31-ago – 28-oct · Investigación, SRS, adenda y arquitectura · 13 · 10 · 0.77
 - Sprint 1 · 29-oct – 4-nov · Rebanada 1: de SQL Server real a hallazgos en la interfaz · 16 · 6 · 0.38
-- Sprint 2 · 5-nov – 11-nov · Rebanadas 2 y 3: score, detalle y explicación trazada · 16 · 0 · 0
+- Sprint 2 · 5-nov – 11-nov · Rebanadas 2 y 3: score, detalle y explicación trazada · 16 · 1 · 0.06
 - Sprint 3 (tentativo) · 12-nov – 15-nov · Evaluación, informe del laboratorio y cierre · 12 · 0 · 0
 - Carga estimada por persona (días de trabajo)
 - Compara la carga de cada sprint con unos 5 días hábiles por persona. Si supera la capacidad, recorten primero lo Podría y luego lo Debería.
@@ -81,7 +81,7 @@
 
 | ID | Tarea | Módulo | MoSCoW | Requisitos | Hecho cuando (criterio de aceptación) | Responsable | Tamaño | Estado | Depende de | Si no alcanza |
 |---|---|---|---|---|---|---|---|---|---|---|
-| S1-03 | Pruebas de arquitectura (NetArchTest): dominio sin EF Core, módulos sin acceso a internos ajenos, solo QueryStoreGateway usa SqlClient | Calidad | Debe | RNF-MAN-01, RNF-SEG-01, Arq. 13.1 | Las 3 pruebas pasan y cada una falla al romper su regla a propósito | Joel | S | Por hacer | S1-01 | Solo la regla de SqlClient (evidencia de HU-15) |
+| S1-03 | Pruebas de arquitectura (NetArchTest): dominio sin EF Core, módulos sin acceso a internos ajenos, solo QueryStoreGateway usa SqlClient | Calidad | Debe | RNF-MAN-01, RNF-SEG-01, Arq. 13.1 | Las 3 pruebas pasan y cada una falla al romper su regla a propósito | Joel | S | Hecho | S1-01 | Solo la regla de SqlClient (evidencia de HU-15) |
 | S1-17 | Curar la base de conocimiento: fragmentos y relaciones causa-efecto para REG-01 a REG-04 | IA | Debe | RF-IA-04, RF-IA-03 (c) | kb_fragment y kb_causal_relation cargados por migración, con fuente citada en cada fragmento | Maykol | M | Por hacer | S1-04 | No recortable (núcleo de la demo) |
 | S1-18 | Servicio de IA: FastAPI con el adaptador de LLM integrado, prompt v1 y endpoint /explain con el esquema de afirmaciones | IA | Debe | RF-IA-02 (v1.1), ADR-02, ADR-10 | Con openrouter_free y un contexto de ejemplo devuelve JSON válido; el candado bloquea APP_ENV=prod | Maykol | M | Por hacer | S1-02 | No recortable (núcleo de la demo) |
 | S1-19 | Integrar la adenda en el SRS v1.1 definitivo y verificar las celdas "A verificar" de la matriz de soporte | Gestión | Debe | Adenda v1.1 §9, §12 | SRS v1.1 con fecha, matriz sin celdas sin verificar y referencias cruzadas actualizadas | Maykol | M | Por hacer |  | Marcar como "No soportado" lo que no se alcance a verificar |
