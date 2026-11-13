@@ -51,7 +51,17 @@ public sealed class CoreModelTests : IDisposable
     [Fact]
     public void ConnectionNoPermiteRegistrarDosVecesLaMismaBase()
     {
-        Assert.Matches(@"CREATE UNIQUE INDEX \S+ ON core\.connection \(server, database_name\)", _script);
+        // S1-09: la unicidad no distingue mayúsculas en la base (columna generada lower(database_name)).
+        Assert.Matches(@"CREATE UNIQUE INDEX \S+ ON core\.connection \(server, database_name_key\)", _script);
+        Assert.Matches(@"database_name_key character varying\(128\) GENERATED ALWAYS AS \(lower\(database_name\)\) STORED", _script);
+    }
+
+    [Fact]
+    public void ConnectionGuardaElCodigoDelFalloDeSondeoNoElMensaje()
+    {
+        // Punto 3 de la aprobación de S1-09: código corto de un enum cerrado, nunca el texto de la SqlException.
+        Assert.Contains("probe_failure_cause character varying(32)", _script, StringComparison.Ordinal);
+        Assert.Contains("last_probed_at timestamp with time zone", _script, StringComparison.Ordinal);
     }
 
     [Fact]

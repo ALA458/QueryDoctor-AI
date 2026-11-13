@@ -30,10 +30,13 @@ public static partial class TelemetryStatementWhitelist
         "CAST(SERVERPROPERTY('EngineEdition') AS INT) AS EngineEdition;";
 
     /// <summary>
-    /// Consulta para inspeccionar el estado actual y configuración de Query Store (RF-CFG-04).
+    /// Consulta para inspeccionar el estado actual y configuración de Query Store (RF-CFG-04, CA-HU02.1):
+    /// estado actual y deseado, motivo de solo lectura, intervalo de agregación, modo de captura y retención
+    /// (stale_query_threshold_days). Todas las columnas existen desde SQL Server 2016 y en Azure SQL Database.
     /// </summary>
     public const string GetQueryStoreOptionsSql =
-        "SELECT actual_state, actual_state_desc, readonly_reason, " +
+        "SELECT actual_state, actual_state_desc, desired_state_desc, readonly_reason, " +
+        "interval_length_minutes, stale_query_threshold_days, " +
         "current_storage_size_mb, max_storage_size_mb, query_capture_mode_desc, size_based_cleanup_mode_desc " +
         "FROM sys.database_query_store_options;";
 
@@ -69,10 +72,12 @@ public static partial class TelemetryStatementWhitelist
     /// <summary>
     /// Consulta para inspeccionar las columnas disponibles de las vistas de Query Store (RF-CFG-03, RF-CFG-04, RNF-COM-04).
     /// Permite a CapabilityProbe generar el perfil de capacidades dinámico por versión.
+    /// Usa sys.all_columns/sys.all_objects: las vistas del esquema sys no aparecen en sys.columns/sys.objects
+    /// (hallazgo de S1-07, lab/results/S1-07-verificacion.md §4).
     /// </summary>
     public const string GetQueryStoreViewColumnsSql =
-        "SELECT c.name AS column_name FROM sys.columns c " +
-        "JOIN sys.objects o ON c.object_id = o.object_id " +
+        "SELECT c.name AS column_name FROM sys.all_columns c " +
+        "JOIN sys.all_objects o ON c.object_id = o.object_id " +
         "WHERE o.name = @ViewName AND SCHEMA_NAME(o.schema_id) = 'sys' " +
         "ORDER BY c.column_id;";
 

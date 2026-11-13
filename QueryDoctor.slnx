@@ -8,6 +8,8 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/QueryDoctor.ArchitectureTests/QueryDoctor.ArchitectureTests.csproj" />
+    <Project Path="tests/QueryDoctor.IntegrationTests/QueryDoctor.IntegrationTests.csproj" />
+    <Project Path="tests/QueryDoctor.LabTests/QueryDoctor.LabTests.csproj" />
     <Project Path="tests/QueryDoctor.UnitTests/QueryDoctor.UnitTests.csproj" />
   </Folder>
 </Solution>

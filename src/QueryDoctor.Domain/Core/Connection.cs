@@ -23,7 +23,17 @@ public sealed class Connection
     /// </summary>
     public string? EncryptedCredentials { get; set; }
 
-    public ConnectionStatus Status { get; set; } = ConnectionStatus.Active;
+    /// <summary>
+    /// Pending por defecto (auditoría B5, S1-09): una conexión solo queda Active cuando el sondeo la verifica.
+    /// Antes valía Active, así que cualquier ruta que olvidara fijar el estado la activaba sin sondeo.
+    /// </summary>
+    public ConnectionStatus Status { get; set; } = ConnectionStatus.Pending;
+
+    /// <summary>Código del último fallo de sondeo; null si el último sondeo fue correcto o no ha corrido.</summary>
+    public ProbeFailureCause? ProbeFailureCause { get; set; }
+
+    /// <summary>Cuándo terminó el último sondeo; null mientras está pendiente.</summary>
+    public DateTimeOffset? LastProbedAt { get; set; }
 
     /// <summary>
     /// Marca de agua: último runtime_stats_interval_id consolidado (RF-ING-05).

@@ -1,6 +1,7 @@
 using System.Data;
 using System.Diagnostics;
 using System.Globalization;
+using System.Net.Sockets;
 using System.Security;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
@@ -36,13 +37,21 @@ public sealed partial class QueryStoreGateway : ITelemetrySource
 
         var connectionString = BuildConnectionString(connection);
 
-        await using var sqlConnection = new SqlConnection(connectionString);
-        await sqlConnection.OpenAsync(cancellationToken);
+        try
+        {
+            await using var sqlConnection = new SqlConnection(connectionString);
+            await sqlConnection.OpenAsync(cancellationToken);
 
-        // Validar que podemos aplicar las políticas de sesión de solo lectura
-        await using var sessionCmd = sqlConnection.CreateCommand();
-        sessionCmd.CommandText = BuildSessionSetupSql(connection.LockTimeoutMs);
-        await sessionCmd.ExecuteNonQueryAsync(cancellationToken);
+            // Validar que podemos aplicar las políticas de sesión de solo lectura
+            await using var sessionCmd = sqlConnection.CreateCommand();
+            sessionCmd.CommandText = BuildSessionSetupSql(connection.LockTimeoutMs);
+            await sessionCmd.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (Exception ex) when (ex is SqlException or InvalidOperationException or IOException or SocketException)
+        {
+            var sqlNumber = (ex as SqlException)?.Number;
+            throw new TelemetrySourceException(SqlErrorClassifier.Classify(sqlNumber, ex), sqlNumber);
+        }
 
         return true;
     }
@@ -111,15 +120,25 @@ public sealed partial class QueryStoreGateway : ITelemetrySource
             success = true;
             return results;
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            errorMessage = SanitizeError(ex.Message, connection.Password);
+            // Cancelación o tiempo límite del llamador (RF-CFG-02): la decide quien canceló, no se reclasifica.
+            errorMessage = nameof(TelemetryFailureKind.Timeout);
+            throw;
+        }
+        catch (Exception ex) when (ex is SqlException or InvalidOperationException or IOException or SocketException)
+        {
+            // S1-09: solo el código y el número de error, nunca el texto del motor (RNF-SEG-09).
+            var sqlNumber = (ex as SqlException)?.Number;
+            var kind = SqlErrorClassifier.Classify(sqlNumber, ex);
+            errorMessage = sqlNumber is null ? kind.ToString() : $"{kind} ({sqlNumber})";
+
             if (_logger != null)
             {
-                LogTelemetryExecutionFailed(_logger, ex, statementKey, connection.TargetDescriptor, errorMessage);
+                LogTelemetryExecutionFailed(_logger, statementKey, connection.TargetDescriptor, errorMessage);
             }
 
-            throw;
+            throw new TelemetrySourceException(kind, sqlNumber);
         }
         finally
         {
@@ -196,15 +215,9 @@ public sealed partial class QueryStoreGateway : ITelemetrySource
             TrustServerCertificate = connection.TrustServerCertificate
         };
 
-        if (!string.IsNullOrWhiteSpace(connection.UserId))
-        {
-            builder.UserID = connection.UserId;
-            builder.Password = connection.Password ?? string.Empty;
-        }
-        else
-        {
-            builder.IntegratedSecurity = true;
-        }
+        // Auditoría B5 (S1-09): ValidateSecurityPolicies ya exige usuario; aquí nunca se cae a IntegratedSecurity.
+        builder.UserID = connection.UserId;
+        builder.Password = connection.Password ?? string.Empty;
 
         builder.Encrypt = connection.EncryptionMode switch
         {
@@ -222,6 +235,14 @@ public sealed partial class QueryStoreGateway : ITelemetrySource
     {
         ArgumentNullException.ThrowIfNull(connection);
 
+        // Auditoría B5 (S1-09): el MVP solo tiene autenticación SQL. Sin usuario, SqlClient usaría la identidad del
+        // propio Worker (IntegratedSecurity) contra la base objetivo: se rechaza en vez de fallar abierto.
+        if (string.IsNullOrWhiteSpace(connection.UserId))
+        {
+            throw new SecurityException(
+                "Conexión rechazada: falta el usuario de autenticación SQL; la autenticación integrada no está soportada.");
+        }
+
         // RNF-SEG-03: Rechazo estricto de TrustServerCertificate=true a menos que sea entorno de prueba local autorizado
         if (connection.TrustServerCertificate && !connection.AllowLocalTestCertificates)
         {
@@ -234,28 +255,15 @@ public sealed partial class QueryStoreGateway : ITelemetrySource
     private static string BuildSessionSetupSql(int lockTimeoutMs) =>
         $"SET LOCK_TIMEOUT {lockTimeoutMs}; SET DEADLOCK_PRIORITY LOW;";
 
-    private static string SanitizeError(string rawError, string? secret)
-    {
-        if (string.IsNullOrEmpty(rawError))
-        {
-            return string.Empty;
-        }
-
-        return !string.IsNullOrEmpty(secret)
-            ? rawError.Replace(secret, "********", StringComparison.Ordinal)
-            : rawError;
-    }
-
     [LoggerMessage(
         EventId = 2001,
         Level = LogLevel.Error,
-        Message = "Error ejecutando consulta de telemetría '{StatementKey}' en '{Target}': {Message}")]
+        Message = "Error ejecutando consulta de telemetría '{StatementKey}' en '{Target}': {FailureCode}")]
     private static partial void LogTelemetryExecutionFailed(
         ILogger logger,
-        Exception ex,
         string statementKey,
         string target,
-        string? message);
+        string failureCode);
 
     [LoggerMessage(
         EventId = 2002,
