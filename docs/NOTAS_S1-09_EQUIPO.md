@@ -3,6 +3,27 @@
 > **De:** Álvaro · **Rama:** `feat/S1-09-conexiones` · Se va completando por partes (P0…P10).
 > Qué cambió en S1-09 que **te afecta**, por persona y por parte. Si algo de aquí choca con tu tarea,
 > avísame antes de cambiarlo. El contrato HTTP completo está en `docs/CONTRATO_API_CONEXIONES.md`.
+> Empieza por el **changelog** (qué entró en cada commit) y el **resumen por persona**. Para probarlo tú mismo,
+> ve a la **guía de punta a punta** al final.
+
+## Changelog de la rama (en orden de commit)
+
+| Commit | Tipo | Qué entró | Parte |
+|---|---|---|---|
+| `16f7f87` | fix | Lista blanca: opciones de Query Store completas y columnas desde `sys.all_*` | P0 |
+| `f9d8ceb` | test | NetArchTest: Application no depende de Infrastructure, EF Core, Npgsql ni Hangfire | P1 |
+| `28ae9b3` | feat | Estados `Pending`/`Failed`/`Rejected`, causa del fallo como código cerrado, unicidad sin distinguir mayúsculas (migración) | P2 |
+| `126e71e` | feat | Matriz de soporte (Cuadro 4.16) y funciones omitidas | P3 |
+| `4c35c8e` | feat | Caso de uso `RegisterConnection`: credenciales cifradas, sondeo encolado solo por id | P4 |
+| `47b89ef` | docs | `docs/CONTRATO_API_CONEXIONES.md` para S1-15 | P4 |
+| `55419f5` | docs | Esta nota, P0 a P4 | — |
+| `55fa451` | feat | `CapabilityProbe`, `ProbeConnection`, errores tipados del Gateway y tiempo límite | P5 |
+| `c7cdcc1` | feat | Repositorio EF, trabajo `probe_connection`, cola `probe` con sondeo de 1 s, Gateway solo en el Worker | P6 |
+| `8cc1413` | fix | **S1-06:** la sesión con cambio de contraseña pendiente conserva la restricción en cada petición | P7 |
+| `193b620` | feat | Endpoints `/connections` solo DBA, CSRF en todo método que cambia estado | P7 |
+| `68e1996` | fix | Connect Timeout = 2/3 del límite del sondeo; error 258 = servidor inalcanzable | P8 |
+| `ff02473` | test | `tests/QueryDoctor.LabTests` (11 pruebas contra SQL Server 2022) y `lab/sql/11-probe-fixtures.sql` | P8 |
+| `e9345ff` | feat | Compose: Worker con PostgreSQL, clave maestra como secreto, `docker-compose.lab.yml` con candado | P9 |
 
 ## Resumen por persona
 
@@ -318,6 +339,114 @@ registró `probe_connection <id>: Active` (EventId 3001) → `GET /api/connectio
   reinicios, así que la línea "DBA inicial creado" puede no estar en los logs del contenedor actual.
 - En PowerShell 5.1 los argumentos vacíos no llegan a `curl.exe`: una variable sin definir desordena todo el
   comando. Comprueben las variables antes.
+
+---
+
+## Guía: probar el alta de punta a punta y leer la respuesta
+
+**Requisitos:**
+- `secrets/master_encryption_key.txt` y `secrets/initial_dba_password.txt` existen como **archivos**, no
+  como directorios (ver P9).
+- El laboratorio está construido con `Run-Lab.ps1 -Step build` y `-Step login`.
+- El compose está levantado con el override:
+  `docker compose -f docker-compose.yml -f docker-compose.lab.yml up -d --build`.
+- El DBA ya hizo su primer ingreso en el navegador (http://localhost:8080/login), porque ese ingreso obliga a
+  cambiar la contraseña.
+
+Los comandos son para PowerShell 5.1:
+- Se usa `curl.exe` porque en PowerShell `curl` es otro comando.
+- El cuerpo va en un archivo porque PowerShell 5.1 quita las comillas de los argumentos.
+- La contraseña se pide con `-AsSecureString` para que **no quede en pantalla** ni en lo que copies al chat.
+
+```powershell
+$jar = "$env:TEMP\qd.jar"
+$s = Read-Host "Contraseña del DBA" -AsSecureString
+$dba = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))
+"jar=$jar | la contraseña tiene $($dba.Length) caracteres"     # si sale 0, no sigas
+curl.exe -s -o NUL -w "login %{http_code} -> %{redirect_url}`n" -c $jar --data-urlencode "usuario=dba" --data-urlencode "password=$dba" http://localhost:8080/api/auth/login
+curl.exe -s -b $jar http://localhost:8080/api/auth/me
+$reader = (Get-Content secrets\mssql_reader_password.txt -Raw).Trim()
+[IO.File]::WriteAllText("$env:TEMP\qd-body.json", (@{ platform="SqlServer"; server="sqlserver"; databaseName="QD_Lab"; authenticationMethod="SqlAuthentication"; username="qd_reader"; password=$reader } | ConvertTo-Json -Compress))
+$resp = curl.exe -s -b $jar -H "Content-Type: application/json" --data-binary "@$env:TEMP\qd-body.json" http://localhost:8080/api/connections; Remove-Item "$env:TEMP\qd-body.json"; $resp
+$id = ($resp | ConvertFrom-Json).id; Start-Sleep -Seconds 3; curl.exe -s -b $jar "http://localhost:8080/api/connections/$id"
+docker compose logs api worker | Select-String -SimpleMatch $reader   # no debe imprimir nada
+```
+
+**Lo esperado, paso a paso:**
+1. El login responde `302 -> http://localhost:8080/`. Si va a `/cambiar-contrasena`, falta el primer ingreso.
+2. `/auth/me` muestra el rol `DBA` y `mustChangePassword: false`.
+3. El `POST` responde `{"id":…,"status":"Pending"}`.
+4. Tres segundos después, el `GET` devuelve `Active`.
+
+Si la conexión ya existía, el `POST` responde **409** con `existingConnectionId`.
+
+### Cómo leer `GET /connections/{id}` (corrida real del 2026-11-13)
+
+Ese `GET` recorre todo el camino real, sin dobles:
+1. La api recibe el alta.
+2. PostgreSQL guarda las credenciales cifradas.
+3. Hangfire encola el trabajo.
+4. El Worker lo toma y sondea con `QueryStoreGateway`, por TLS, contra SQL Server.
+5. El perfil queda guardado y la api lo devuelve.
+
+Cubre CA-HU01.1, CA-HU02.1 y RF-CFG-07.
+
+**Estado de la conexión**
+
+| Campo | Valor real | Qué significa |
+|---|---|---|
+| `status` | `Active` | El Worker sondeó y todo salió bien. Si no, sale `Failed`, o `Rejected` si la versión es anterior a 2016. **Nunca se queda en `Pending`** (RF-CFG-02). |
+| `failureCause` / `failureMessage` | `null` | No hubo fallo. Si lo hay, sale un código cerrado (`InvalidCredentials`, `TlsCertificateInvalid`, …) con su mensaje fijo, nunca el texto de SQL Server. |
+| `lastProbedAt` | 14:59:54 | Cuándo terminó el sondeo: 2 o 3 s después del `POST`, gracias a la cola `probe` que revisa cada 1 s. |
+| `minimumSupportedVersion` | SQL Server 2016 (13.x) | Siempre presente, para que se pueda explicar un rechazo (CA-HU01.3). |
+| `lastIngestionAt` | `null` | Todavía no hay ingesta (S1-10/S1-11). |
+
+**Lo que detectó el sondeo (`capabilities`, RF-CFG-03)**
+
+| Campo | Valor real | De dónde sale |
+|---|---|---|
+| `engineVersion` | `16.0.4305.5` | `SERVERPROPERTY('ProductVersion')`: SQL Server 2022 |
+| `edition` | Developer Edition (64-bit) | `SERVERPROPERTY('Edition')` |
+| `supportLevel` | `Tested` | La matriz del Cuadro 4.16 (P3) |
+| `hasExcessivePermissions` | `null` | **No evaluado**: RF-CFG-05 va al Sprint 2. `null` no significa "la cuenta está bien". |
+
+**Query Store (`capabilities.queryStore`, CA-HU02.1, RF-CFG-04).** Se lee de `sys.database_query_store_options`
+y coincide con lo que configura `lab/sql/01-database.sql`.
+
+| Campo | Valor real | Qué significa |
+|---|---|---|
+| `actualState` / `desiredState` | `READ_WRITE` / `READ_WRITE` | Está activo, y así se quiere |
+| `readOnlyReason` | `0` | No está forzado a solo lectura |
+| `intervalLengthMinutes` | `1` | Configuración del laboratorio (el valor por defecto es 60) |
+| `captureMode` | `ALL` | Configuración del laboratorio (el valor por defecto es `AUTO`) |
+| `retentionDays` | `30` | `stale_query_threshold_days` |
+| `canIngest` | `true` | Regla D5: vale `READ_WRITE` o `READ_ONLY`. S1-11 la usa para CA-HU02.2 |
+
+**`omittedFeatures: []`** (RF-CFG-07, RNF-COM-04): la vista `query_store_runtime_stats` de 2022 trae las columnas
+de RF-ING-03, así que no se omite nada. En una versión que no las tenga sale `TempDbAndLogBytes` con su mensaje.
+
+### La última línea: buscar la contraseña en los logs
+
+`Select-String -SimpleMatch $reader` busca **la contraseña real de `qd_reader`, como texto literal**, en todos
+los logs de `api` y `worker`. Esa contraseña llegó en el `POST`, se cifró, el Worker la descifró y la usó para
+conectarse a SQL Server. Si en algún punto se hubiera registrado (en el cuerpo de la petición, en la cadena de
+conexión o en un error de SqlClient), la búsqueda imprimiría esa línea.
+
+**Que no imprima nada es la evidencia de RNF-SEG-09.** Solo vale después de un alta real.
+
+Para comprobar que la búsqueda sí funciona, busca algo que tiene que aparecer, como el id de la conexión:
+`docker compose logs worker | Select-String -SimpleMatch $id` imprime `probe_connection <id>: Active`
+(EventId 3001).
+
+### Romperlo a propósito: sin la excepción de laboratorio
+
+1. Recrea el worker solo con el compose principal: `docker compose up -d --force-recreate worker`.
+2. Repite el `POST` con `databaseName="QD_Lab_NoQS"`. Debe terminar `Failed` con
+   `failureCause: TlsCertificateInvalid`.
+3. Restaura el override:
+   `docker compose -f docker-compose.yml -f docker-compose.lab.yml up -d --force-recreate worker`.
+4. Repite el mismo `POST`. Ahora reemplaza la conexión fallida (D3) y debe quedar `Active` con
+   `actualState: OFF` y `canIngest: false`.
 
 ---
 
