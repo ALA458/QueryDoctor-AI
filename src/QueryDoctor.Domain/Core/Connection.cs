@@ -25,6 +25,12 @@ public sealed class Connection
 
     public ConnectionStatus Status { get; set; } = ConnectionStatus.Active;
 
+    /// <summary>Código del último fallo de sondeo; null si el último sondeo fue correcto o no ha corrido.</summary>
+    public ProbeFailureCause? ProbeFailureCause { get; set; }
+
+    /// <summary>Cuándo terminó el último sondeo; null mientras está pendiente.</summary>
+    public DateTimeOffset? LastProbedAt { get; set; }
+
     /// <summary>
     /// Marca de agua: último runtime_stats_interval_id consolidado (RF-ING-05).
     /// Se avanza en la misma transacción del upsert de la ingesta.
