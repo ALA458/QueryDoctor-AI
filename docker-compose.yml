@@ -74,9 +74,12 @@ services:
       # Primer DBA (S1-06): contraseña desde secreto, cambio obligatorio en el primer ingreso.
       InitialDba__UserName: dba
       InitialDba__PasswordFile: /run/secrets/initial_dba_password
+      # S1-09: clave maestra de SecretProtector (AES-256-GCM) para cifrar credenciales antes de guardarlas (RNF-SEG-04).
+      Security__SecretProtector__MasterKeyPath: /run/secrets/master_encryption_key
     secrets:
       - postgres_password
       - initial_dba_password
+      - master_encryption_key
     networks:
       - frontend
       - backend
@@ -102,13 +105,25 @@ services:
     restart: unless-stopped
     environment:
       DOTNET_ENVIRONMENT: ${APP_ENV:-Development}
+      # S1-09: sin esta conexión el Worker no registra servidores Hangfire y probe_connection nunca corre.
+      Postgres__Host: db
+      Postgres__Database: ${POSTGRES_DB:-querydoctor}
+      Postgres__Username: ${POSTGRES_USER:-querydoctor}
+      Postgres__PasswordFile: /run/secrets/postgres_password
+      # S1-09: misma clave maestra que la api, para descifrar las credenciales al sondear.
+      Security__SecretProtector__MasterKeyPath: /run/secrets/master_encryption_key
+      # La excepción de TLS del laboratorio NO va aquí: solo en docker-compose.lab.yml (invariante 3).
     secrets:
       - postgres_password
+      - master_encryption_key
     networks:
       - backend
       - targets
     depends_on:
       db:
+        condition: service_healthy
+      # La api aplica las migraciones al arrancar; el Worker lee core.connection y el esquema de Hangfire.
+      api:
         condition: service_healthy
 
 
@@ -145,6 +160,9 @@ secrets:
     file: ./secrets/mssql_sa_password.txt
   initial_dba_password:
     file: ./secrets/initial_dba_password.txt
+  # S1-09: 32 bytes aleatorios en Base64 (ver docs/NOTAS_S1-09_EQUIPO.md, P9). Ignorado por Git.
+  master_encryption_key:
+    file: ./secrets/master_encryption_key.txt
 
 networks:
   frontend: # navegador -> web -> api

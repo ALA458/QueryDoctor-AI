@@ -1,6 +1,7 @@
 using Hangfire;
 using QueryDoctor.Application.Jobs;
 using QueryDoctor.Infrastructure;
+using QueryDoctor.Infrastructure.Connections;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -9,6 +10,9 @@ builder.Services.AddQueryDoctorHangfire(builder.Configuration);
 
 // Solo el Worker llega a bases objetivo (invariante 2): Gateway, CapabilityProbe y probe_connection (S1-09).
 builder.Services.AddTargetTelemetry(builder.Configuration);
+
+// Invariante 3: la excepción de TLS del laboratorio (docker-compose.lab.yml) no arranca fuera de Development.
+LabCertificateGuard.EnsureAllowed(builder.Configuration, builder.Environment.EnvironmentName);
 
 var postgresConn = DependencyInjection.GetPostgresConnectionString(builder.Configuration);
 if (!string.IsNullOrWhiteSpace(postgresConn))

@@ -8,10 +8,10 @@
 
 | Quién | Lo que tienes que saber | Partes |
 |---|---|---|
-| **Maykol** | Cambié dos sentencias de tu lista blanca (aprobadas); el Gateway ahora lanza `TelemetrySourceException` tipada en vez de `SqlException`; el Gateway solo se registra en el Worker y la cola `probe` tiene su propio servidor Hangfire; SqlClient reintenta 10 s ante 4060 y un puerto cerrado tarda todo el `Connect Timeout` (medido en el laboratorio) | P0, P5, P6, P8 |
+| **Maykol** | Agregué al compose las variables `Postgres__*` del worker y el secreto `master_encryption_key` (P9). Cambié dos sentencias de tu lista blanca (aprobadas); el Gateway ahora lanza `TelemetrySourceException` tipada en vez de `SqlException`; el Gateway solo se registra en el Worker y la cola `probe` tiene su propio servidor Hangfire; SqlClient reintenta 10 s ante 4060 y un puerto cerrado tarda todo el `Connect Timeout` (medido en el laboratorio) | P0, P5, P6, P8, P9 |
 | **Daniel** | Toqué 4 archivos tuyos de S1-04 (estados, columnas, UK, prueba del modelo); hay contrato nuevo para el PR #35; **arreglé un fallo de seguridad de S1-06** (la sesión con cambio de contraseña pendiente perdía la restricción) y el CSRF ahora cubre todo método que cambia estado | P2, P4, P7 |
 | **Joel** | `lab/sql/10-whitelist-validation.sql` quedó desactualizado frente a P0; la matriz de soporte y `CanIngest` son funciones puras de Domain; agregué `lab/sql/11-probe-fixtures.sql` (base sin Query Store y login `qd_perf`) y hay que correrlo después de `build` y `login` | P0, P3, P8 |
-| **Todos** | Application ya no puede depender de EF Core, Npgsql, Hangfire ni de Infrastructure (NetArchTest); en Windows usen `127.0.0.1`, no `localhost`, para llegar al SQL Server del compose | P1, P8 |
+| **Todos** | Application ya no puede depender de EF Core, Npgsql, Hangfire ni de Infrastructure (NetArchTest); en Windows usen `127.0.0.1`, no `localhost`, para llegar al SQL Server del compose; **generen `secrets/master_encryption_key.txt`** o el compose no arranca | P1, P8, P9 |
 
 ---
 
@@ -278,5 +278,48 @@ versión 12.x sustituida sobre el sondeo real → `Rejected`, credenciales borra
 
 ---
 
+## P9 — Compose: Worker conectado, clave maestra y excepción TLS aparte · `feat(S1-09)` · afecta a **Maykol** y a **todos**
+
+En `docker-compose.yml` (de Maykol) **solo se agregó**, no se cambió nada existente:
+- `worker`: variables `Postgres__*`. Sin ellas el Worker no registraba **ningún** servidor Hangfire y nada se
+  ejecutaba. Ahora también espera a que `api` esté sana, porque la api aplica las migraciones.
+- `api` y `worker`: secreto nuevo `master_encryption_key` + `Security__SecretProtector__MasterKeyPath`. Sin él,
+  `POST /connections` daba 500 al cifrar las credenciales.
+
+**Cada uno genera su clave una sola vez** (32 bytes aleatorios en Base64; `secrets/` está en `.gitignore`):
+
+```powershell
+$b = New-Object byte[] 32; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b); [IO.File]::WriteAllText("$PWD\secrets\master_encryption_key.txt", [Convert]::ToBase64String($b))
+```
+
+⚠️ **No la regeneres** con datos cifrados en tu PostgreSQL: lo cifrado con la clave anterior no se puede descifrar.
+La CI no necesita nada: ya crea un archivo de relleno por cada secreto que declara el compose.
+
+### Excepción de TLS del laboratorio (invariante 3)
+- Vive **solo** en `docker-compose.lab.yml`, que agrega `Probe__LabTrustedCertificateServers__0: sqlserver` al
+  worker. El compose principal no la tiene. Para el laboratorio:
+  `docker compose -f docker-compose.yml -f docker-compose.lab.yml up -d --build`.
+- Sin ese archivo, una conexión al `sqlserver` del compose queda `Failed` con `TlsCertificateInvalid`. Es el
+  comportamiento correcto: el certificado es autofirmado.
+- **Candado:** `LabCertificateGuard` hace que el Worker **no arranque** si la excepción está puesta y el entorno no
+  es `Development` (`APP_ENV`). No lo debiliten (mismo espíritu que el candado de ADR-10 en el servicio de IA).
+
+### Alta real de punta a punta (2026-11-13, compose + `docker-compose.lab.yml`)
+Login del DBA → `POST /api/connections` (`sqlserver` / `QD_Lab` / `qd_reader`) → `202 Pending` → el Worker
+registró `probe_connection <id>: Active` (EventId 3001) → `GET /api/connections/{id}` a los 3 s: `Active`,
+16.0.4305.5 Developer, `Tested`, `READ_WRITE`, `canIngest: true`, nada omitido. Buscar la contraseña de
+`qd_reader` en los logs de `api` y `worker` no devuelve nada.
+
+**Ten en cuenta (para Daniel, S1-06)**
+- Si se levanta el compose **antes** de crear `secrets/initial_dba_password.txt`, Docker crea un **directorio**
+  con ese nombre y el DBA inicial nunca se crea. Hay que borrarlo y crear el archivo.
+- Una contraseña inicial que no cumple la política tumba la api al arrancar (solo muestra los códigos, bien) y
+  `restart: unless-stopped` la reinicia en bucle: cuando se corrige el archivo, el DBA se crea en uno de esos
+  reinicios, así que la línea "DBA inicial creado" puede no estar en los logs del contenedor actual.
+- En PowerShell 5.1 los argumentos vacíos no llegan a `curl.exe`: una variable sin definir desordena todo el
+  comando. Comprueben las variables antes.
+
+---
+
 ## Pendiente de completar en esta nota
-P9 (compose), P10 (cierre).
+P10 (cierre).
