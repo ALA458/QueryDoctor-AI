@@ -22,6 +22,20 @@
   4. Pruebas negativas con tipos canario que demuestran automáticamente que cada una de las 3 reglas falla cuando se rompe a propósito.
 
 ## Lo que necesita saber cada uno
+**Daniel**
+- Fix de seguridad de S1-06 (`8cc1413`): la sesión con cambio de contraseña pendiente perdía la restricción desde
+  la segunda petición. Un claim propio va en `MustChangePasswordClaimsPrincipalFactory`, no en el login.
+- S1-15: contrato en `docs/CONTRATO_API_CONEXIONES.md` (202 + `Pending`, estados nuevos, `failureCause`).
+- Sincronizar `docs/QueryDoctor_Sprints (1).xlsx` con SPRINTS.md (S1-09 Hecho, CA-HU02.2 en S1-11).
+- S1-20: pedir al tutor que ratifique el traslado de CA-HU02.2 a S1-11.
+- `Connection.Status` vale `Pending` por defecto (B5). B7: `OriginCheck` solo compara el host del `Origin`.
+
+**Maykol**
+- Compose: el worker ya tiene `Postgres__*` y el secreto `master_encryption_key`; la excepción de TLS vive solo en
+  `docker-compose.lab.yml`, con candado (`LabCertificateGuard`).
+- Gateway: lanza `TelemetrySourceException` con un código; solo se registra en el Worker (`AddTargetTelemetry`).
+- S1-10/S1-11: SqlClient reintenta 4060 tras 10 s (`ConnectRetryInterval`). El Gateway rechaza conectar sin usuario (B5).
+
 **Joel**
 - **S2-01 (`REG-03`) y S2-02 (`HealthScoreCalculator`):** Siguientes tareas del motor y score sobre la base de `S1-14`.
 - Las reglas de `NetArchTest` en `S1-03` ya vigilan `QueryDoctor.Application.Engine`, `QueryDoctor.Application.Scoring` y `QueryDoctor.Application.Validation`.

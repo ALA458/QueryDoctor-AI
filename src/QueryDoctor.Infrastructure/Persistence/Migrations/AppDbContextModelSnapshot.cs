@@ -246,6 +246,13 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(128)")
                         .HasColumnName("database_name");
 
+                    b.Property<string>("DatabaseNameKey")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("database_name_key")
+                        .HasComputedColumnSql("lower(database_name)", true);
+
                     b.Property<string>("EncryptedCredentials")
                         .HasColumnType("text")
                         .HasColumnName("encrypted_credentials");
@@ -260,11 +267,20 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("last_consolidated_interval_id");
 
+                    b.Property<DateTimeOffset?>("LastProbedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_probed_at");
+
                     b.Property<string>("Platform")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)")
                         .HasColumnName("platform");
+
+                    b.Property<string>("ProbeFailureCause")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("probe_failure_cause");
 
                     b.Property<string>("Server")
                         .IsRequired()
@@ -284,7 +300,7 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Server", "DatabaseName")
+                    b.HasIndex("Server", "DatabaseNameKey")
                         .IsUnique();
 
                     b.ToTable("connection", "core");

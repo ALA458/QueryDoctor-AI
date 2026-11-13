@@ -32,6 +32,25 @@ public class LayerDependencyTests
         Assert.True(result.IsSuccessful, Describe(result));
     }
 
+    // S1-09: los casos de uso persisten y encolan a través de interfaces propias
+    // (IConnectionRepository, IProbeJobScheduler); EF Core, Npgsql y Hangfire viven en Infrastructure.
+    [Fact]
+    public void ApplicationNoDependeDeInfrastructureNiDePersistenciaNiDeHangfire()
+    {
+        var result = Types.InAssembly(Application)
+            .ShouldNot()
+            .HaveDependencyOnAny(
+                "QueryDoctor.Infrastructure",
+                "QueryDoctor.Api",
+                "QueryDoctor.Worker",
+                "Microsoft.EntityFrameworkCore",
+                "Npgsql",
+                "Hangfire")
+            .GetResult();
+
+        Assert.True(result.IsSuccessful, Describe(result));
+    }
+
     [Fact]
     public void ApplicationNoDependeDeInfraestructuraNiDeHostsNiDeFrameworksDePersistencia()
     {

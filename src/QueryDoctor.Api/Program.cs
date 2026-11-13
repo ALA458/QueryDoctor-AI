@@ -1,15 +1,25 @@
+using System.Text.Json.Serialization;
 using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using QueryDoctor.Api.Auth;
+using QueryDoctor.Api.Connections;
 using QueryDoctor.Infrastructure;
 using QueryDoctor.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddQueryDoctorHangfire(builder.Configuration);
 builder.Services.AddQueryDoctorAuth(builder.Configuration);
+
+// S1-09: alta de conexiones. La Api guarda y encola; NO registra el Gateway (invariante 2).
+builder.Services.AddConnectionRegistration();
+
+// Enumerados como texto en las respuestas (contrato de S1-15), nunca como número.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 var app = builder.Build();
 
@@ -48,5 +58,9 @@ if (app.Environment.IsDevelopment())
 // Healthcheck del contenedor: debe ser anónimo. Todo lo demás exige sesión (FallbackPolicy).
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapAuthEndpoints();
+app.MapConnectionEndpoints();
 
 app.Run();
+
+/// <summary>Visible para WebApplicationFactory en las pruebas de integración (S1-09).</summary>
+public partial class Program;

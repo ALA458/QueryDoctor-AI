@@ -109,6 +109,43 @@ Endpoints API: `/connections`, `/ingestions`, `/queries`, `/plans/{id}`, `/findi
 | DA-02 | **Abierta** | Calibrar umbrales con el laboratorio (S3-01) |
 | DA-07 | **Propuesta de cierre lista (S1-07)** | Protocolo empírico F1–F8 ejecutado en SQL Server 2022 (`lab/results/S1-07-verificacion.md`); pendiente ratificación en S1-20 e informe final RF-EVA-04 (S3-05) |
 
+## Decisiones de implementación de S1-09 (conexiones + CapabilityProbe)
+Aprobadas por el responsable (Álvaro). No cierran ninguna DA. Detalle en `docs/NOTAS_S1-09_EQUIPO.md` y contrato
+HTTP en `docs/CONTRATO_API_CONEXIONES.md`.
+
+| ID | Decisión |
+|---|---|
+| D1 | `connection` gana los estados `Pending`/`Failed`/`Rejected`, `probe_failure_cause varchar(32)` (código cerrado, nunca el texto del motor) y `last_probed_at`. Unicidad por (servidor en minúsculas, `lower(database_name)`), sin resolver DNS |
+| D2 | Cuenta sin el permiso mínimo de la matriz → `Failed` / `MissingPermission`. En 2022+ basta `VIEW DATABASE PERFORMANCE STATE` |
+| D3 | Volver a registrar una conexión `Failed` o `Rejected` reemplaza credenciales y vuelve a sondear; si está `Active` o `Pending`, 409 |
+| D4 | Matriz del Cuadro 4.16: < 13.x `NotSupported` (`Rejected`), 13–14 `CompatibleUntested`, ≥ 15 y Azure SQL DB `Tested`. **Deuda:** Azure SQL DB y 2025 sin pruebas ejecutadas |
+| D5 | Regla `QueryStoreState.CanIngest` (READ_WRITE o READ_ONLY). CA-HU02.2 pasa a S1-11 |
+| D6 | Paquetes de prueba nuevos: `Testcontainers.PostgreSql`, `Microsoft.AspNetCore.Mvc.Testing` 10.x |
+| D7 | `tests/QueryDoctor.LabTests` contra el SQL Server del laboratorio; sin `QD_LAB_SQL` salen omitidas, y una omitida no es evidencia |
+| D8 | `lab/sql/11-probe-fixtures.sql`: base `QD_Lab_NoQS` (Query Store OFF) y login `qd_perf` |
+
+**Mecánica que conviene conocer:**
+- `probe_connection` va en la cola `probe`, atendida por un servidor Hangfire propio del Worker con sondeo de
+  1 s (las demás colas, 15 s). El argumento es solo el id de la conexión (invariante 2).
+- Los fallos del sondeo terminan en `Failed` sin reintento. Un fallo de persistencia marca `Failed`/`Unknown` con un
+  `UPDATE` condicional y, si no puede, Hangfire reintenta 3 veces: nunca queda `Pending` (auditoría M1).
+- Límite total del sondeo `Probe:TimeoutSeconds` (15 por defecto). SqlClient recibe 2/3 de ese valor como
+  Connect Timeout, para que un fallo de red llegue con su causa real y no como `Timeout`.
+- El Gateway ya no se registra en `AddInfrastructure`: la Api usa `AddConnectionRegistration` y el Worker
+  `AddTargetTelemetry`. El Gateway traduce los fallos a `TelemetrySourceException` con un código, sin texto.
+- **Excepción de TLS del laboratorio (invariante 3):** solo en `docker-compose.lab.yml`
+  (`Probe__LabTrustedCertificateServers__0: sqlserver`). `LabCertificateGuard` impide arrancar el Worker con
+  ella fuera de `Development`, con `APP_ENV=prod` o con un servidor distinto de `sqlserver`.
+- El Gateway solo admite autenticación SQL: sin usuario rechaza, nunca usa `IntegratedSecurity`.
+- La clave maestra de `SecretProtector` es el Docker secret `master_encryption_key` (api y worker).
+- `UseSameOriginForms` (CSRF) cubre todo POST/PUT/PATCH/DELETE.
+
+**Riesgo abierto (OWASP A01, SSRF):** un DBA puede registrar cualquier host:puerto, y la diferencia entre
+`ServerUnreachable` e `InvalidCredentials` revela qué puertos están abiertos, también en la red `backend`
+(`db`, `api`, `ai`), donde está el Worker. Hoy lo mitigan dos cosas: solo un
+DBA puede registrar y solo el Worker sale a la red `targets`. Pero esa red no es `internal`. Queda por proponer
+una lista de hosts permitidos o una red restringida.
+
 > **Nota sobre nomenclatura F#:** En `ARQUITECTURA_v0.1.md` §9 las siglas **F1–F4** denotan *fronteras de confianza*, mientras que en el SRS (Apéndice A) y en `lab/results/S1-07-verificacion.md` las siglas **F1–F8** denotan los *hallazgos documentales y empíricos de Query Store*.
 
 ## Riesgos que afectan al código (§14.1)

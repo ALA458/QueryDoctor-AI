@@ -1,0 +1,8 @@
+# S1-09 · SOLO LABORATORIO (invariante 3, RNF-SEG-03).
+# Acepta el certificado autofirmado del contenedor sqlserver para que el Worker pueda sondearlo.
+# Uso:   docker compose -f docker-compose.yml -f docker-compose.lab.yml up -d
+# Nunca en producción: el Worker se niega a arrancar con esto fuera de Development (LabCertificateGuard).
+services:
+  worker:
+    environment:
+      Probe__LabTrustedCertificateServers__0: sqlserver

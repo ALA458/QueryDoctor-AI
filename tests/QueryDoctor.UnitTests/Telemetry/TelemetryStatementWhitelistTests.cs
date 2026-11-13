@@ -36,6 +36,31 @@ public class TelemetryStatementWhitelistTests
         }
     }
 
+    [Theory]
+    [InlineData("actual_state_desc")]
+    [InlineData("desired_state_desc")]
+    [InlineData("readonly_reason")]
+    [InlineData("interval_length_minutes")]
+    [InlineData("query_capture_mode_desc")]
+    [InlineData("stale_query_threshold_days")]
+    public void QueryStoreOptionsReadsEveryFieldRequiredByRfCfg04(string column)
+    {
+        // RF-CFG-04 / CA-HU02.1: estado actual y deseado, motivo de solo lectura, intervalo, modo de captura y retención.
+        Assert.Contains(column, TelemetryStatementWhitelist.GetQueryStoreOptionsSql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void QueryStoreViewColumnsUsesAllCatalogViews()
+    {
+        // S1-07: las vistas sys.query_store_* solo aparecen en sys.all_objects / sys.all_columns.
+        var sql = TelemetryStatementWhitelist.GetQueryStoreViewColumnsSql;
+
+        Assert.Contains("FROM sys.all_columns c", sql, StringComparison.Ordinal);
+        Assert.Contains("JOIN sys.all_objects o", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("sys.columns ", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("sys.objects ", sql, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void ValidateStatementAllowsExactWhitelistedQuery()
     {
