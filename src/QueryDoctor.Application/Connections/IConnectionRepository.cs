@@ -18,6 +18,11 @@ public interface IConnectionRepository
 
     void Add(Connection connection);
 
+    /// <summary>Perfil de capacidades vigente (uno por conexión), o null si nunca hubo sondeo correcto.</summary>
+    Task<CapabilityProfile?> GetProfileAsync(Guid connectionId, CancellationToken cancellationToken);
+
+    void AddProfile(CapabilityProfile profile);
+
     /// <summary>Confirma los cambios pendientes.</summary>
     /// <exception cref="DuplicateConnectionException">Otra solicitud registró la misma base al mismo tiempo.</exception>
     Task SaveChangesAsync(CancellationToken cancellationToken);

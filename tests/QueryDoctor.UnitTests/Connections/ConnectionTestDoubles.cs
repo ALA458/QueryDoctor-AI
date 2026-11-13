@@ -49,6 +49,13 @@ internal sealed class InMemoryConnectionRepository : IConnectionRepository
 
     public void Add(Connection connection) => _pending.Add(connection);
 
+    public List<CapabilityProfile> Profiles { get; } = [];
+
+    public Task<CapabilityProfile?> GetProfileAsync(Guid connectionId, CancellationToken cancellationToken) =>
+        Task.FromResult(Profiles.FirstOrDefault(p => p.ConnectionId == connectionId));
+
+    public void AddProfile(CapabilityProfile profile) => Profiles.Add(profile);
+
     public Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         if (RaceWinner is not null && _pending.Count > 0)

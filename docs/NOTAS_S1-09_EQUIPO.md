@@ -8,7 +8,7 @@
 
 | Quién | Lo que tienes que saber | Partes |
 |---|---|---|
-| **Maykol** | Cambié dos sentencias de tu lista blanca (aprobadas) | P0 |
+| **Maykol** | Cambié dos sentencias de tu lista blanca (aprobadas); el Gateway ahora lanza `TelemetrySourceException` tipada en vez de `SqlException` | P0, P5 |
 | **Daniel** | Toqué 4 archivos tuyos de S1-04 (estados, columnas, UK, prueba del modelo); hay contrato nuevo para el PR #35 | P2, P4 |
 | **Joel** | `lab/sql/10-whitelist-validation.sql` quedó desactualizado frente a P0; la matriz de soporte y `CanIngest` son funciones puras de Domain | P0, P3 |
 | **Todos** | Application ya no puede depender de EF Core, Npgsql, Hangfire ni de Infrastructure (NetArchTest) | P1 |
@@ -118,8 +118,45 @@ Contrato HTTP: `docs/CONTRATO_API_CONEXIONES.md`.
   `ConnectionCredentials.ToString()` oculta la contraseña, pero igual **no la registres** en logs.
 - Los enumerados se aceptan **solo por nombre** (`"SqlServer"`), no por número.
 
+## P5 — Sondeo, errores tipados y tiempo límite · `feat(S1-09)` · afecta a **Maykol** y a quien use el Gateway (**S1-11**)
+
+Archivos de Maykol modificados: `Infrastructure/Telemetry/QueryStoreGateway.cs`.
+Nuevos: `Application/Telemetry/TelemetrySourceException.cs`, `Infrastructure/Telemetry/SqlErrorClassifier.cs`,
+`Application/Connections/ICapabilityProbe.cs` (+ `ProbeOptions`), `Application/Connections/ProbeConnection.cs`,
+`Infrastructure/Connections/CapabilityProbe.cs`.
+
+- **El Gateway ya no deja escapar `SqlException`.** Los fallos de conexión o de ejecución salen como
+  `TelemetrySourceException` con `Kind` (`InvalidCredentials`, `ServerUnreachable`, `TlsCertificateInvalid`,
+  `PermissionDenied`, `Timeout`, `Unknown`) y `SqlErrorNumber`. **Sin** `InnerException` y con mensaje fijo:
+  el texto del motor puede traer servidor o usuario (RNF-SEG-09).
+- La clasificación (`SqlErrorClassifier`) es por **número de error** y por la cadena de `InnerException`
+  (`AuthenticationException` / `Win32Exception` para TLS, `SocketException`), nunca por el texto.
+- El log del Gateway (EventId 2001) y `StatementLogEntry.ErrorMessage` guardan solo `Kind (número)`, p. ej.
+  `InvalidCredentials (18456)`. Se eliminó `SanitizeError`.
+- `OperationCanceledException` y la `SecurityException` de la política TLS / lista blanca **siguen sin envolverse**.
+- `CapabilityProbe` usa solo `ITelemetrySource` y 4 claves de la lista blanca; **no** referencia SqlClient.
+- `ProbeConnection` (el caso de uso del trabajo) sigue este orden y se detiene en el primer fallo:
+  versión/plataforma → permiso mínimo → opciones de Query Store → columnas. Así una versión anterior a 2016 se
+  rechaza por versión y no por "no existe `sys.database_query_store_options`".
+- **Tiempo límite (RF-CFG-02):** `Probe:TimeoutSeconds` (15 por defecto) acota **todo** el sondeo y también el
+  Connect Timeout / CommandTimeout de cada sentencia. Si se agota: `Failed` + `Timeout`. La conexión **nunca**
+  queda en `Pending`.
+
+**Ten en cuenta**
+- **S1-11 (ingesta) y cualquiera que llame al Gateway:** atrapa `TelemetrySourceException` y decide por `Kind`;
+  ya no hay `SqlException` que atrapar (y fuera del Gateway no se puede referenciar SqlClient).
+- **Maykol:** el número 4060 ("no puede abrir la base") se clasifica como `PermissionDenied`, porque cubre tanto
+  "la base no existe" como "el login no tiene usuario en esa base". Si prefieres separarlos, hace falta un código nuevo.
+- `CapabilityProfile.HasExcessivePermissions` se guarda en `false`, que en S1-09 significa **"no evaluado"**
+  (la columna no admite null). La API lo expone como `null`. RF-CFG-05 lo llena en el Sprint 2.
+- `QueryStoreReadOnlyReason` se guarda como el número de `readonly_reason` en texto (`"0"` = ninguno).
+- `omitted_features_json` es un arreglo JSON de códigos: `[]` o `["TempDbAndLogBytes"]`.
+- Con Query Store en `OFF` la conexión queda **`Active`** (se avisa que la ingesta se omitirá); no es un fallo.
+- `Probe:LabTrustedCertificateServers` es la **única** vía para aceptar el certificado autofirmado del laboratorio
+  (invariante 3). Vacía por defecto; el Worker la rechaza fuera de Development (P9).
+
 ---
 
 ## Pendiente de completar en esta nota
-P5/P6 (probe, errores tipados del Gateway, tiempo límite, trabajo Hangfire), P7 (endpoints, CSRF),
+P6 (repositorio EF, trabajo Hangfire, Worker, Testcontainers), P7 (endpoints, CSRF),
 P8 (pruebas de laboratorio), P9 (compose), P10 (cierre).
