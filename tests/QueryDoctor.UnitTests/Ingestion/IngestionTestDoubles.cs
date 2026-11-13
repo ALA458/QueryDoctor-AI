@@ -5,6 +5,18 @@ using QueryDoctor.Domain.Core;
 
 namespace QueryDoctor.UnitTests.Ingestion;
 
+/// <summary>Filas de ejemplo para las pruebas de ingesta (unitarias, integración y laboratorio).</summary>
+internal static class IngestionSamples
+{
+    public static readonly DateTimeOffset Start = new(2026, 11, 13, 10, 0, 0, TimeSpan.Zero);
+
+    public static RuntimeMetrics Metrics(long count, double value, double? optional = 1d) =>
+        new(count, value, value, value, value, value, value, value, value, optional, optional);
+
+    public static RuntimeStatRow Row(long plan, long interval, RuntimeMetrics metrics, bool closed = true, ExecutionType type = ExecutionType.Regular) =>
+        new(plan, type, interval, Start.AddMinutes(interval), Start.AddMinutes(interval + 1), closed, metrics);
+}
+
 internal sealed class FakeQueryStoreReader : IQueryStoreReader
 {
     public QueryStoreOptions? Options { get; set; } = new("READ_WRITE", "READ_WRITE", null, 1, "ALL", 30);
@@ -29,10 +41,21 @@ internal sealed class FakeQueryStoreReader : IQueryStoreReader
 
     public List<TargetDatabaseConnection> Targets { get; } = [];
 
-    public Task<QueryStoreOptions?> GetOptionsAsync(TargetDatabaseConnection target, CancellationToken cancellationToken)
+    /// <summary>Se completa cuando una ingesta empieza a leer; con <see cref="Gate"/> la deja esperando ahí.</summary>
+    public TaskCompletionSource Entered { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public Task? Gate { get; set; }
+
+    public async Task<QueryStoreOptions?> GetOptionsAsync(TargetDatabaseConnection target, CancellationToken cancellationToken)
     {
         Targets.Add(target);
-        return FailOptions is null ? Task.FromResult(Options) : Task.FromException<QueryStoreOptions?>(FailOptions);
+        Entered.TrySetResult();
+        if (Gate is not null)
+        {
+            await Gate.WaitAsync(cancellationToken);
+        }
+
+        return FailOptions is null ? Options : throw FailOptions;
     }
 
     public Task<QueryStoreReadResult> ReadStatsAsync(TargetDatabaseConnection target, QueryStoreReadRequest request, CancellationToken cancellationToken)

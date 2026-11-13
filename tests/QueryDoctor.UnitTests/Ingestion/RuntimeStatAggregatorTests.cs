@@ -1,19 +1,12 @@
 using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Domain.Core;
+using static QueryDoctor.UnitTests.Ingestion.IngestionSamples;
 
 namespace QueryDoctor.UnitTests.Ingestion;
 
 // RF-ING-04: agregación ponderada por número de ejecuciones, nunca promedio de promedios.
 public class RuntimeStatAggregatorTests
 {
-    private static readonly DateTimeOffset Start = new(2026, 11, 13, 10, 0, 0, TimeSpan.Zero);
-
-    internal static RuntimeMetrics Metrics(long count, double value, double? optional = 1d) =>
-        new(count, value, value, value, value, value, value, value, value, optional, optional);
-
-    internal static RuntimeStatRow Row(long plan, long interval, RuntimeMetrics metrics, bool closed = true, ExecutionType type = ExecutionType.Regular) =>
-        new(plan, type, interval, Start.AddMinutes(interval), Start.AddMinutes(interval + 1), closed, metrics);
-
     // (ejecuciones, promedio) de cada fila → promedio ponderado esperado.
     public static TheoryData<long[], double[], double> WeightedCases => new()
     {

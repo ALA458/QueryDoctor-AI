@@ -1,6 +1,6 @@
 using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Domain.Core;
-using static QueryDoctor.UnitTests.Ingestion.RuntimeStatAggregatorTests;
+using static QueryDoctor.UnitTests.Ingestion.IngestionSamples;
 
 namespace QueryDoctor.UnitTests.Ingestion;
 
