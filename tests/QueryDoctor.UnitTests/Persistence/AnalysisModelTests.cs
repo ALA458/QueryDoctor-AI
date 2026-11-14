@@ -28,9 +28,31 @@ public sealed class AnalysisModelTests : IDisposable
     [InlineData("analysis.threshold_set")]
     [InlineData("analysis.analysis_run")]
     [InlineData("analysis.finding")]
+    [InlineData("analysis.health_score")]
     public void LasTablasDelEsquemaAnalysisExisten(string tabla)
     {
         Assert.Contains($"CREATE TABLE {tabla} (", _script, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void HealthScoreTieneIndicesDePuntajeEHistorialYParametrosPersistidos()
+    {
+        Assert.Matches(
+            @"CREATE INDEX \S+ ON analysis\.health_score \(connection_id, calculated_at\)",
+            _script);
+
+        Assert.Matches(
+            @"CREATE INDEX \S+ ON analysis\.health_score \(connection_id, score\)",
+            _script);
+
+        Assert.Matches(
+            @"CREATE INDEX \S+ ON analysis\.health_score \(query_id, calculated_at\)",
+            _script);
+
+        Assert.Contains("parameters_json", _script, StringComparison.Ordinal);
+        Assert.Contains("parameters_hash", _script, StringComparison.Ordinal);
+        Assert.Contains("contributing_findings_json", _script, StringComparison.Ordinal);
+        Assert.Contains("weighted_consumption_pct", _script, StringComparison.Ordinal);
     }
 
     [Fact]
