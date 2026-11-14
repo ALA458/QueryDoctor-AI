@@ -9,7 +9,7 @@
 > "Figura 7.1", no está en el repo) con varias decisiones **propuestas**. La sección 6 indica
 > cuáles quedaron aplicadas en el código y cuáles no.
 >
-> **Alcance.** Detalla `core` y `ops`. `analysis`, `ai` y `audit` solo se listan (sección 5).
+> **Alcance.** Detalla `core`, `ops` y las tablas del motor en `analysis` (`S1-13`). `health_score` (`S2-02`), `ai` y `audit` se listan en la sección 6.
 
 ---
 
@@ -243,17 +243,112 @@ ApplicationRole, Guid>`), con sus tablas movidas a `ops` y columnas en `snake_ca
 
 ---
 
-## 5. Esquemas fuera de S1-04 (aún no existen en la base)
+## 5. Esquema `analysis` (S1-13)
+
+Agregado en la migración `EsquemaAnalysis`. Cubre el catálogo de reglas versionado (`RF-MOT-15`), los conjuntos de umbrales (`RF-MOT-14`), las corridas de análisis (`analysis_run`) y los hallazgos (`RF-MOT-03`, `RF-MOT-17`). La tabla `analysis.health_score` llega en `S2-02`.
+
+### 5.1 `analysis.rule_catalog` — Catálogo de reglas (E-06)
+
+Sembrado en la migración con las 11 reglas del Cuadro 4.11 del SRS (`REG-01`..`REG-11`) e identificadores fijos (`7a2d4c0e-…-0001` a `0011`).
+
+| Columna | Tipo | Nulo | Descripción |
+|---|---|---|---|
+| id | uuid | no | PK |
+| rule_id | varchar(16) | no | `REG-01`..`REG-11` (RF-MOT-15) |
+| catalog_version | varchar(32) | no | Versión del catálogo (`1.0.0`) |
+| rule_version | varchar(32) | no | Versión semántica de la regla (`1.0.0`) |
+| name | varchar(128) | no | Nombre oficial en español (Tabla 4.11) |
+| description | varchar(1024) | no | Señal técnica que activa la regla |
+| documentation_source | varchar(512) | no | Fuente documental citada (RF-MOT-15) |
+| rule_class | varchar(32) | no | `ClassA`, `ClassB`, `ClassC`, `ClassD`, `None` |
+| evidence_class | varchar(32) | no | `Estimada`, `EjecucionAgregada`, `PlanReal`, `NoAplica` |
+| base_severity | varchar(32) | no | `Informativa`, `Baja`, `Media`, `Alta` |
+| priority | varchar(32) | no | `Must`, `Should`, `Could` |
+| default_thresholds_json | text | no | Umbrales por defecto en JSON canónico (Cuadro 4.5) |
+
+- **PK:** `PK_rule_catalog (id)`
+- **UK:** `IX_rule_catalog_rule_id_catalog_version_rule_version (rule_id, catalog_version, rule_version)`
+
+### 5.2 `analysis.threshold_set` — Conjunto de umbrales (RF-MOT-14)
+
+Sembrado en la migración con el conjunto de umbrales por defecto del Cuadro 4.5 (`7a2d4c0e-…-1001`).
+
+| Columna | Tipo | Nulo | Descripción |
+|---|---|---|---|
+| id | uuid | no | PK |
+| catalog_version | varchar(32) | no | Versión del catálogo |
+| configuration_hash | varchar(64) | no | SHA-256 en hexadecimal sobre el JSON canónico de umbrales |
+| thresholds_json | text | no | Umbrales serializados en JSON canónico |
+| is_default | boolean | no | `true` para la semilla por defecto |
+| created_at | timestamptz | no | |
+
+- **PK:** `PK_threshold_set (id)`
+- **UK:** `IX_threshold_set_catalog_version_configuration_hash (catalog_version, configuration_hash)`
+
+### 5.3 `analysis.analysis_run` — Ejecución de análisis de un plan
+
+| Columna | Tipo | Nulo | Descripción |
+|---|---|---|---|
+| id | uuid | no | PK |
+| connection_id | uuid | no | FK → core.connection |
+| query_id | uuid | no | FK → core.query |
+| plan_id | uuid | no | FK → core.plan |
+| threshold_set_id | uuid | no | FK → analysis.threshold_set |
+| catalog_version | varchar(32) | no | Versión del catálogo usada (RF-MOT-02) |
+| engine_version | varchar(64) | sí | Versión del motor SQL Server del plan (RNF-COM-02) |
+| thresholds_used_json | text | no | Instantánea de umbrales usada (RF-MOT-14) |
+| status | varchar(32) | no | `Running`, `Succeeded`, `Failed` |
+| findings_count | integer | no | Cantidad de hallazgos emitidos |
+| started_at | timestamptz | no | |
+| finished_at | timestamptz | sí | |
+| error_cause | varchar(1024) | sí | Causa del fallo sin literales (RNF-SEG-09) |
+
+- **PK:** `PK_analysis_run (id)`
+- **Índices no únicos:** `IX_analysis_run_plan_id_started_at (plan_id, started_at)`, `IX_analysis_run_connection_id (connection_id)`
+- **FK:** `connection_id`, `query_id`, `plan_id` **ON DELETE CASCADE**; `threshold_set_id` **ON DELETE RESTRICT**.
+
+### 5.4 `analysis.finding` — Hallazgo del motor determinístico (E-05)
+
+| Columna | Tipo | Nulo | Descripción |
+|---|---|---|---|
+| id | uuid | no | PK |
+| analysis_run_id | uuid | no | FK → analysis.analysis_run |
+| connection_id | uuid | no | FK → core.connection |
+| query_id | uuid | no | FK → core.query |
+| plan_id | uuid | no | FK → core.plan |
+| finding_code | varchar(64) | no | `finding_id` determinístico (`F-XXXXXXXXXXXX`, hash de plan+regla+versión+nodos) |
+| rule_id | varchar(16) | no | `REG-01`..`REG-11` |
+| rule_version | varchar(32) | no | Versión de la regla |
+| catalog_version | varchar(32) | no | Versión del catálogo |
+| schema_version | varchar(16) | no | Versión del contrato JSON (`1.0.0`, RF-MOT-17) |
+| kind | varchar(32) | no | `Senal`, `Indicio`, `PlanNoAnalizable` (RF-MOT-03) |
+| severity | varchar(32) | no | `Informativa`, `Baja`, `Media`, `Alta` |
+| evidence_class | varchar(32) | no | `Estimada`, `EjecucionAgregada`, `PlanReal`, `NoAplica` |
+| nodes_json | text | no | Nodos del plan involucrados en JSON |
+| encrypted_evidence_json | text | no | Evidencia del hallazgo cifrada con `IFieldEncryptor` (RNF-SEG-14) |
+| context_json | text | no | Datos numéricos de contexto (ejecuciones, consumo %, filas estimadas) |
+| thresholds_used_json | text | no | Umbrales aplicados por la regla (RF-MOT-14) |
+| engine_version | varchar(64) | sí | Versión del motor SQL Server |
+| analyzed_at | timestamptz | no | |
+
+- **PK:** `PK_finding (id)`
+- **UK:** `IX_finding_analysis_run_id_finding_code (analysis_run_id, finding_code)`
+- **Índices no únicos:** `IX_finding_plan_id (plan_id)`, `IX_finding_query_id (query_id)`, `IX_finding_connection_id_severity (connection_id, severity)`
+- **FK:** `analysis_run_id`, `connection_id`, `query_id`, `plan_id` **ON DELETE CASCADE**.
+
+---
+
+## 6. Esquemas y tablas pendientes en la base
 
 | Esquema | Tablas previstas (§7) | Tarea que las crea |
 |---|---|---|
-| analysis | finding, rule_catalog, threshold_set, health_score | S1-13, S2-02 |
+| analysis | health_score | S2-02 (`rule_catalog`, `threshold_set`, `analysis_run` y `finding` ya existen desde S1-13) |
 | ai | explanation, claim, claim_reference, kb_fragment, kb_causal_relation | S1-17, S2-05 |
 | audit | trace_entry, audit_event, statement_log (solo adición, `prev_hash`) | S2-06; statement_log: S1-08 usa hoy un escritor en memoria |
 
 ---
 
-## 6. Decisiones de la propuesta: qué quedó aplicado
+## 7. Decisiones de la propuesta: qué quedó aplicado
 
 Estado respecto del código en `main`. **Aplicada** = el código hace lo propuesto.
 **Parcial** = una parte sí y otra no. **No aplicada** = el código hace otra cosa o nada.

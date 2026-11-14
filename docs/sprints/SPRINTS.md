@@ -9,6 +9,7 @@
 - Base: SRS v1.0 + Adenda v1.1 + Documento de arquitectura v0.1. Sprints de 1 semana. Tamaños: S ≈ 0,5 día · M ≈ 1,5 días · L ≈ 3 días (supuestos editables en C14:C16).
 - Sprint · Fechas · Meta · Tareas · Hechas · % avance
 - Sprint 0 (hecho) · 31-ago – 28-oct · Investigación, SRS, adenda y arquitectura · 13 · 10 · 0.77
+- Sprint 1 · 29-oct – 4-nov · Rebanada 1: de SQL Server real a hallazgos en la interfaz · 16 · 9 · 0.56
 - Sprint 1 · 29-oct – 4-nov · Rebanada 1: de SQL Server real a hallazgos en la interfaz · 16 · 8 · 0.50
 - Sprint 2 · 5-nov – 11-nov · Rebanadas 2 y 3: score, detalle y explicación trazada · 16 · 0 · 0
 - Sprint 3 (tentativo) · 12-nov – 15-nov · Evaluación, informe del laboratorio y cierre · 12 · 0 · 0

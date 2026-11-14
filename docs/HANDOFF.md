@@ -3,6 +3,7 @@
 > **Se sobrescribe, no se acumula.** Máximo ~50 líneas. Lo escribe quien cierra una
 > sesión (humano o agente). La historia vive en los PR y en git.
 
+**Actualizado:** 2026-11-12 · **Por:** Joel · **Rama:** `feat/S1-13-catalogo-reglas`
 **Actualizado:** 2026-11-11 · **Por:** Joel · **Rama:** `feat/S1-12-plan-parser`
 
 ## Estado de tareas en `main` + rama actual
@@ -13,6 +14,8 @@
 - ✅ **S1-06** (Daniel): Identity mínimo, DBA inicial desde secreto, login, cambio obligatorio de contraseña y bloqueo por intentos.
 - ✅ **S1-07 / S0-10** (Joel): Laboratorio SQL Server 2022 (`lab/`), 7 escenarios sembrados, 16 fixtures `.sqlplan` y verificación empírica F1–F8.
 - ✅ **S1-08** (Maykol): `QueryStoreGateway` + `TelemetryStatementWhitelist` + `statement_log`.
+- ✅ **S1-12** (Joel): `ShowplanXmlParser` (`IPlanParser`) con `XmlReader` seguro, árbol tipado en `QueryDoctor.Domain.Plans` y emisión de `REG-11` sin detener el lote.
+- ✅ **S1-13** (Joel, en esta rama): Catálogo de reglas versionado (`IRule`, `IRuleCatalog`, `VersionedRuleCatalog` con `REG-01`..`REG-11`), umbrales configurables (`RuleThresholds`), motor determinístico (`IRuleEngine`, `DeterministicRuleEngine`), contrato JSON versionado del hallazgo (`FindingContract`), entidades de `QueryDoctor.Domain.Analysis` y migración EF Core `EsquemaAnalysis` (`analysis.rule_catalog`, `analysis.threshold_set`, `analysis.analysis_run`, `analysis.finding`).
 - ✅ **S1-12** (Joel, en esta rama): `ShowplanXmlParser` (`IPlanParser`) en memoria sin E/S con `XmlReader` seguro (sin DTD, con límites de caracteres y profundidad), modelo tipado inmutable en `QueryDoctor.Domain.Plans`, soporte para planes *Dispatcher* de PSP, y emisión de `REG-11` ante XML nulo/truncado/inválido sin detener el lote.
 **Actualizado:** 2026-11-13 · **Por:** Álvaro · **Rama:** `feat/S1-11-ingesta` (sale de `main`, no apilada)
 
@@ -43,6 +46,17 @@
 - Sprint 2: registrar el `RecurringJob` de `IngestConnectionJob.RunScheduledAsync` (RF-ING-06, DA-03).
 
 **Joel**
+- **S1-14 (`REG-01`, `REG-02`, `REG-04`):** Solo debes implementar `IRule` para cada regla en `QueryDoctor.Application.Engine.Rules` usando `VersionedRuleCatalog.BuiltInDescriptors` y registrarlas en `DependencyInjection.cs` (`services.AddSingleton<IRule, ...>()`).
+- **S2-02 (`HealthScoreCalculator`):** Las enumeraciones `FindingSeverity` y `EvidenceClass` ya están en `QueryDoctor.Domain.Analysis`; falta agregar la entidad `HealthScore` y su migración para `analysis.health_score`.
+
+**Álvaro**
+- **S1-11 (`IngestionService`) y trabajo `analyze`:** Puedes inyectar `IRuleEngine` (`QueryDoctor.Application.Engine.Rules`) y persistir `AnalysisRun` y `Finding` en `AppDbContext` (cifrando `FindingContractJson.SerializeEvidence(finding.Evidence)` con `IFieldEncryptor.Encrypt` en `Finding.EncryptedEvidenceJson`).
+
+**Daniel**
+- **S1-16 y S2-09 (listado y detalle de hallazgos):** El contrato JSON versionado del hallazgo está en `FindingContract` (`QueryDoctor.Application.Engine.Rules`), alineado con el Listing B.1 del SRS.
+
+## Siguiente paso
+Abrir y fusionar el PR de `feat/S1-13-catalogo-reglas` y continuar con **S1-14** (`REG-01`, `REG-02`, `REG-04`).
 - **S1-13 (`IRule`, catálogo, `analysis`) y S1-14 (`REG-01/02/04`):** El árbol tipado ya está listo en `QueryDoctor.Domain.Plans` (`ParsedPlan`, `PlanStatement`, `PlanOperatorNode`, `PlanWarning`, `MissingIndexGroup`, `ImplicitConversionInfo`). Los identificadores SQL (`Database`, `Schema`, `Table`, `Index`, `Column`) ya vienen normalizados sin corchetes exteriores `[...]`.
 - **S1-03 (`NetArchTest`):** Ya puedes añadir la regla de que `QueryDoctor.Application.Engine` y `QueryDoctor.Domain.Plans` no dependen de E/S ni de infraestructura.
 
