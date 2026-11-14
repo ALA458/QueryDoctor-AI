@@ -43,7 +43,6 @@ public static class DependencyInjection
 
         // Telemetría e ingesta de SQL Server (S1-08, RNF-SEG-01, RF-TRZ-04)
         services.TryAddSingleton<IStatementLogWriter, InMemoryStatementLogWriter>();
-        services.AddScoped<ITelemetrySource, QueryStoreGateway>();
         // S1-09: el Gateway hacia las bases objetivo ya NO se registra aquí, porque la Api también llama a
         // AddInfrastructure y nunca debe conectarse a bases objetivo (invariante 2). Ver AddTargetTelemetry.
 
