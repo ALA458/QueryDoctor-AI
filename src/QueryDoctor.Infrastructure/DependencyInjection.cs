@@ -50,6 +50,18 @@ public static class DependencyInjection
         services.TryAddSingleton<IRuleCatalog, VersionedRuleCatalog>();
         services.TryAddSingleton<IRuleEngine, DeterministicRuleEngine>();
 
+        // Motor determinístico: parser de Showplan XML, catálogo versionado y motor de reglas sin E/S (S1-12, S1-13, S1-14, RF-MOT-01..17, RNF-MAN-01)
+        services.TryAddSingleton<PlanParserOptions>();
+        services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
+        services.TryAddSingleton(_ => BindRuleThresholds(configuration));
+        foreach (var builtInRule in VersionedRuleCatalog.DiscoverBuiltInRules())
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IRule>(builtInRule));
+        }
+
+        services.TryAddSingleton<IRuleCatalog, VersionedRuleCatalog>();
+        services.TryAddSingleton<IRuleEngine, DeterministicRuleEngine>();
+
         // Telemetría e ingesta de SQL Server (S1-08, RNF-SEG-01, RF-TRZ-04)
         services.TryAddSingleton<IStatementLogWriter, InMemoryStatementLogWriter>();
         // S1-09: el Gateway hacia las bases objetivo ya NO se registra aquí, porque la Api también llama a
