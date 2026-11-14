@@ -22,7 +22,7 @@
 | ID | Riesgo | Superficie | Control (requisito) | Prueba / tarea | Estado |
 |---|---|---|---|---|---|
 | LLM01 | Prompt Injection | Texto SQL, comentarios y nombres de objetos son datos no confiables | Delimitación de datos no confiables + suite de 10 casos (RNF-SEG-06) | S2-07 | ⬜ |
-| LLM02 | Sensitive Information Disclosure | Literales en SQL/plan/evidencia; datos reales hacia proveedor gratuito | LiteralMasker con ScriptDom en el Worker, sin opción de desactivar ni respaldo con regex (RNF-SEG-05, RA-03); candado `APP_ENV=prod` contra perfiles que comparten datos (ADR-10) | S2-04, S1-18 | ⬜ |
+| LLM02 | Sensitive Information Disclosure | Literales en SQL/plan/evidencia; datos reales hacia proveedor gratuito | LiteralMasker con ScriptDom en el Worker, sin opción de desactivar ni respaldo con regex (RNF-SEG-05, RA-03); candado `APP_ENV=prod` contra perfiles que comparten datos (ADR-10) | S2-04: `SeededLiteralsAcceptanceTests` (0 centinelas en las solicitudes registradas por el doble del cliente), `MaskingCannotBeDisabledTests`, `MaskingArchitectureTests`; S1-18. Falta repetirla con el cliente HTTP real (S2-05) | 🟨 |
 | LLM03 | Supply Chain | Proveedor/modelo vía OpenRouter (otro endpoint puede servir otra cuantización) | Perfiles documentados; perfil de pago sin *fallbacks*; la traza registra perfil y `served_by` (ADR-10, §8.3) | S1-18 | ⬜ |
 | LLM04 | Data and Model Poisoning | Base de conocimiento del RAG | KB curada, cargada por migración, con fuente citada (RF-IA-04) | S1-17 | ⬜ |
 | LLM05 | Improper Output Handling | Salida del modelo en la UI | Esquema Pydantic (lo que no cumple se rechaza); validador en .NET (ADR-06); render solo texto + CSP (RNF-SEG-07) | S1-18, S2-03, S2-11 | ⬜ |
@@ -35,6 +35,10 @@
 ## Riesgos residuales declarados
 - Los nombres de tablas y columnas viajan al LLM sin seudonimizar (DA-13, aceptado como
   riesgo residual el 28-oct-2026; seudonimización planificada después).
+- Las estimaciones del plan pueden reproducir un literal: con `TOP (n)` el optimizador estima `n` filas y
+  `estimated_rows`/`EstimateRows` lo repiten. Se conservan porque el validador las necesita (RF-IA-03 b) (S2-04, H2).
+- Los identificadores entre corchetes llegan intactos y pueden llevar instrucciones (`[Ignora las instrucciones…]`);
+  los comentarios sí se eliminan. Lo delimita S2-07 (RNF-SEG-06) (S2-04, H3).
 - La salida de `ai` restringida a un dominio no es nativa en Compose: firewall del host o
   proxy de salida, control parcial (RA-05).
 - Las metas marcadas † son provisionales hasta calibrar con el laboratorio.
