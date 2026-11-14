@@ -62,10 +62,8 @@ internal static class AuthEndpoints
         if (user.MustChangePassword)
         {
             // Sesión restringida: solo puede cambiar la contraseña; el resto de la API responde 403.
-            await signIn.SignInWithClaimsAsync(
-                user,
-                isPersistent: false,
-                [new Claim(AuthConstants.MustChangePasswordClaim, "1")]);
+            // El claim lo agrega MustChangePasswordClaimsPrincipalFactory, también en cada revalidación (fix S1-09).
+            await signIn.SignInAsync(user, isPersistent: false);
 
             return Redirect(AuthConstants.ChangePasswordPage, null, null, returnUrl);
         }
