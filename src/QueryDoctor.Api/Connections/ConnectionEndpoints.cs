@@ -1,5 +1,6 @@
 using QueryDoctor.Api.Auth;
 using QueryDoctor.Application.Connections;
+using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Domain.Core;
 
 namespace QueryDoctor.Api.Connections;
@@ -19,7 +20,8 @@ internal sealed record RegisterConnectionRequest(
 }
 
 /// <summary>
-/// /connections (S1-09; RF-CFG-01 a 04, RF-CFG-07; CA-HU01.1–01.3, CA-HU02.1). Solo DBA (RNF-SEG-12) y CSRF por
+/// /connections (S1-09; RF-CFG-01 a 04, RF-CFG-07; CA-HU01.1–01.3, CA-HU02.1) y su ingesta manual (S1-11; RF-ING-06,
+/// RF-ING-08). Solo DBA (RNF-SEG-12) y CSRF por
 /// mismo origen (UseSameOriginForms). La Api guarda y encola; el sondeo corre en el Worker (invariante 2).
 /// </summary>
 internal static class ConnectionEndpoints
@@ -32,6 +34,10 @@ internal static class ConnectionEndpoints
         group.MapPost("/", RegisterAsync);
         group.MapGet("/", ListAsync);
         group.MapGet("/{id:guid}", GetAsync).WithName(GetConnectionRoute);
+
+        // S1-11: ingesta manual (RF-ING-06, CA-HU03.1) y sus ejecuciones con la causa (RF-ING-08, CA-HU02.2).
+        group.MapPost("/{id:guid}/ingestions", RequestIngestionAsync);
+        group.MapGet("/{id:guid}/ingestions", ListIngestionsAsync);
 
         return app;
     }
@@ -82,6 +88,46 @@ internal static class ConnectionEndpoints
 
             _ => throw new InvalidOperationException("Resultado de alta no contemplado."),
         };
+    }
+
+    private const int IngestionRunsShown = 20;
+
+    private static async Task<IResult> RequestIngestionAsync(Guid id, RequestIngestion useCase, CancellationToken cancellationToken)
+    {
+        var result = await useCase.ExecuteAsync(id, cancellationToken);
+
+        return result switch
+        {
+            RequestIngestionResult.Accepted accepted => Results.Accepted(
+                $"/connections/{accepted.ConnectionId}/ingestions",
+                new { connectionId = accepted.ConnectionId }),
+
+            RequestIngestionResult.NotFound => Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                detail: "La conexión no existe."),
+
+            RequestIngestionResult.NotActive notActive => Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Conexión no activa",
+                detail: "Solo se puede ingerir una conexión activa.",
+                extensions: new Dictionary<string, object?> { ["status"] = notActive.Status.ToString() }),
+
+            RequestIngestionResult.AlreadyInProgress => Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Ingesta en curso",
+                detail: IngestionCauseMessages.For(IngestionCause.AlreadyRunning),
+                extensions: new Dictionary<string, object?> { ["cause"] = nameof(IngestionCause.AlreadyRunning) }),
+
+            _ => throw new InvalidOperationException("Resultado de ingesta no contemplado."),
+        };
+    }
+
+    private static async Task<IResult> ListIngestionsAsync(Guid id, IIngestionQueries queries, CancellationToken cancellationToken)
+    {
+        var runs = await queries.ListRunsAsync(id, IngestionRunsShown, cancellationToken);
+        return runs is null
+            ? Results.Problem(statusCode: StatusCodes.Status404NotFound, detail: "La conexión no existe.")
+            : Results.Ok(runs);
     }
 
     private static async Task<IResult> ListAsync(IConnectionQueries queries, CancellationToken cancellationToken) =>

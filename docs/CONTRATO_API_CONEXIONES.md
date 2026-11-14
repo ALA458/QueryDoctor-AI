@@ -95,7 +95,7 @@ Cuerpo igual al de tu contrato:
 - `queryStoreState`: `READ_WRITE` | `READ_ONLY` | `OFF` | `ERROR` | `READ_CAPTURE_SECONDARY` | `null`.
 - `hasExcessivePermissions`: **siempre `null`** en S1-09 = "no evaluado". La advertencia de RF-CFG-05 llega en el
   Sprint 2; mostrarla solo si llega `true`. Nunca interpretar `null` como "la cuenta está bien".
-- `lastIngestionAt`: `null` hasta S1-11.
+- `lastIngestionAt`: fin de la última ingesta **correcta** (`Succeeded`); `null` si nunca hubo una (S1-11, CA-HU03.1).
 
 ## `GET /connections/{id}` → 200 — **nuevo** (detalle y estado del sondeo)
 
@@ -136,6 +136,50 @@ Cuerpo igual al de tu contrato:
 - `queryStore` cubre CA-HU02.1 (estado, intervalo, modo de captura, retención) y RF-CFG-04 (estado deseado,
   motivo de solo lectura). `readOnlyReason` es el número de `sys.database_query_store_options` (0 = ninguno).
 - Si `canIngest` es `false` (Query Store OFF o ERROR), mostrar: "Query Store no está disponible: la ingesta se
-  omitirá" (CA-HU02.2 la implementa S1-11).
+  omitirá". Es el estado del último **sondeo**; la ingesta vuelve a leerlo en vivo y la causa real de cada ejecución
+  está en `GET /connections/{id}/ingestions` (CA-HU02.2, S1-11).
 - `omittedFeatures` vacío = nada omitido (RF-CFG-07, RNF-COM-04).
 - **404** `ProblemDetails` si el `id` no existe.
+
+## `POST /connections/{id}/ingestions` → 202 — **nuevo** (S1-11, ingesta manual)
+
+Solo DBA y mismo origen, como el alta. Sin cuerpo. La Api valida y encola `ingest_connection` en la cola `ingest`;
+la ingesta corre en el Worker (invariante 2).
+
+```json
+{ "connectionId": "6f0c…" }
+```
+
+- `Location: /connections/{id}/ingestions`. El resultado llega como una ejecución nueva en el `GET` de abajo.
+- **404** si la conexión no existe. **409** `{ "status": "Pending" }` (o `Failed`, `Rejected`, `Disabled`) si no
+  está `Active`.
+- **409** `{ "cause": "AlreadyRunning" }` si ya hay una ingesta de esa conexión en curso o esperando en la cola:
+  no se encola otra. Si dos peticiones llegan a la vez y pasan las dos, el bloqueo por conexión deja la segunda
+  `Skipped` con causa `AlreadyRunning`, sin duplicar (RF-ING-05).
+- La ingesta **programada** (RF-ING-06) llega en el Sprint 2.
+
+## `GET /connections/{id}/ingestions` → 200 — **nuevo** (S1-11)
+
+Últimas 20 ejecuciones, la más reciente primero. Solo DBA. **404** si la conexión no existe.
+
+```json
+[
+  {
+    "id": "a1b2…",
+    "trigger": "Manual",
+    "status": "Skipped",
+    "startedAt": "2026-11-13T10:10:00Z",
+    "finishedAt": "2026-11-13T10:10:00Z",
+    "rowsUpserted": null,
+    "cause": "QueryStoreDisabled",
+    "causeMessage": "Query Store está deshabilitado en la base. La ingesta se omitió y los datos ya almacenados se conservan."
+  }
+]
+```
+
+- `trigger`: `Manual` | `Scheduled`. `status`: `Running` | `Succeeded` | `Failed` | `Skipped`.
+- `cause` (código cerrado, `null` si `Succeeded` o `Running`): `QueryStoreDisabled`, `QueryStoreNotReadable`,
+  `ConnectionNotActive`, `AlreadyRunning`, `MissingPermission`, `InvalidCredentials`, `ServerUnreachable`,
+  `TlsCertificateInvalid`, `Timeout`, `Interrupted`, `Unknown`. Mostrar `causeMessage` tal cual, como texto.
+- `ServerUnreachable`, `Timeout` y `Unknown` se reintentan solos (30, 60, 120 y 240 s): cada intento es una fila
+  nueva y retoma desde la marca de agua (RNF-FIA-01).

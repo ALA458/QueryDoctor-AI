@@ -159,22 +159,13 @@ public sealed class ProbeConnection
         return ProbeResult.Ok(new ProfileData(engine, assessment.SupportLevel, options, omitted));
     }
 
-    private TargetDatabaseConnection BuildTarget(Connection connection, ConnectionCredentials credentials)
-    {
-        // Excepción de TLS SOLO para el laboratorio local (invariante 3): lista explícita, vacía por defecto.
-        var labCertificate = _options.LabTrustedCertificateServers
-            .Any(s => string.Equals(s, connection.Server, StringComparison.OrdinalIgnoreCase));
-
-        return new TargetDatabaseConnection(
-            connection.Server,
-            connection.DatabaseName,
-            credentials.UserName,
-            credentials.Password,
-            connection.Encryption == ConnectionEncryption.Strict ? TargetEncryptionMode.Strict : TargetEncryptionMode.Mandatory,
-            trustServerCertificate: labCertificate,
-            allowLocalTestCertificates: labCertificate,
-            connectionTimeoutSeconds: ConnectTimeoutSeconds(_options.TimeoutSeconds));
-    }
+    // Excepción de TLS SOLO para el laboratorio local (invariante 3): lista explícita, vacía por defecto.
+    private TargetDatabaseConnection BuildTarget(Connection connection, ConnectionCredentials credentials) =>
+        TargetConnectionFactory.Build(
+            connection,
+            credentials,
+            _options.LabTrustedCertificateServers,
+            ConnectTimeoutSeconds(_options.TimeoutSeconds));
 
     /// <summary>
     /// 2/3 del límite total para abrir la conexión (mínimo 1 s). Ante un error de red SqlClient reintenta hasta agotar

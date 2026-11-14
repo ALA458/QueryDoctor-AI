@@ -5,54 +5,97 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
   <meta name="referrer" content="same-origin">
-  <title>Inicio · Query Doctor AI</title>
+  <title>Conexiones · Query Doctor AI</title>
   <link rel="stylesheet" href="/assets/css/tokens.css">
   <link rel="stylesheet" href="/assets/css/auth.css">
-  <script src="/assets/js/auth.js" defer></script>
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <script src="/assets/js/app.js" defer></script>
 </head>
-<body data-page="home">
-  <div class="shell">
-    <section class="stage" aria-label="Query Doctor AI">
-      <div class="brand">
-        <svg class="brand-mark" viewBox="0 0 34 34" fill="none" aria-hidden="true">
-          <circle class="ring" cx="17" cy="17" r="15.5" stroke-width="1.5"/>
-          <path class="beat" d="M4 18h7l3-7 5 14 3-9 2 2h8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <div>Query Doctor AI<small>Proyecto de Ingeniería I · UTB</small></div>
+<body data-page="connections">
+  <div class="app">
+    <aside class="side">
+      <div>
+        <div class="brand">
+          <svg class="brand-mark" viewBox="0 0 34 34" fill="none" aria-hidden="true">
+            <circle class="ring" cx="17" cy="17" r="15.5" stroke-width="1.5"/>
+            <path class="beat" d="M4 18h7l3-7 5 14 3-9 2 2h8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div>Query Doctor AI<small>Proyecto de Ingeniería I · UTB</small></div>
+        </div>
+        <nav class="nav" aria-label="Principal">
+          <a class="nav-item is-active" href="/" aria-current="page">Conexiones</a>
+          <a class="nav-item" href="/consultas">Consultas</a>
+        </nav>
       </div>
-      <div class="stage-body">
-        <p class="eyebrow">Sesión</p>
-        <h1 class="headline">Lee el plan.<br><em>Encuentra</em> la señal.</h1>
-        <p class="lede">Diagnóstico de consultas SQL Server a partir de Query Store, con explicaciones que remiten a la evidencia del motor.</p>
-        <svg class="plan-art" viewBox="0 0 560 350" role="img" aria-label="Ilustración: un latido que baja hasta el plan de ejecución de una consulta y marca un operador como señal">
-        <path class="ecg-ghost" d="M0 70h120l12-26 14 58 14-84 16 62 14-10h80l12-14 14 24 12-10h250"/>
-        <path class="ecg" pathLength="1" d="M0 70h120l12-26 14 58 14-84 16 62 14-10h80l12-14 14 24 12-10h250"/>
-        <path class="drop" d="M270 74v50"/>
-        <path class="link" d="M270 160v34"/>
-        <path class="link" d="M270 230v20h-140v28M270 250h140v28"/>
-        <g class="node"><rect x="200" y="124" width="140" height="36" rx="2"/><text x="270" y="147" text-anchor="middle">Sort</text></g>
-        <g class="node"><rect x="200" y="194" width="140" height="36" rx="2"/><text x="270" y="217" text-anchor="middle">Nested Loops</text></g>
-        <g class="node"><rect x="60" y="278" width="140" height="36" rx="2"/><text x="130" y="301" text-anchor="middle">Index Seek</text></g>
-        <g class="node signal"><rect x="340" y="278" width="140" height="36" rx="2"/><text x="410" y="301" text-anchor="middle">Key Lookup</text></g>
-        <rect class="halo" x="340" y="278" width="140" height="36" rx="2"/>
-        <text class="tag" x="340" y="336">SEÑAL</text>
-      </svg>
+      <div class="side-foot">
+        <div class="who"><strong id="who-user">—</strong><span id="who-role"></span></div>
+        <form method="post" action="/api/auth/logout"><button class="link-btn" type="submit">Cerrar sesión</button></form>
       </div>
-      <div class="stage-foot"><span>Solo lectura sobre tu base</span><span>Sesión con expiración</span></div>
-    </section>
-    <main class="panel">
-      <div class="card" id="home" hidden>
-        <h2>Sesión activa</h2>
-        <p class="sub">Página provisional hasta que llegue el panel de conexiones (S1-15).</p>
-        <dl class="whoami">
-          <dt>Usuario</dt><dd id="who-user">—</dd>
-          <dt>Rol</dt><dd id="who-roles">—</dd>
-        </dl>
-        <form method="post" action="/api/auth/logout">
-          <button class="btn btn-quiet" type="submit"><span>Cerrar sesión</span><span class="arrow" aria-hidden="true">→</span></button>
-        </form>
-      </div>
+    </aside>
+
+    <main class="main" id="main" hidden>
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Configuración</p>
+          <h1>Conexiones</h1>
+          <p class="sub">Bases de datos SQL Server que Query Doctor lee con una cuenta de solo lectura. Aquí ves su nivel de soporte, el estado de Query Store y la última ingesta.</p>
+        </div>
+        <button class="btn btn-auto" type="button" id="new-connection"><span>Nueva conexión</span><span class="arrow" aria-hidden="true">+</span></button>
+      </header>
+
+      <div id="notice" class="notice" role="status" aria-live="polite"></div>
+      <section id="list" aria-live="polite"></section>
     </main>
   </div>
+
+  <dialog id="dialog" aria-labelledby="dialog-title">
+    <h2 id="dialog-title">Nueva conexión</h2>
+    <p class="sub">Usa una cuenta de solo lectura. Las credenciales viajan cifradas hacia la API y se guardan cifradas; esta página no las conserva.</p>
+    <div id="form-notice" class="notice" role="alert"></div>
+    <form id="connection-form" autocomplete="off">
+      <div class="row">
+        <div class="field">
+          <label for="platform">Plataforma</label>
+          <div class="control">
+            <select id="platform" name="platform" required>
+              <option value="SqlServer">SQL Server</option>
+              <option value="AzureSqlDatabase">Azure SQL Database</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="encryption">Cifrado TLS</label>
+          <div class="control">
+            <select id="encryption" name="encryption" required>
+              <option value="Mandatory">Obligatorio</option>
+              <option value="Strict">Estricto</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="server">Servidor</label>
+        <div class="control"><input id="server" name="server" type="text" placeholder="host,puerto" required maxlength="255" spellcheck="false"></div>
+      </div>
+      <div class="field">
+        <label for="databaseName">Base de datos</label>
+        <div class="control"><input id="databaseName" name="databaseName" type="text" required maxlength="128" spellcheck="false"></div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="username">Usuario</label>
+          <div class="control"><input id="username" name="username" type="text" required maxlength="128" autocomplete="off" spellcheck="false"></div>
+        </div>
+        <div class="field">
+          <label for="password">Contraseña</label>
+          <div class="control"><input id="password" name="password" type="password" required autocomplete="new-password"></div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="cancel" type="button" id="cancel">Cancelar</button>
+        <button class="btn" type="submit" id="save"><span>Guardar conexión</span><span class="arrow" aria-hidden="true">→</span></button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>
