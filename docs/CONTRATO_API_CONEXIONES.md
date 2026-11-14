@@ -153,8 +153,9 @@ la ingesta corre en el Worker (invariante 2).
 - `Location: /connections/{id}/ingestions`. El resultado llega como una ejecución nueva en el `GET` de abajo.
 - **404** si la conexión no existe. **409** `{ "status": "Pending" }` (o `Failed`, `Rejected`, `Disabled`) si no
   está `Active`.
-- Pedirla dos veces seguidas no rompe nada: la segunda queda `Skipped` con causa `AlreadyRunning` si la primera
-  sigue corriendo (bloqueo por conexión), o vuelve a leer sin duplicar (RF-ING-05).
+- **409** `{ "cause": "AlreadyRunning" }` si ya hay una ingesta de esa conexión en curso o esperando en la cola:
+  no se encola otra. Si dos peticiones llegan a la vez y pasan las dos, el bloqueo por conexión deja la segunda
+  `Skipped` con causa `AlreadyRunning`, sin duplicar (RF-ING-05).
 - La ingesta **programada** (RF-ING-06) llega en el Sprint 2.
 
 ## `GET /connections/{id}/ingestions` → 200 — **nuevo** (S1-11)

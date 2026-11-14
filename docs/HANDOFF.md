@@ -9,7 +9,8 @@
 - ✅ En `main`: S1-01, S1-02, S1-04 a S1-10.
 - 🔄 **S1-11** (Álvaro, esta rama, PR por abrir): ingesta incremental. `/verify` VERDE con corrida real del
   laboratorio (14/14). Cierra CA-HU03.1–03.3, CA-HU03.4 con fallo inyectado (corte de red real **recortado** al
-  Sprint 2) y **CA-HU02.2** (venía de S1-09). Preauditoría APROBABLE; falta la revisión por ejes en otra sesión.
+  Sprint 2) y **CA-HU02.2** (venía de S1-09). Preauditoría APROBABLE con B1, B2 y B6 ya corregidos (`cc55bf4`);
+  falta la revisión por ejes en otra sesión.
 - Decisiones I1–I8 y mecánica: `docs/ARCHITECTURE_PLAN.md` §S1-11. Contrato HTTP: `docs/CONTRATO_API_CONEXIONES.md`.
 
 ## Cómo probarla
@@ -43,7 +44,6 @@
 - RF-ING-06: falta la ingesta programada (Sprint 2). RNF-FIA-01: falta la prueba de corte de red real (Sprint 2).
 - `QUERY_STORE CLEAR` congela la marca de agua; el intervalo activo de una consulta que sale del Top-N queda con
   su último valor; los SELECT de la plataforma entran en el Query Store objetivo.
-- POST repetidos encolan varias ingestas (se serializan por el bloqueo); un plan `TooLarge` se guarda igual cifrado.
 - De S1-09 siguen: D4 (Azure SQL y 2025 sin pruebas), SSRF B1, B3, B8, B9.
 
 ## Siguiente paso

@@ -159,7 +159,7 @@ Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA. Con
 | I5 | Query Store OFF/ilegible, ocupada o conexión inactiva → `Skipped`; credenciales/TLS/permisos → `Failed` sin reintento; red, tiempo límite e inesperados → `Failed` y Hangfire reintenta a 30/60/120/240 s. Una `Running` huérfana pasa a `Failed/Interrupted` |
 | I6 | Sin migración: el esquema de S1-04 alcanza. La marca anterior y la nueva quedan en el log del trabajo |
 | I7 | Primera ingesta: ventana `Ingestion:InitialLookbackHours` = 24. Después, todo lo posterior a la marca, sin ventana |
-| I8 | Textos, consultas y planes solo se insertan (no cambian en Query Store y recifrar cambiaría el valor); `runtime_stat` solo se actualiza si cambió algún valor. Planes nulos, vacíos, truncados, sin raíz ShowPlanXML o > 32 M caracteres → `NotAnalyzable` con causa; los demás, `Pending` para el motor |
+| I8 | Textos, consultas y planes solo se insertan (no cambian en Query Store y recifrar cambiaría el valor); `runtime_stat` solo se actualiza si cambió algún valor. Planes nulos, vacíos, truncados, sin raíz ShowPlanXML o > `Ingestion:MaxPlanCharacters` (32 M) → `NotAnalyzable` con causa; los `TooLarge` no guardan el XML; los demás, `Pending` para el motor |
 
 **Mecánica que conviene conocer:**
 - Lista blanca nueva: `GetIngestionRuntimeStats`, `GetIngestionRuntimeStatsWithoutTempDbLog` (2016) y
@@ -171,11 +171,13 @@ Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA. Con
 - Bloqueo: `pg_try_advisory_lock` con clave = primeros 8 bytes de SHA-256(`querydoctor:ingest:` + id), en una conexión
   propia sin pool que se mantiene toda la ingesta. Se descartó `[DisableConcurrentExecution]`: bloquea por método,
   espera en vez de omitir y su candado puede quedar colgado si el Worker muere.
+- `POST …/ingestions` responde 409 si hay una ejecución `Running` o un trabajo de esa conexión en la cola `ingest`
+  (API de monitoreo de Hangfire, solo lectura de PostgreSQL).
 - La excepción de TLS del laboratorio es la misma del sondeo (`TargetConnectionFactory`, `Probe:LabTrustedCertificateServers`).
 
 **Deuda de S1-11:** `origin_context` vacío con la cuenta de mínimo privilegio; un `QUERY_STORE CLEAR` congela la
 marca; el intervalo activo de una consulta que sale del Top-N queda con su último valor; los SELECT de la plataforma
-entran en el Query Store objetivo; sin deduplicar POST repetidos; `statement_log` en memoria sin límite (B9, ahora
+entran en el Query Store objetivo; `statement_log` en memoria sin límite (B9, ahora
 crece con cada ingesta); prueba de corte de red de RNF-FIA-01 al Sprint 2.
 
 > **Nota sobre nomenclatura F#:** En `ARQUITECTURA_v0.1.md` §9 las siglas **F1–F4** denotan *fronteras de confianza*, mientras que en el SRS (Apéndice A) y en `lab/results/S1-07-verificacion.md` las siglas **F1–F8** denotan los *hallazgos documentales y empíricos de Query Store*.
