@@ -56,6 +56,15 @@ public enum MaskingFailureCause
     /// Apareció un posible portador de literales no catalogado (atributo con apóstrofo o texto en un elemento).
     /// </summary>
     PlanUnexpectedLiteralCarrier,
+
+    /// <summary>El hallazgo trae una clave de evidencia que el enmascarador no tiene clasificada (D5).</summary>
+    EvidenceKeyUnclassified,
+
+    /// <summary>Un fragmento T-SQL de la evidencia no se pudo tokenizar.</summary>
+    EvidenceFragmentLexicalError,
+
+    /// <summary>Un campo de evidencia que debería ser identificador, código o número contiene una cadena.</summary>
+    EvidenceUnexpectedLiteral,
 }
 
 /// <summary>

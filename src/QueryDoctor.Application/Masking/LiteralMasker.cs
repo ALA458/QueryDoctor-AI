@@ -20,7 +20,23 @@ public sealed class LiteralMasker : IMasker
         var sql = MaskSql(input.SqlText, session);
         var plan = MaskPlan(input.PlanXml, session);
 
-        return new MaskedContext(sql, plan, session.ToMetrics());
+        var findings = new List<MaskedFinding>();
+        var excluded = new List<MaskingExclusion>();
+        foreach (var finding in (input.Findings ?? []).OrderBy(f => f.FindingId, StringComparer.Ordinal))
+        {
+            var checkpoint = session.Save();
+            if (EvidenceMasker.TryMask(finding, session, out var masked, out var cause))
+            {
+                findings.Add(masked!);
+            }
+            else
+            {
+                session.Restore(checkpoint);
+                excluded.Add(new MaskingExclusion(finding.FindingId, finding.Rule.Id, cause!.Value));
+            }
+        }
+
+        return new MaskedContext(sql, plan, findings, excluded, session.ToMetrics());
     }
 
     internal static MaskedTextResult MaskPlan(string? planXml, MaskingSession session)
