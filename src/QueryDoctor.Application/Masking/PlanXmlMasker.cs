@@ -9,6 +9,8 @@ namespace QueryDoctor.Application.Masking;
 /// parámetros y predicados del plan"). Se lee con <see cref="XmlReader"/> con DTD prohibido, sin resolver y con
 /// los mismos límites que <see cref="ShowplanXmlParser"/> (S1-12). Cualquier problema deja el plan entero no
 /// enviable (D6): nunca se entrega una copia a medio enmascarar.
+/// Denegación por defecto (auditoría H1): cada atributo es portador de literales (pasa por el lexer), conservado
+/// (métrica, enumeración, identificador o hash) o desconocido; un atributo desconocido deja el plan no enviable.
 /// </summary>
 internal static class PlanXmlMasker
 {
@@ -25,7 +27,66 @@ internal static class PlanXmlMasker
         "ConstValue",
         "ParameterCompiledValue",
         "ParameterRuntimeValue",
+
+        // SQL que se envía a un servidor vinculado (elemento RemoteQuery).
+        "RemoteQuery",
     };
+
+    /// <summary>
+    /// Atributos que se conservan tal cual: métricas y estimaciones, enumeraciones, opciones SET, identificadores
+    /// de objetos (DA-13 abierta) y hashes. Salen del inventario de los 16 planes del laboratorio (S1-07), más unos
+    /// pocos del esquema showplanxml.xsd que tampoco llevan literales. Agregar uno exige confirmar que no puede
+    /// contener un valor de la consulta.
+    /// </summary>
+    private static readonly HashSet<string> PreservedAttributes = new(StringComparer.Ordinal)
+    {
+        // Raíz y sentencia.
+        "Version", "Build", "StatementId", "StatementCompId", "StatementType", "StatementSubTreeCost",
+        "StatementEstRows", "StatementOptmLevel", "StatementOptmEarlyAbortReason", "StatementParameterizationType",
+        "StatementSqlHandle", "QueryHash", "QueryPlanHash", "RetrievedFromCache", "ParentObjectId",
+        "DatabaseContextSettingsId", "CardinalityEstimationModelVersion", "SecurityPolicyApplied", "QueryVariantID",
+
+        // Opciones SET de la sentencia.
+        "ANSI_NULLS", "ANSI_PADDING", "ANSI_WARNINGS", "ARITHABORT", "CONCAT_NULL_YIELDS_NULL",
+        "NUMERIC_ROUNDABORT", "QUOTED_IDENTIFIER",
+
+        // QueryPlan, memoria, hilos y tiempos.
+        "CachedPlanSize", "CompileCPU", "CompileMemory", "CompileTime", "DegreeOfParallelism", "MemoryGrant",
+        "NonParallelPlanReason", "DesiredMemory", "GrantWaitTime", "GrantedMemory", "LastRequestedMemory",
+        "IsMemoryGrantFeedbackAdjusted", "MaxQueryMemory", "MaxUsedMemory", "RequestedMemory", "RequiredMemory",
+        "SerialDesiredMemory", "SerialRequiredMemory", "GrantWarningKind", "Input", "Output",
+        "EstimatedAvailableDegreeOfParallelism", "EstimatedAvailableMemoryGrant", "EstimatedPagesCached",
+        "MaxCompileMemory", "Branches", "UsedThreads", "ReservedThreads", "CpuTime", "ElapsedTime",
+        "WaitCount", "WaitTimeMs", "WaitType",
+
+        // RelOp: estimaciones y propiedades del operador.
+        "NodeId", "PhysicalOp", "LogicalOp", "Parallel", "EstimatedExecutionMode", "EstimateRows",
+        "EstimateRowsWithoutRowGoal", "EstimatedRowsRead", "EstimateIO", "EstimateCPU", "EstimateRebinds",
+        "EstimateRewinds", "AvgRowSize", "EstimatedTotalSubtreeCost", "TableCardinality", "IsAdaptive",
+        "AdaptiveThresholdRows", "EstimatedJoinType", "ManyToMany", "Partitioned", "Optimized",
+        "WithOrderedPrefetch", "WithUnorderedPrefetch", "Distinct", "Operation", "CompareOp", "ScanType",
+
+        // Contadores reales por hilo.
+        "Thread", "Batches", "ActualRows", "ActualRowsRead", "ActualExecutions", "ActualExecutionMode",
+        "ActualEndOfScans", "ActualElapsedms", "ActualCPUms", "ActualScans", "ActualLogicalReads",
+        "ActualPhysicalReads", "ActualReadAheads", "ActualLobLogicalReads", "ActualLobPhysicalReads",
+        "ActualLobReadAheads", "ActualRebinds", "ActualRewinds", "InputMemoryGrant", "OutputMemoryGrant",
+        "UsedMemoryGrant",
+
+        // Acceso a índices y objetos (identificadores, DA-13).
+        "Database", "Schema", "Table", "Index", "Alias", "IndexKind", "Storage", "TableReferenceId", "Column",
+        "ColumnId", "Name", "Usage", "Ascending", "Ordered", "ScanDirection", "ForcedIndex", "ForceScan",
+        "ForceSeek", "NoExpandHint", "Lookup",
+
+        // Conversiones, advertencias y derrames.
+        "DataType", "Length", "Style", "Implicit", "ConvertIssue", "ParameterDataType", "SpillLevel",
+        "SpilledThreadCount", "GrantedMemoryKb", "UsedMemoryKb", "ReadsFromTempDb", "WritesToTempDb",
+
+        // Estadísticas, índices faltantes y planes sensibles a parámetros.
+        "Statistics", "SamplingPercent", "ModificationCount", "LastUpdate", "Impact", "LowBoundary", "HighBoundary",
+    };
+
+    private const string XmlnsNamespace = "http://www.w3.org/2000/xmlns/";
 
     private const string RootElement = "ShowPlanXML";
 
@@ -132,7 +193,11 @@ internal static class PlanXmlMasker
             do
             {
                 var value = reader.Value;
-                if (LiteralCarrierAttributes.Contains(reader.LocalName))
+                if (string.Equals(reader.NamespaceURI, XmlnsNamespace, StringComparison.Ordinal))
+                {
+                    // Declaración de espacio de nombres: se copia tal cual.
+                }
+                else if (LiteralCarrierAttributes.Contains(reader.LocalName))
                 {
                     if (!SqlLexicalMasker.TryMask(value, session, out var maskedValue))
                     {
@@ -142,9 +207,15 @@ internal static class PlanXmlMasker
 
                     value = maskedValue!;
                 }
-                else if (value.Contains('\'', StringComparison.Ordinal))
+                else if (!PreservedAttributes.Contains(reader.LocalName))
                 {
-                    // Red de seguridad: un atributo no catalogado con apóstrofo puede llevar una cadena literal.
+                    // Denegación por defecto (H1): no sabemos si este atributo puede llevar un valor de la consulta.
+                    cause = MaskingFailureCause.PlanUnknownAttribute;
+                    return false;
+                }
+                else if (value.Contains('\'', StringComparison.Ordinal) || value.Contains('"', StringComparison.Ordinal))
+                {
+                    // Red de seguridad: un atributo conservado no debería traer una cadena entre comillas.
                     cause = MaskingFailureCause.PlanUnexpectedLiteralCarrier;
                     return false;
                 }

@@ -103,6 +103,35 @@ public sealed class LiteralMaskerPlanTests
     }
 
     [Fact]
+    public void ElSqlEnviadoAUnServidorVinculadoSeEnmascara()
+    {
+        // H1 de la preauditoría: RemoteQuery dejaba pasar los números del SQL remoto.
+        const string Ns = "http://schemas.microsoft.com/sqlserver/2004/07/showplan";
+        var plan =
+            $"<ShowPlanXML xmlns=\"{Ns}\"><QueryPlan><RelOp NodeId=\"0\" PhysicalOp=\"Remote Query\" LogicalOp=\"Remote Query\">" +
+            $"<RemoteQuery RemoteQuery=\"SELECT * FROM t WHERE id = {BigNumber} AND c = N'{Secret}'\" />" +
+            "</RelOp></QueryPlan></ShowPlanXML>";
+
+        var result = _sut.Mask(new MaskingInput(null, plan));
+
+        Assert.True(result.Plan.IsSendable, $"{result.Plan.FailureCause}");
+        AssertNoneIn(result.Plan.Text);
+        Assert.Contains("RemoteQuery=\"SELECT * FROM t WHERE id = @qd_num_1 AND c = @qd_str_2\"", result.Plan.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void LaDeclaracionDeEspacioDeNombresSeCopiaConLaListaBlanca()
+    {
+        // Las declaraciones de espacio de nombres no son atributos de datos: se copian y el plan sigue siendo enviable.
+        var plan = MaskingFixtures.Read("ESC05.actual.sqlplan");
+
+        var result = _sut.Mask(new MaskingInput(null, plan));
+
+        Assert.True(result.Plan.IsSendable, $"{result.Plan.FailureCause}");
+        Assert.StartsWith("<ShowPlanXML xmlns=\"http://schemas.microsoft.com/sqlserver/2004/07/showplan\"", result.Plan.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SqlYPlanCompartenNumeracionYElMismoLiteralRecibeElMismoMarcador()
     {
         var plan = MaskingFixtures.Seed(MaskingFixtures.Read("ESC03.actual.sqlplan"));
@@ -137,7 +166,11 @@ public sealed class LiteralMaskerPlanTests
             { "no es XML", $"QD_SECRET_7f3a <ShowPlanXML", MaskingFailureCause.PlanMalformed },
             { "con DTD", $"<!DOCTYPE ShowPlanXML [<!ENTITY s '{Secret}'>]><ShowPlanXML xmlns=\"{Ns}\">&s;</ShowPlanXML>", MaskingFailureCause.PlanDtdProhibited },
             { "raiz inesperada", $"<Other StatementText=\"SELECT '{Secret}'\" />", MaskingFailureCause.PlanUnexpectedRoot },
-            { "atributo no catalogado con apostrofo", $"<ShowPlanXML xmlns=\"{Ns}\"><X Note=\"N'{Secret}'\" /></ShowPlanXML>", MaskingFailureCause.PlanUnexpectedLiteralCarrier },
+            { "atributo no catalogado con apostrofo", $"<ShowPlanXML xmlns=\"{Ns}\"><X Note=\"N'{Secret}'\" /></ShowPlanXML>", MaskingFailureCause.PlanUnknownAttribute },
+            { "atributo no catalogado numerico (H1)", $"<ShowPlanXML xmlns=\"{Ns}\"><X Note=\"{BigNumber}\" /></ShowPlanXML>", MaskingFailureCause.PlanUnknownAttribute },
+            { "atributo no catalogado con comillas dobles (H1)", $"<ShowPlanXML xmlns=\"{Ns}\"><X Other=\"c = &quot;{Secret}&quot;\" /></ShowPlanXML>", MaskingFailureCause.PlanUnknownAttribute },
+            { "atributo conservado con apostrofo", $"<ShowPlanXML xmlns=\"{Ns}\"><Object Table=\"N'{Secret}'\" /></ShowPlanXML>", MaskingFailureCause.PlanUnexpectedLiteralCarrier },
+            { "atributo conservado con comillas dobles", $"<ShowPlanXML xmlns=\"{Ns}\"><Object Table=\"&quot;{Secret}&quot;\" /></ShowPlanXML>", MaskingFailureCause.PlanUnexpectedLiteralCarrier },
             { "texto dentro de un elemento", $"<ShowPlanXML xmlns=\"{Ns}\"><X>{Secret}</X></ShowPlanXML>", MaskingFailureCause.PlanUnexpectedLiteralCarrier },
             { "StatementText que no tokeniza", $"<ShowPlanXML xmlns=\"{Ns}\"><StmtSimple StatementText=\"SELECT '{Secret}\" /></ShowPlanXML>", MaskingFailureCause.PlanAttributeLexicalError },
         };

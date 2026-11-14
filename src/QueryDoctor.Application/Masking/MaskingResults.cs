@@ -53,9 +53,12 @@ public enum MaskingFailureCause
     PlanAttributeLexicalError,
 
     /// <summary>
-    /// Apareció un posible portador de literales no catalogado (atributo con apóstrofo o texto en un elemento).
+    /// Apareció un posible portador de literales: comillas en un atributo conservado o texto en un elemento.
     /// </summary>
     PlanUnexpectedLiteralCarrier,
+
+    /// <summary>El plan trae un atributo que no está catalogado como portador ni como conservado (H1).</summary>
+    PlanUnknownAttribute,
 
     /// <summary>El hallazgo trae una clave de evidencia que el enmascarador no tiene clasificada (D5).</summary>
     EvidenceKeyUnclassified,
