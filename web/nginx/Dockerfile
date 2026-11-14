@@ -3,6 +3,6 @@
 # y /assets sigue igual.
 FROM nginxinc/nginx-unprivileged:1.31-alpine
 COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
-COPY nginx/index.html nginx/login.html nginx/cambiar-contrasena.html /usr/share/nginx/html/
+COPY nginx/index.html nginx/consultas.html nginx/login.html nginx/cambiar-contrasena.html /usr/share/nginx/html/
 COPY assets/ /usr/share/nginx/html/assets/
 EXPOSE 8080
