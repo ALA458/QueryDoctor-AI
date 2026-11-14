@@ -85,6 +85,24 @@ public sealed class LiteralMaskerPlanTests
     }
 
     [Fact]
+    public void UnValorDeParametroNumericoSinApostrofoTambienSeEnmascara()
+    {
+        // Sin apóstrofo, la red de seguridad no lo detectaría: solo lo cubre el catálogo de portadores.
+        const string Ns = "http://schemas.microsoft.com/sqlserver/2004/07/showplan";
+        var plan =
+            $"<ShowPlanXML xmlns=\"{Ns}\"><QueryPlan><ParameterList>" +
+            $"<ColumnReference Column=\"@id\" ParameterDataType=\"bigint\" ParameterCompiledValue=\"({CompiledNumber})\" ParameterRuntimeValue=\"({RuntimeNumber})\" />" +
+            "</ParameterList></QueryPlan></ShowPlanXML>";
+
+        var result = _sut.Mask(new MaskingInput(null, plan));
+
+        Assert.True(result.Plan.IsSendable);
+        AssertNoneIn(result.Plan.Text);
+        Assert.Contains("ParameterCompiledValue=\"(@qd_num_1)\"", result.Plan.Text, StringComparison.Ordinal);
+        Assert.Contains("ParameterRuntimeValue=\"(@qd_num_2)\"", result.Plan.Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void SqlYPlanCompartenNumeracionYElMismoLiteralRecibeElMismoMarcador()
     {
         var plan = MaskingFixtures.Seed(MaskingFixtures.Read("ESC03.actual.sqlplan"));
