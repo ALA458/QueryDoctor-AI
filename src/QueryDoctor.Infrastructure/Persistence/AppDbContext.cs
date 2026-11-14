@@ -43,6 +43,8 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser, Applicatio
 
     public DbSet<Finding> Findings => Set<Finding>();
 
+    public DbSet<HealthScore> HealthScores => Set<HealthScore>();
+
     public DbSet<KbFragment> KbFragments => Set<KbFragment>();
 
     public DbSet<KbCausalRelation> KbCausalRelations => Set<KbCausalRelation>();
