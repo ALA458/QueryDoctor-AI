@@ -22,15 +22,15 @@ jobs:
         steps:
             - name: Descargar codigo
               uses: actions/checkout@v7
-            
+
             - name: Setup de .NET
               uses: actions/setup-dotnet@v6
               with:
                 global-json-file: global.json
-                
+
             - name: Restaurar paquetes (incluye NuGet Audit)
               run: dotnet restore
-        
+
             - name: Compilar
               run: dotnet build --no-restore --configuration Release
 
@@ -39,3 +39,32 @@ jobs:
 
             - name: Pruebas
               run: dotnet test --no-build --configuration Release
+
+    docker:
+        name: Docker (build de imagenes)
+        runs-on: ubuntu-latest
+        timeout-minutes: 20
+
+        steps:
+            - name: Descargar codigo
+              uses: actions/checkout@v7
+
+            - name: Construir imagen de la api
+              run: docker build --target api -t qd-api-ci .
+
+            - name: Construir imagen del worker
+              run: docker build --target worker -t qd-worker-ci .
+
+            - name: Construir imagen de web
+              run: docker build -f web/nginx/Dockerfile -t qd-web-ci ./web
+
+            - name: Construir imagen de ai
+              run: docker build -t qd-ai-ci ./ai-service
+
+            - name: Validar docker-compose.yml
+              run: |
+                mkdir -p secrets
+                # Crea un archivo de relleno por cada secreto que declara el compose
+                grep -oE 'file: \./secrets/[A-Za-z0-9_.-]+' docker-compose.yml \
+                  | sed 's#file: ./##' | while read -r f; do echo "ci-placeholder" > "$f"; done
+                docker compose config --quiet

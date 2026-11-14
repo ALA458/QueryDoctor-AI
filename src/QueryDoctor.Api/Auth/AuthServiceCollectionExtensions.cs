@@ -37,7 +37,9 @@ internal static class AuthServiceCollectionExtensions
 
                 options.User.RequireUniqueEmail = true;
             })
-            .AddEntityFrameworkStores<AppDbContext>();
+            .AddEntityFrameworkStores<AppDbContext>()
+            // El claim de cambio pendiente debe sobrevivir a la revalidación por petición (fix S1-09, RNF-SEG-13).
+            .AddClaimsPrincipalFactory<MustChangePasswordClaimsPrincipalFactory>();
 
         // Inactividad configurable, 30 min por defecto (RNF-SEG-13).
         var idleMinutes = configuration.GetValue("Auth:IdleTimeoutMinutes", 30);

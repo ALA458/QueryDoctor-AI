@@ -6,6 +6,9 @@ namespace QueryDoctor.Infrastructure.Persistence.Configurations;
 
 public sealed class ConnectionConfiguration : IEntityTypeConfiguration<Connection>
 {
+    /// <summary>Propiedad sombra: columna generada database_name_key = lower(database_name).</summary>
+    public const string DatabaseNameKeyProperty = "DatabaseNameKey";
+
     public void Configure(EntityTypeBuilder<Connection> builder)
     {
         builder.ToTable("connection", "core");
@@ -18,8 +21,15 @@ public sealed class ConnectionConfiguration : IEntityTypeConfiguration<Connectio
         builder.Property(c => c.Encryption).HasConversion<string>().HasMaxLength(32);
         builder.Property(c => c.Status).HasConversion<string>().HasMaxLength(32);
         builder.Property(c => c.EncryptedCredentials).HasColumnType("text");
+        builder.Property(c => c.ProbeFailureCause).HasConversion<string>().HasMaxLength(32);
 
-        // Una misma base no se registra dos veces.
-        builder.HasIndex(c => new { c.Server, c.DatabaseName }).IsUnique();
+        // S1-09: server ya llega normalizado en minúsculas (ConnectionAddress). database_name conserva
+        // las mayúsculas (intercalaciones CS), así que la unicidad usa una columna generada lower(...).
+        builder.Property<string>(DatabaseNameKeyProperty)
+            .HasMaxLength(128)
+            .HasComputedColumnSql("lower(database_name)", stored: true);
+
+        // Una misma base no se registra dos veces, sin distinguir mayúsculas.
+        builder.HasIndex(nameof(Connection.Server), DatabaseNameKeyProperty).IsUnique();
     }
 }
