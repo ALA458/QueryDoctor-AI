@@ -13,13 +13,13 @@ public sealed class VersionedRuleCatalog : IRuleCatalog
     private static readonly IReadOnlyList<RuleDescriptor> CanonicalDescriptors = BuildCanonicalDescriptors();
     private static readonly IReadOnlyDictionary<string, RuleDescriptor> DescriptorsById =
         CanonicalDescriptors.ToDictionary(d => d.RuleId, StringComparer.OrdinalIgnoreCase);
-    private static readonly IReadOnlyList<IRule> BuiltInRuleInstances = DiscoverBuiltInRulesCore();
+    private static readonly Lazy<IReadOnlyList<IRule>> BuiltInRuleInstances = new(DiscoverBuiltInRulesCore);
 
     private readonly IReadOnlyList<IRule> _activeRules;
 
     public VersionedRuleCatalog(IEnumerable<IRule>? activeRules = null)
     {
-        var sourceRules = activeRules ?? BuiltInRuleInstances;
+        var sourceRules = activeRules ?? BuiltInRuleInstances.Value;
 
         // Orden determinista por RuleId y versión para que la salida nunca dependa del orden de registro en DI (RF-MOT-02).
         _activeRules = sourceRules
@@ -36,7 +36,7 @@ public sealed class VersionedRuleCatalog : IRuleCatalog
     /// Descubre por reflexión todas las reglas públicas y concretas que implementan <see cref="IRule"/> en el ensamblado del motor,
     /// de modo que agregar una regla nueva no requiera modificar otras reglas ni el flujo de análisis (RNF-MAN-01, Arquitectura §9).
     /// </summary>
-    public static IReadOnlyList<IRule> DiscoverBuiltInRules() => BuiltInRuleInstances;
+    public static IReadOnlyList<IRule> DiscoverBuiltInRules() => BuiltInRuleInstances.Value;
 
     public IReadOnlyList<RuleDescriptor> GetAllDescriptors() => CanonicalDescriptors;
 

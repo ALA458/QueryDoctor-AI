@@ -44,6 +44,7 @@
 - `parse_and_validate_llm_json` delega parseo, construcción y normalización de afirmaciones en helpers.
 - `OpenRouterProvider` aplica la política de privacidad del perfil pago desde un helper dedicado.
 - El candado de producción bloquea perfiles que comparten datos con una condición compuesta.
+- El descubrimiento de reglas integradas se ejecuta de forma diferida para evitar inicialización estática circular entre el catálogo y los descriptores de reglas.
 - ✅ En `main`: S1-01, S1-02, S1-04 a S1-10.
 - 🔄 **S1-11** (Álvaro, esta rama, PR por abrir): ingesta incremental. `/verify` VERDE con corrida real del
   laboratorio (14/14). Cierra CA-HU03.1–03.3, CA-HU03.4 con fallo inyectado (corte de red real **recortado** al
