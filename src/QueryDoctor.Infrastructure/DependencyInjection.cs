@@ -10,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Connections;
+using QueryDoctor.Application.Engine.Parsing;
 using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Infrastructure.Connections;
@@ -36,6 +37,12 @@ public static class DependencyInjection
         services.AddSingleton<IFieldEncryptor, SecretProtector>();
         services.TryAddSingleton(TimeProvider.System);
 
+        // Motor determinístico: parser de Showplan XML en memoria sin E/S (S1-12, RF-MOT-01, RF-MOT-16)
+        services.TryAddSingleton<PlanParserOptions>();
+        services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
+
+        // Telemetría e ingesta de SQL Server (S1-08, RNF-SEG-01, RF-TRZ-04)
+        services.TryAddSingleton<IStatementLogWriter, InMemoryStatementLogWriter>();
         // S1-09: el Gateway hacia las bases objetivo ya NO se registra aquí, porque la Api también llama a
         // AddInfrastructure y nunca debe conectarse a bases objetivo (invariante 2). Ver AddTargetTelemetry.
 
