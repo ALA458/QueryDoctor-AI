@@ -18,6 +18,9 @@ public static partial class TelemetryStatementWhitelist
         public const string GetTopQueriesByTotalDuration = "GetTopQueriesByTotalDuration";
         public const string GetPlanXmlByPlanId = "GetPlanXmlByPlanId";
         public const string GetQueryStoreViewColumns = "GetQueryStoreViewColumns";
+        public const string GetIngestionRuntimeStats = "GetIngestionRuntimeStats";
+        public const string GetIngestionRuntimeStatsWithoutTempDbLog = "GetIngestionRuntimeStatsWithoutTempDbLog";
+        public const string GetQueryTextById = "GetQueryTextById";
     }
 
     /// <summary>
@@ -81,6 +84,60 @@ public static partial class TelemetryStatementWhitelist
         "WHERE o.name = @ViewName AND SCHEMA_NAME(o.schema_id) = 'sys' " +
         "ORDER BY c.column_id;";
 
+    // S1-11: partes comunes de las dos variantes de la sentencia de ingesta. Solo cambian las columnas de TempDB y
+    // bytes de log (RF-ING-03), que no existen en SQL Server 2016: así RNF-COM-04 se cumple sin SQL dinámico.
+    private const string IngestionRuntimeStatsSelect =
+        "SELECT rs.plan_id, p.query_id, q.query_text_id, q.query_hash, p.query_plan_hash, p.engine_version, " +
+        "OBJECT_SCHEMA_NAME(q.object_id) AS object_schema, OBJECT_NAME(q.object_id) AS object_name, " +
+        "rs.execution_type, rs.runtime_stats_interval_id, i.start_time, i.end_time, " +
+        "CASE WHEN i.end_time <= SYSDATETIMEOFFSET() THEN 1 ELSE 0 END AS is_closed, " +
+        "rs.count_executions, rs.avg_duration, rs.avg_cpu_time, rs.avg_logical_io_reads, rs.avg_physical_io_reads, " +
+        "rs.avg_logical_io_writes, rs.avg_rowcount, rs.avg_dop, rs.avg_query_max_used_memory, ";
+
+    // Top-N (RF-ING-10, D1 de S1-11): las N consultas con mayor duración total (Σ avg_duration × count_executions)
+    // en los intervalos posteriores a la marca de agua, con desempate por query_id para que sea determinista.
+    // Subconsulta y no WITH: así statement_log solo muestra sentencias que empiezan por SELECT (CA-HU15.2).
+    private const string IngestionRuntimeStatsFrom =
+        "FROM sys.query_store_runtime_stats rs " +
+        "JOIN sys.query_store_runtime_stats_interval i ON i.runtime_stats_interval_id = rs.runtime_stats_interval_id " +
+        "JOIN sys.query_store_plan p ON p.plan_id = rs.plan_id " +
+        "JOIN sys.query_store_query q ON q.query_id = p.query_id " +
+        "JOIN (SELECT TOP (@TopCount) p2.query_id " +
+        "FROM sys.query_store_runtime_stats rs2 " +
+        "JOIN sys.query_store_runtime_stats_interval i2 ON i2.runtime_stats_interval_id = rs2.runtime_stats_interval_id " +
+        "JOIN sys.query_store_plan p2 ON p2.plan_id = rs2.plan_id " +
+        "JOIN sys.query_store_query q2 ON q2.query_id = p2.query_id " +
+        "WHERE rs2.runtime_stats_interval_id > @AfterIntervalId AND i2.start_time >= @MinStartTime " +
+        "AND q2.is_internal_query = 0 " +
+        "GROUP BY p2.query_id " +
+        "ORDER BY SUM(rs2.avg_duration * rs2.count_executions) DESC, p2.query_id) t ON t.query_id = p.query_id " +
+        "WHERE rs.runtime_stats_interval_id > @AfterIntervalId AND i.start_time >= @MinStartTime " +
+        "ORDER BY rs.runtime_stats_interval_id, rs.plan_id, rs.execution_type;";
+
+    /// <summary>
+    /// Ingesta incremental (S1-11; RF-ING-01, 02, 03, 05, 10): filas crudas de sys.query_store_runtime_stats de las
+    /// N consultas de mayor consumo, en los intervalos posteriores a la marca de agua (cerrados y activos), con los
+    /// identificadores de consulta, texto y plan. La agregación ponderada (RF-ING-04) se hace después, en .NET.
+    /// SQL Server 2017+ y Azure SQL.
+    /// </summary>
+    public const string GetIngestionRuntimeStatsSql =
+        IngestionRuntimeStatsSelect +
+        "rs.avg_tempdb_space_used, rs.avg_log_bytes_used " +
+        IngestionRuntimeStatsFrom;
+
+    /// <summary>
+    /// Igual que <see cref="GetIngestionRuntimeStatsSql"/> para motores sin las columnas de TempDB y bytes de log
+    /// (SQL Server 2016): se devuelven nulas y la ingesta lo deja registrado (RNF-COM-04).
+    /// </summary>
+    public const string GetIngestionRuntimeStatsWithoutTempDbLogSql =
+        IngestionRuntimeStatsSelect +
+        "CAST(NULL AS float) AS avg_tempdb_space_used, CAST(NULL AS float) AS avg_log_bytes_used " +
+        IngestionRuntimeStatsFrom;
+
+    /// <summary>Texto SQL de una consulta de Query Store, solo para textos que aún no se guardaron (S1-11, RF-ING-01).</summary>
+    public const string GetQueryTextByIdSql =
+        "SELECT qt.query_text_id, qt.query_sql_text FROM sys.query_store_query_text qt WHERE qt.query_text_id = @QueryTextId;";
+
     private static readonly FrozenDictionary<string, string> RegisteredStatements = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
     {
         [Keys.DetectEngineVersion] = DetectEngineVersionSql,
@@ -89,6 +146,9 @@ public static partial class TelemetryStatementWhitelist
         [Keys.GetTopQueriesByTotalDuration] = GetTopQueriesByTotalDurationSql,
         [Keys.GetPlanXmlByPlanId] = GetPlanXmlByPlanIdSql,
         [Keys.GetQueryStoreViewColumns] = GetQueryStoreViewColumnsSql,
+        [Keys.GetIngestionRuntimeStats] = GetIngestionRuntimeStatsSql,
+        [Keys.GetIngestionRuntimeStatsWithoutTempDbLog] = GetIngestionRuntimeStatsWithoutTempDbLogSql,
+        [Keys.GetQueryTextById] = GetQueryTextByIdSql,
     }.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
     private static readonly string[] ForbiddenTokens =
