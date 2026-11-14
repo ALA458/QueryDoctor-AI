@@ -34,8 +34,9 @@
 **Actualizado:** 2026-11-13 · **Por:** Álvaro · **Rama:** `feat/S1-11-ingesta` (sale de `main`, no apilada)
 
 ## Estado
-- 🔒 `ai-service` instala dependencias solo desde ruedas precompiladas (`--only-binary=:all:`).
-  La resolución para Linux/Python 3.12 pasó; falta validar el build Docker cuando el daemon esté disponible.
+- 🔒 `ai-service` instala desde `requirements.lock`, con versiones y hashes fijados,
+  solo usando ruedas precompiladas (`--require-hashes --only-binary=:all:`).
+  `pytest` subió a 9.0.3+ por PYSEC-2026-1845 y `pytest-asyncio` al rango compatible.
 - `ai-service` usa anotaciones `Annotated` para las dependencias FastAPI en `main.py`.
 - `/explain` infiere su esquema de respuesta `ExplainResponse` desde la anotación de retorno.
 - `GeminiProvider.generate_explanation` delega reintentos y extracción de texto; hay regresión de 503 en `test_providers.py`.

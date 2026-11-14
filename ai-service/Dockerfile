@@ -9,8 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Usuario sin privilegios por seguridad (RNF-SEG-01 / CIS Docker)
 RUN useradd --uid 10001 --no-create-home app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir --only-binary=:all: -r requirements.txt
+COPY requirements.lock .
+RUN pip install --no-cache-dir --require-hashes --only-binary=:all: -r requirements.lock
 
 COPY src/ ./src/
 
