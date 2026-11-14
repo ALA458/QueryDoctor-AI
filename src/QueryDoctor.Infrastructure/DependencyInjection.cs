@@ -13,6 +13,7 @@ using QueryDoctor.Application.Connections;
 using QueryDoctor.Application.Engine.Parsing;
 using QueryDoctor.Application.Engine.Rules;
 using QueryDoctor.Application.Ingestion;
+using QueryDoctor.Application.KnowledgeBase;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Domain.Analysis;
 using QueryDoctor.Infrastructure.Connections;
@@ -77,6 +78,7 @@ public static class DependencyInjection
             services.AddScoped<IConnectionRepository, EfConnectionRepository>();
             services.AddScoped<IConnectionQueries, EfConnectionQueries>();
             services.AddScoped<IIngestionQueries, EfIngestionQueries>();
+            services.AddScoped<IKnowledgeBaseRepository, EfKnowledgeBaseRepository>();
         }
 
         return services;
