@@ -568,6 +568,128 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                     b.ToTable("finding", "analysis");
                 });
 
+            modelBuilder.Entity("QueryDoctor.Domain.Analysis.HealthScore", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<double>("AlphaUsed")
+                        .HasColumnType("double precision")
+                        .HasColumnName("alpha_used");
+
+                    b.Property<string>("Band")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("band");
+
+                    b.Property<DateTimeOffset>("CalculatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("calculated_at");
+
+                    b.Property<Guid>("ConnectionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("connection_id");
+
+                    b.Property<string>("ContributingFindingsJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("contributing_findings_json");
+
+                    b.Property<double>("CpuShare")
+                        .HasColumnType("double precision")
+                        .HasColumnName("cpu_share");
+
+                    b.Property<double>("DurationShare")
+                        .HasColumnType("double precision")
+                        .HasColumnName("duration_share");
+
+                    b.Property<int>("FindingsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("findings_count");
+
+                    b.Property<double>("ImpactComponent")
+                        .HasColumnType("double precision")
+                        .HasColumnName("impact_component");
+
+                    b.Property<Guid?>("IngestionRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ingestion_run_id");
+
+                    b.Property<double>("LogicalReadsShare")
+                        .HasColumnType("double precision")
+                        .HasColumnName("logical_reads_share");
+
+                    b.Property<string>("ParametersHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("parameters_hash");
+
+                    b.Property<string>("ParametersJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("parameters_json");
+
+                    b.Property<double>("Priority")
+                        .HasColumnType("double precision")
+                        .HasColumnName("priority");
+
+                    b.Property<Guid>("QueryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("query_id");
+
+                    b.Property<double>("Score")
+                        .HasColumnType("double precision")
+                        .HasColumnName("score");
+
+                    b.Property<double>("SeverityComponent")
+                        .HasColumnType("double precision")
+                        .HasColumnName("severity_component");
+
+                    b.Property<double>("TotalCpuMicroseconds")
+                        .HasColumnType("double precision")
+                        .HasColumnName("total_cpu_microseconds");
+
+                    b.Property<double>("TotalDurationMicroseconds")
+                        .HasColumnType("double precision")
+                        .HasColumnName("total_duration_microseconds");
+
+                    b.Property<long>("TotalExecutions")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_executions");
+
+                    b.Property<double>("TotalLogicalReads")
+                        .HasColumnType("double precision")
+                        .HasColumnName("total_logical_reads");
+
+                    b.Property<double>("WeightedConsumptionPct")
+                        .HasColumnType("double precision")
+                        .HasColumnName("weighted_consumption_pct");
+
+                    b.Property<DateTimeOffset>("WindowEnd")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("window_end");
+
+                    b.Property<DateTimeOffset>("WindowStart")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("window_start");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IngestionRunId");
+
+                    b.HasIndex("ConnectionId", "CalculatedAt");
+
+                    b.HasIndex("ConnectionId", "Score");
+
+                    b.HasIndex("QueryId", "CalculatedAt");
+
+                    b.ToTable("health_score", "analysis");
+                });
+
             modelBuilder.Entity("QueryDoctor.Domain.Analysis.RuleCatalogEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1571,6 +1693,26 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .HasForeignKey("PlanId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("QueryDoctor.Domain.Core.Query", null)
+                        .WithMany()
+                        .HasForeignKey("QueryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Analysis.HealthScore", b =>
+                {
+                    b.HasOne("QueryDoctor.Domain.Core.Connection", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QueryDoctor.Domain.Core.IngestionRun", null)
+                        .WithMany()
+                        .HasForeignKey("IngestionRunId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("QueryDoctor.Domain.Core.Query", null)
                         .WithMany()

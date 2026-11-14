@@ -66,7 +66,18 @@ public enum AnalysisRunStatus
 }
 
 /// <summary>
-/// Conversiones canónicas entre las enumeraciones del motor y las etiquetas normativas del contrato JSON del SRS (RF-MOT-03, RF-MOT-17, Apéndice B).
+/// Banda de interpretación del puntaje de salud H(q) (RF-SCO-06, CA-HU08.3, E-07):
+/// 0–39 Crítica, 40–69 Atención, 70–100 Saludable.
+/// </summary>
+public enum HealthScoreBand
+{
+    Critica,
+    Atencion,
+    Saludable,
+}
+
+/// <summary>
+/// Conversiones canónicas entre las enumeraciones del motor y las etiquetas normativas del contrato JSON del SRS (RF-MOT-03, RF-MOT-17, RF-SCO-06, Apéndice B).
 /// </summary>
 public static class AnalysisEnumCodes
 {
@@ -80,6 +91,15 @@ public static class AnalysisEnumCodes
             _ => "NO_APLICA",
         };
 
+    public static EvidenceClass ParseEvidenceClass(string? code) =>
+        code?.Trim().ToUpperInvariant() switch
+        {
+            "ESTIMADA" or "ESTIMATED" => EvidenceClass.Estimada,
+            "EJECUCION_AGREGADA" or "AGGREGATEDEXECUTION" => EvidenceClass.EjecucionAgregada,
+            "PLAN_REAL" or "ACTUALPLAN" => EvidenceClass.PlanReal,
+            _ => EvidenceClass.NoAplica,
+        };
+
     public static string ToContractCode(this FindingSeverity severity) =>
         severity switch
         {
@@ -88,6 +108,15 @@ public static class AnalysisEnumCodes
             FindingSeverity.Media => "MEDIA",
             FindingSeverity.Alta => "ALTA",
             _ => "INFORMATIVA",
+        };
+
+    public static FindingSeverity ParseFindingSeverity(string? code) =>
+        code?.Trim().ToUpperInvariant() switch
+        {
+            "ALTA" or "HIGH" => FindingSeverity.Alta,
+            "MEDIA" or "MEDIUM" => FindingSeverity.Media,
+            "BAJA" or "LOW" => FindingSeverity.Baja,
+            _ => FindingSeverity.Informativa,
         };
 
     public static string ToContractCode(this FindingKind kind) =>
@@ -99,6 +128,14 @@ public static class AnalysisEnumCodes
             _ => "SENAL",
         };
 
+    public static FindingKind ParseFindingKind(string? code) =>
+        code?.Trim().ToUpperInvariant() switch
+        {
+            "INDICIO" => FindingKind.Indicio,
+            "PLAN_NO_ANALIZABLE" => FindingKind.PlanNoAnalizable,
+            _ => FindingKind.Senal,
+        };
+
     public static string ToContractCode(this RuleClass ruleClass) =>
         ruleClass switch
         {
@@ -108,5 +145,23 @@ public static class AnalysisEnumCodes
             RuleClass.ClassD => "D",
             RuleClass.None => "-",
             _ => "-",
+        };
+
+    public static string ToContractCode(this HealthScoreBand band) =>
+        band switch
+        {
+            HealthScoreBand.Critica => "CRITICA",
+            HealthScoreBand.Atencion => "ATENCION",
+            HealthScoreBand.Saludable => "SALUDABLE",
+            _ => "SALUDABLE",
+        };
+
+    public static HealthScoreBand ParseHealthScoreBand(string? code) =>
+        code?.Trim().ToUpperInvariant() switch
+        {
+            "CRITICA" or "CRÍTICA" or "CRITICAL" => HealthScoreBand.Critica,
+            "ATENCION" or "ATENCIÓN" or "ATTENTION" => HealthScoreBand.Atencion,
+            "SALUDABLE" or "HEALTHY" => HealthScoreBand.Saludable,
+            _ => HealthScoreBand.Saludable,
         };
 }
