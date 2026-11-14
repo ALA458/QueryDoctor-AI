@@ -202,8 +202,12 @@ public sealed class IngestConnection
             var xml = await _reader.GetPlanXmlAsync(target, row.Stat.QueryStorePlanId, cancellationToken);
 
             // RF-ING-09 / CA-HU03.3: un plan irrecuperable queda NotAnalyzable con su causa y la ingesta sigue.
-            var classification = PlanXmlClassifier.Classify(xml.Found, xml.Content);
-            var encrypted = xml is { Found: true, Content: { Length: > 0 } content } ? _encryptor.Encrypt(content) : null;
+            var classification = PlanXmlClassifier.Classify(xml.Found, xml.Content, _options.MaxPlanCharacters);
+            // Auditoría B2: un plan TooLarge no se cifra ni se guarda (solo la causa): duplicarlo en memoria al cifrarlo y
+            // en Base64 podía agotar la memoria del Worker con un plan patológico. Los demás se guardan aunque no sean
+            // analizables, porque un XML truncado aún sirve para revisarlo a mano.
+            var keepXml = classification.Cause is not PlanNotAnalyzableCause.TooLarge;
+            var encrypted = keepXml && xml is { Found: true, Content: { Length: > 0 } content } ? _encryptor.Encrypt(content) : null;
 
             plans.Add(new IngestedPlan(
                 row.Stat.QueryStorePlanId,

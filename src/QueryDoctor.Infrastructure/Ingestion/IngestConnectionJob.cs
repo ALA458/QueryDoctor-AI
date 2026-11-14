@@ -74,11 +74,13 @@ public sealed partial class IngestConnectionJob
         {
             outcome = await _ingest.ExecuteAsync(connectionId, trigger, cancellationToken);
         }
-        catch (Exception ex) when (ex is DbUpdateException or Npgsql.NpgsqlException or InvalidOperationException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Fallo de PostgreSQL antes de abrir la ejecución o al cerrarla: solo el tipo (RNF-SEG-09). Si quedó una
-            // ejecución en Running, la próxima ingesta la cierra como Interrupted.
-            LogPersistenceFailed(_logger, connectionId, ex.GetType().Name);
+            // Lo que escapa del caso de uso no pasó por su clasificación: bloqueo, lectura de la conexión o apertura y
+            // cierre de la ejecución (casi siempre PostgreSQL). Se registra solo el tipo y Hangfire recibe una excepción
+            // sin el mensaje original, que podría traer host o usuario (RNF-SEG-09). Auditoría B6: no se etiqueta como
+            // "persistencia" lo que no se sabe que lo sea. Una ejecución que quedó en Running la cierra la siguiente.
+            LogOutsideIngestionFailed(_logger, connectionId, ex.GetType().Name);
             throw new IngestionRetryException(IngestionCause.Unknown);
         }
 
@@ -130,22 +132,49 @@ public sealed partial class IngestConnectionJob
         Message = "ingest_connection {ConnectionId}: {Count} filas con execution_type desconocido descartadas")]
     private static partial void LogDiscarded(ILogger logger, Guid connectionId, int count);
 
-    [LoggerMessage(EventId = 4006, Level = LogLevel.Error, Message = "ingest_connection {ConnectionId}: fallo de persistencia ({ExceptionType})")]
-    private static partial void LogPersistenceFailed(ILogger logger, Guid connectionId, string exceptionType);
+    [LoggerMessage(EventId = 4006, Level = LogLevel.Error,
+        Message = "ingest_connection {ConnectionId}: fallo fuera de la ingesta (bloqueo o registro de la ejecución): {ExceptionType}")]
+    private static partial void LogOutsideIngestionFailed(ILogger logger, Guid connectionId, string exceptionType);
 }
 
-/// <summary>Encola ingest_connection con el cliente Hangfire de la Api (S1-10).</summary>
+/// <summary>
+/// Encola ingest_connection con el cliente Hangfire de la Api (S1-10). Auditoría B1: no encola otra si ya hay una de la
+/// misma conexión esperando en la cola ingest (se mira con la API de monitoreo de Hangfire, que solo lee PostgreSQL).
+/// </summary>
 public sealed class HangfireIngestionJobScheduler : IIngestionJobScheduler
 {
-    private readonly IBackgroundJobClient _client;
+    /// <summary>Cuántos trabajos en espera de la cola ingest se revisan.</summary>
+    public const int PendingJobsChecked = 1000;
 
-    public HangfireIngestionJobScheduler(IBackgroundJobClient client)
+    private readonly IBackgroundJobClient _client;
+    private readonly JobStorage _storage;
+
+    public HangfireIngestionJobScheduler(IBackgroundJobClient client, JobStorage storage)
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
+        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
     }
 
-    public void EnqueueManual(Guid connectionId) =>
+    public bool TryEnqueueManual(Guid connectionId)
+    {
+        if (IsPending(connectionId))
+        {
+            return false;
+        }
+
         _client.Enqueue<IngestConnectionJob>(JobQueues.Ingest, job => job.RunManualAsync(connectionId, CancellationToken.None));
+        return true;
+    }
+
+    private bool IsPending(Guid connectionId) =>
+        _storage.GetMonitoringApi()
+            .EnqueuedJobs(JobQueues.Ingest, 0, PendingJobsChecked)
+            .Select(entry => entry.Value?.Job)
+            .Any(job => job is not null
+                && job.Type == typeof(IngestConnectionJob)
+                && job.Args.Count > 0
+                && job.Args[0] is Guid id
+                && id == connectionId);
 }
 
 /// <summary>Lecturas de ejecuciones de ingesta con EF Core, sin rastreo.</summary>
@@ -173,4 +202,8 @@ public sealed class EfIngestionQueries : IIngestionQueries
 
         return runs.Select(IngestionRunView.From).ToList();
     }
+
+    public Task<bool> HasRunningAsync(Guid connectionId, CancellationToken cancellationToken) =>
+        _db.IngestionRuns.AsNoTracking()
+            .AnyAsync(r => r.ConnectionId == connectionId && r.Status == IngestionStatus.Running, cancellationToken);
 }

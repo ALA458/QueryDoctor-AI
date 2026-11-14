@@ -54,6 +54,46 @@ public sealed class IngestionEndpointsTests(PostgresFixture postgres) : IDisposa
     }
 
     [Fact]
+    public async Task UnaSegundaPeticionMientrasLaPrimeraEsperaDa409()
+    {
+        // Auditoría B1: el segundo POST ve el trabajo en la cola ingest y no encola otro.
+        var id = await SeedConnectionAsync(ConnectionStatus.Active);
+        using var client = await _api.ClientAsync(RoleNames.Dba);
+
+        using var first = await client.PostAsync($"/connections/{id}/ingestions", null);
+        using var second = await client.PostAsync($"/connections/{id}/ingestions", null);
+
+        Assert.Equal(HttpStatusCode.Accepted, first.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+        Assert.Equal("AlreadyRunning", (await second.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("cause").GetString());
+        Assert.Equal(1, await IngestJobsAsync(id));
+    }
+
+    [Fact]
+    public async Task ConUnaEjecucionEnCursoNoSeEncola()
+    {
+        var id = await SeedConnectionAsync(ConnectionStatus.Active);
+        await using (var db = postgres.CreateContext())
+        {
+            db.IngestionRuns.Add(new IngestionRun
+            {
+                Id = Guid.NewGuid(),
+                ConnectionId = id,
+                Trigger = IngestionTrigger.Manual,
+                Status = IngestionStatus.Running,
+                StartedAt = DateTimeOffset.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        using var client = await _api.ClientAsync(RoleNames.Dba);
+        using var response = await client.PostAsync($"/connections/{id}/ingestions", null);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(0, await IngestJobsAsync(id));
+    }
+
+    [Fact]
     public async Task UnaConexionNoActivaDa409YNoEncola()
     {
         var id = await SeedConnectionAsync(ConnectionStatus.Pending);

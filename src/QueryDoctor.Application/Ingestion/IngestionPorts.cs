@@ -21,8 +21,16 @@ public sealed class IngestionOptions
     /// <summary>Límite total de una ingesta, en segundos: no retener el bloqueo por conexión indefinidamente.</summary>
     public int TimeoutSeconds { get; set; } = 600;
 
+    /// <summary>Tope de tamaño de un plan: por encima queda NotAnalyzable/TooLarge y no se guarda (RF-ING-09).</summary>
+    public long MaxPlanCharacters { get; set; } = PlanXmlClassifier.DefaultMaxCharacters;
+
     public void Validate()
     {
+        if (MaxPlanCharacters < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(MaxPlanCharacters), "Ingestion:MaxPlanCharacters debe ser al menos 1.");
+        }
+
         if (TopN is < 1 or > 5000)
         {
             throw new ArgumentOutOfRangeException(nameof(TopN), "Ingestion:TopN debe estar entre 1 y 5000 (RNF-RND-02).");
@@ -188,5 +196,6 @@ public interface IIngestionStore
 /// <summary>Encola ingest_connection. El argumento es solo el identificador (§8.1).</summary>
 public interface IIngestionJobScheduler
 {
-    void EnqueueManual(Guid connectionId);
+    /// <summary>Encola una ingesta manual; false si ya hay una de esa conexión esperando en la cola (no encola otra).</summary>
+    bool TryEnqueueManual(Guid connectionId);
 }

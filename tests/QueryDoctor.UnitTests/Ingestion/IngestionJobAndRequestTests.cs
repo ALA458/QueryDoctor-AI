@@ -69,6 +69,21 @@ public class IngestionJobAndRequestTests
     }
 
     [Fact]
+    public async Task UnFalloFueraDelCasoDeUsoSeReintentaSinElMensajeOriginal()
+    {
+        // Auditoría B6: cualquier excepción que escape (aquí, del bloqueo) llega a Hangfire sin su texto (RNF-SEG-09).
+        var connection = AddActive();
+        var job = new IngestConnectionJob(
+            new IngestConnection(_store, _reader, new ThrowingLock(), _encryptor, TimeProvider.System, new IngestionOptions(), new ProbeOptions()),
+            NullLogger<IngestConnectionJob>.Instance);
+
+        var ex = await Assert.ThrowsAsync<IngestionRetryException>(() => job.RunManualAsync(connection.Id, CancellationToken.None));
+
+        Assert.DoesNotContain("Password", ex.Message, StringComparison.Ordinal);
+        Assert.Null(ex.InnerException);
+    }
+
+    [Fact]
     public async Task QueryStoreOffNoSeReintenta()
     {
         var connection = AddActive();
@@ -100,7 +115,7 @@ public class IngestionJobAndRequestTests
     {
         var repository = new InMemoryConnectionRepository();
         var scheduler = new RecordingIngestionScheduler();
-        var useCase = new RequestIngestion(repository, scheduler);
+        var useCase = new RequestIngestion(repository, new FakeRunQueries(), scheduler);
         var active = new Connection { Id = Guid.NewGuid(), Status = ConnectionStatus.Active };
         var pending = new Connection { Id = Guid.NewGuid(), Status = ConnectionStatus.Pending };
         repository.Stored.AddRange([active, pending]);
@@ -109,6 +124,27 @@ public class IngestionJobAndRequestTests
         Assert.Equal(ConnectionStatus.Pending, Assert.IsType<RequestIngestionResult.NotActive>(await useCase.ExecuteAsync(pending.Id)).Status);
         Assert.IsType<RequestIngestionResult.NotFound>(await useCase.ExecuteAsync(Guid.NewGuid()));
         Assert.Equal([active.Id], scheduler.Enqueued);
+    }
+
+    [Fact]
+    public async Task NoSeEncolaOtraSiYaHayUnaEnCursoOEnCola()
+    {
+        // Auditoría B1: POST repetidos no generan lecturas repetidas de la base objetivo (RNF-RND-01).
+        var repository = new InMemoryConnectionRepository();
+        var runs = new FakeRunQueries();
+        var scheduler = new RecordingIngestionScheduler();
+        var useCase = new RequestIngestion(repository, runs, scheduler);
+        var connection = new Connection { Id = Guid.NewGuid(), Status = ConnectionStatus.Active };
+        repository.Stored.Add(connection);
+
+        runs.Running.Add(connection.Id);
+        Assert.IsType<RequestIngestionResult.AlreadyInProgress>(await useCase.ExecuteAsync(connection.Id));
+        Assert.Empty(scheduler.Enqueued);
+
+        runs.Running.Clear();
+        Assert.IsType<RequestIngestionResult.Accepted>(await useCase.ExecuteAsync(connection.Id));
+        Assert.IsType<RequestIngestionResult.AlreadyInProgress>(await useCase.ExecuteAsync(connection.Id));
+        Assert.Equal([connection.Id], scheduler.Enqueued);
     }
 
     [Theory]
@@ -133,10 +169,37 @@ public class IngestionJobAndRequestTests
         }
     }
 
+    /// <summary>Como la cola real: no encola otra de una conexión que ya está esperando.</summary>
     private sealed class RecordingIngestionScheduler : IIngestionJobScheduler
     {
         public List<Guid> Enqueued { get; } = [];
 
-        public void EnqueueManual(Guid connectionId) => Enqueued.Add(connectionId);
+        public bool TryEnqueueManual(Guid connectionId)
+        {
+            if (Enqueued.Contains(connectionId))
+            {
+                return false;
+            }
+
+            Enqueued.Add(connectionId);
+            return true;
+        }
+    }
+
+    private sealed class ThrowingLock : IIngestionLock
+    {
+        public Task<IAsyncDisposable?> TryAcquireAsync(Guid connectionId, CancellationToken cancellationToken) =>
+            throw new FormatException("Host=db;Password=secreta");
+    }
+
+    private sealed class FakeRunQueries : IIngestionQueries
+    {
+        public HashSet<Guid> Running { get; } = [];
+
+        public Task<IReadOnlyList<IngestionRunView>?> ListRunsAsync(Guid connectionId, int take, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<IngestionRunView>?>([]);
+
+        public Task<bool> HasRunningAsync(Guid connectionId, CancellationToken cancellationToken) =>
+            Task.FromResult(Running.Contains(connectionId));
     }
 }

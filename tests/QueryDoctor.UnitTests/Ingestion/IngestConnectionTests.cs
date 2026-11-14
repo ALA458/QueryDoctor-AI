@@ -126,6 +126,28 @@ public class IngestConnectionTests
         Assert.Equal(PlanAnalysisStatus.Pending, Assert.Single(plans, p => p.QueryStorePlanId == 200).Classification.Status);
     }
 
+    [Fact]
+    public async Task UnPlanDemasiadoGrandeQuedaNoAnalizableSinGuardarSuXml()
+    {
+        // Auditoría B2: TooLarge guarda solo la causa; los demás no analizables conservan el XML cifrado.
+        AddRow(1, 10, 100, 5);
+        AddRow(2, 20, 200, 5);
+        _reader.Texts[10] = "SELECT 1";
+        _reader.Texts[20] = "SELECT 2";
+        _reader.Plans[100] = ShowPlan + new string(' ', 100);
+        _reader.Plans[200] = "<ShowPlanXML><trunc";
+
+        await UseCase(new IngestionOptions { MaxPlanCharacters = ShowPlan.Length + 10 }).ExecuteAsync(_connection.Id, IngestionTrigger.Manual);
+
+        var plans = Assert.Single(_store.Batches).Plans;
+        var large = Assert.Single(plans, p => p.QueryStorePlanId == 100);
+        Assert.Equal(PlanNotAnalyzableCause.TooLarge, large.Classification.Cause);
+        Assert.Null(large.EncryptedPlanXml);
+        var truncated = Assert.Single(plans, p => p.QueryStorePlanId == 200);
+        Assert.Equal(PlanNotAnalyzableCause.MalformedXml, truncated.Classification.Cause);
+        Assert.NotNull(truncated.EncryptedPlanXml);
+    }
+
     [Theory]
     [InlineData("OFF", IngestionCause.QueryStoreDisabled)]
     [InlineData("ERROR", IngestionCause.QueryStoreNotReadable)]

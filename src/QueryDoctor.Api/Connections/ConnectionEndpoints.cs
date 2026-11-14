@@ -112,6 +112,12 @@ internal static class ConnectionEndpoints
                 detail: "Solo se puede ingerir una conexión activa.",
                 extensions: new Dictionary<string, object?> { ["status"] = notActive.Status.ToString() }),
 
+            RequestIngestionResult.AlreadyInProgress => Results.Problem(
+                statusCode: StatusCodes.Status409Conflict,
+                title: "Ingesta en curso",
+                detail: IngestionCauseMessages.For(IngestionCause.AlreadyRunning),
+                extensions: new Dictionary<string, object?> { ["cause"] = nameof(IngestionCause.AlreadyRunning) }),
+
             _ => throw new InvalidOperationException("Resultado de ingesta no contemplado."),
         };
     }

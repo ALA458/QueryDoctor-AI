@@ -17,6 +17,9 @@ public abstract record RequestIngestionResult
 
     /// <summary>La conexión existe pero no está Active (409).</summary>
     public sealed record NotActive(ConnectionStatus Status) : RequestIngestionResult;
+
+    /// <summary>Ya hay una ingesta de la conexión en curso o en cola (409): no se encola otra (auditoría B1).</summary>
+    public sealed record AlreadyInProgress : RequestIngestionResult;
 }
 
 /// <summary>
@@ -26,11 +29,13 @@ public abstract record RequestIngestionResult
 public sealed class RequestIngestion
 {
     private readonly IConnectionRepository _connections;
+    private readonly IIngestionQueries _runs;
     private readonly IIngestionJobScheduler _scheduler;
 
-    public RequestIngestion(IConnectionRepository connections, IIngestionJobScheduler scheduler)
+    public RequestIngestion(IConnectionRepository connections, IIngestionQueries runs, IIngestionJobScheduler scheduler)
     {
         _connections = connections ?? throw new ArgumentNullException(nameof(connections));
+        _runs = runs ?? throw new ArgumentNullException(nameof(runs));
         _scheduler = scheduler ?? throw new ArgumentNullException(nameof(scheduler));
     }
 
@@ -47,7 +52,13 @@ public sealed class RequestIngestion
             return new RequestIngestionResult.NotActive(connection.Status);
         }
 
-        _scheduler.EnqueueManual(connectionId);
+        // Auditoría B1 (RNF-RND-01): POST repetidos no deben encolar lecturas repetidas de la base objetivo. Dos POST
+        // simultáneos aún podrían encolar dos trabajos; el bloqueo por conexión los serializa y el segundo no duplica.
+        if (await _runs.HasRunningAsync(connectionId, cancellationToken) || !_scheduler.TryEnqueueManual(connectionId))
+        {
+            return new RequestIngestionResult.AlreadyInProgress();
+        }
+
         return new RequestIngestionResult.Accepted(connectionId);
     }
 }
@@ -90,4 +101,7 @@ public interface IIngestionQueries
 {
     /// <summary>null si la conexión no existe; si existe, sus últimas ejecuciones, la más reciente primero.</summary>
     Task<IReadOnlyList<IngestionRunView>?> ListRunsAsync(Guid connectionId, int take, CancellationToken cancellationToken);
+
+    /// <summary>Hay una ejecución en Running para la conexión.</summary>
+    Task<bool> HasRunningAsync(Guid connectionId, CancellationToken cancellationToken);
 }
