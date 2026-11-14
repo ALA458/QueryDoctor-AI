@@ -36,6 +36,26 @@ public enum MaskingFailureCause
 
     /// <summary>ScriptDom no pudo tokenizar el texto SQL (cadena o comentario sin cerrar, texto truncado…).</summary>
     SqlLexicalError,
+
+    /// <summary>El plan no es XML bien formado o está truncado.</summary>
+    PlanMalformed,
+
+    /// <summary>El plan declara un DTD (prohibido, como en el parser de S1-12).</summary>
+    PlanDtdProhibited,
+
+    /// <summary>El elemento raíz no es <c>ShowPlanXML</c>.</summary>
+    PlanUnexpectedRoot,
+
+    /// <summary>El plan supera la profundidad máxima de anidamiento.</summary>
+    PlanTooDeep,
+
+    /// <summary>Un atributo que lleva T-SQL o un valor literal no se pudo tokenizar.</summary>
+    PlanAttributeLexicalError,
+
+    /// <summary>
+    /// Apareció un posible portador de literales no catalogado (atributo con apóstrofo o texto en un elemento).
+    /// </summary>
+    PlanUnexpectedLiteralCarrier,
 }
 
 /// <summary>

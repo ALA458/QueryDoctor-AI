@@ -8,8 +8,8 @@ namespace QueryDoctor.Application.Masking;
 public interface IMasker
 {
     /// <summary>
-    /// Enmascara todos los componentes de <paramref name="input"/> dentro de una misma numeración de marcadores.
-    /// Cada componente falla cerrado por su cuenta, con causa tipada.
+    /// Enmascara todos los componentes de <paramref name="input"/> dentro de una misma numeración de marcadores,
+    /// en orden fijo: SQL y después plan. Cada componente falla cerrado por su cuenta, con causa tipada.
     /// </summary>
     MaskedContext Mask(MaskingInput input);
 }
@@ -18,21 +18,26 @@ public interface IMasker
 /// Contenido sin enmascarar que el núcleo quiere enviar a la IA. Nunca se registra ni se serializa.
 /// </summary>
 /// <param name="SqlText">Texto SQL de la consulta (Query Store), ya descifrado.</param>
-public sealed record MaskingInput(string? SqlText);
+/// <param name="PlanXml">Showplan XML del plan, ya descifrado.</param>
+public sealed record MaskingInput(string? SqlText, string? PlanXml = null);
 
 /// <summary>
 /// Resultado del enmascarado. Solo el enmascarador puede construirlo.
 /// </summary>
 public sealed class MaskedContext
 {
-    internal MaskedContext(MaskedTextResult sql, MaskingMetrics metrics)
+    internal MaskedContext(MaskedTextResult sql, MaskedTextResult plan, MaskingMetrics metrics)
     {
         Sql = sql;
+        Plan = plan;
         Metrics = metrics;
     }
 
     /// <summary>Texto SQL enmascarado, o no enviable con su causa.</summary>
     public MaskedTextResult Sql { get; }
+
+    /// <summary>Showplan XML enmascarado, o no enviable con su causa.</summary>
+    public MaskedTextResult Plan { get; }
 
     /// <summary>Métricas registrables (sin texto, RNF-SEG-09).</summary>
     public MaskingMetrics Metrics { get; }

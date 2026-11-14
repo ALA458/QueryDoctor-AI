@@ -18,8 +18,26 @@ public sealed class LiteralMasker : IMasker
 
         var session = new MaskingSession();
         var sql = MaskSql(input.SqlText, session);
+        var plan = MaskPlan(input.PlanXml, session);
 
-        return new MaskedContext(sql, session.ToMetrics());
+        return new MaskedContext(sql, plan, session.ToMetrics());
+    }
+
+    internal static MaskedTextResult MaskPlan(string? planXml, MaskingSession session)
+    {
+        if (string.IsNullOrWhiteSpace(planXml))
+        {
+            return MaskedTextResult.NotSendable(MaskingFailureCause.InputMissing);
+        }
+
+        var checkpoint = session.Save();
+        if (!PlanXmlMasker.TryMask(planXml, session, out var masked, out var cause))
+        {
+            session.Restore(checkpoint);
+            return MaskedTextResult.NotSendable(cause!.Value);
+        }
+
+        return MaskedTextResult.Sendable(masked!);
     }
 
     internal static MaskedTextResult MaskSql(string? sqlText, MaskingSession session)
