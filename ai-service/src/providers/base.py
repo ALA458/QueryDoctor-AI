@@ -36,24 +36,7 @@ class BaseLLMProvider(ABC):
         start_time: float,
     ) -> ExplainResponse:
         """Limpia la salida del LLM, extrae el JSON y valida el esquema de afirmaciones (RF-IA-02)."""
-        cleaned = raw_text.strip()
-
-        # Remover bloques de código markdown si el LLM los incluyó
-        if cleaned.startswith("```"):
-            cleaned = re.sub(r"^```[a-zA-Z0-9_-]*\s*", "", cleaned)
-            cleaned = re.sub(r"\s*```$", "", cleaned)
-            cleaned = cleaned.strip()
-
-        # Si aún hay texto antes o después del JSON, extraer el primer bloque {...}
-        json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
-        if json_match:
-            cleaned = json_match.group(0)
-
-        try:
-            data = json.loads(cleaned)
-        except json.JSONDecodeError as exc:
-            raise ValueError(f"El LLM no devolvió un JSON válido: {exc}. Salida cruda: {raw_text[:200]}") from exc
-
+        data = self._parse_llm_json(raw_text)
         summary = data.get("summary", "Diagnóstico de rendimiento de consulta SQL Server.")
         raw_claims = data.get("claims", [])
         if not isinstance(raw_claims, list) or len(raw_claims) == 0:
@@ -61,56 +44,12 @@ class BaseLLMProvider(ABC):
 
         valid_finding_ids = {f.finding_id for f in request.findings}
         valid_fragment_ids = {kb.fragment_id for kb in request.kb_fragments}
-
-        validated_claims: list[ClaimOutput] = []
-        for idx, item in enumerate(raw_claims):
-            if not isinstance(item, dict):
-                continue
-
-            claim_type_str = item.get("claim_type", "").upper()
-            try:
-                claim_type = ClaimType(claim_type_str)
-            except ValueError:
-                # Si el modelo devolvió un tipo no exacto, inferir o mapear
-                if "OBSERV" in claim_type_str:
-                    claim_type = ClaimType.OBSERVACION
-                elif "RECOMEND" in claim_type_str:
-                    claim_type = ClaimType.RECOMENDACION
-                else:
-                    claim_type = ClaimType.INTERPRETACION
-
-            statement = item.get("statement", "").strip()
-            if not statement:
-                statement = f"Afirmación diagnóstica generada #{idx + 1}"
-
-            finding_ids = item.get("finding_ids", [])
-            if isinstance(finding_ids, str):
-                finding_ids = [finding_ids]
-            # Filtrar solo ids válidos o si el modelo inventó uno, asociar al primer finding válido
-            filtered_finding_ids = [fid for fid in finding_ids if fid in valid_finding_ids]
-            if not filtered_finding_ids and request.findings:
-                filtered_finding_ids = [request.findings[0].finding_id]
-
-            kb_fragment_id = item.get("kb_fragment_id")
-            if kb_fragment_id:
-                kb_fragment_id = kb_fragment_id.strip()
-
-            # En INTERPRETACION y RECOMENDACION, asegurar fragment_id válido
-            if claim_type in (ClaimType.INTERPRETACION, ClaimType.RECOMENDACION):
-                if not kb_fragment_id or (valid_fragment_ids and kb_fragment_id not in valid_fragment_ids):
-                    # Asignar el primer fragmento disponible si existe
-                    if request.kb_fragments:
-                        kb_fragment_id = request.kb_fragments[0].fragment_id
-                    else:
-                        kb_fragment_id = "KB-GENERAL-01"
-
-            claim = ClaimOutput(
-                claim_type=claim_type,
-                statement=statement,
-                finding_ids=filtered_finding_ids,
-                kb_fragment_id=kb_fragment_id,
-            )
-            validated_claims.append(claim)
+        validated_claims = self._build_claims(
+            raw_claims,
+            request,
+            valid_finding_ids,
+            valid_fragment_ids,
+        )
 
         if not validated_claims:
             raise ValueError("No se pudieron validar afirmaciones válidas a partir de la salida del LLM.")
@@ -131,3 +70,127 @@ class BaseLLMProvider(ABC):
             claims=validated_claims,
             metadata=metadata,
         )
+
+    @staticmethod
+    def _parse_llm_json(raw_text: str) -> Any:
+        cleaned = raw_text.strip()
+
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```[a-zA-Z0-9_-]*\s*", "", cleaned)
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3].rstrip()
+            cleaned = cleaned.strip()
+
+        json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        if json_match:
+            cleaned = json_match.group(0)
+
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"El LLM no devolvió un JSON válido: {exc}. Salida cruda: {raw_text[:200]}"
+            ) from exc
+
+    def _build_claims(
+        self,
+        raw_claims: list[Any],
+        request: ExplainRequest,
+        valid_finding_ids: set[str],
+        valid_fragment_ids: set[str],
+    ) -> list[ClaimOutput]:
+        claims: list[ClaimOutput] = []
+        for idx, item in enumerate(raw_claims):
+            if isinstance(item, dict):
+                claims.append(
+                    self._build_claim(
+                        item,
+                        idx,
+                        request,
+                        valid_finding_ids,
+                        valid_fragment_ids,
+                    )
+                )
+        return claims
+
+    def _build_claim(
+        self,
+        item: dict[str, Any],
+        idx: int,
+        request: ExplainRequest,
+        valid_finding_ids: set[str],
+        valid_fragment_ids: set[str],
+    ) -> ClaimOutput:
+        claim_type_str = item.get("claim_type", "").upper()
+        claim_type = self._normalize_claim_type(claim_type_str)
+
+        statement = item.get("statement", "").strip()
+        if not statement:
+            statement = f"Afirmación diagnóstica generada #{idx + 1}"
+
+        finding_ids = self._normalize_finding_ids(
+            item.get("finding_ids", []),
+            request,
+            valid_finding_ids,
+        )
+        kb_fragment_id = self._normalize_kb_fragment_id(
+            item.get("kb_fragment_id"),
+            claim_type,
+            request,
+            valid_fragment_ids,
+        )
+        return ClaimOutput(
+            claim_type=claim_type,
+            statement=statement,
+            finding_ids=finding_ids,
+            kb_fragment_id=kb_fragment_id,
+        )
+
+    @staticmethod
+    def _normalize_claim_type(claim_type_str: str) -> ClaimType:
+        try:
+            return ClaimType(claim_type_str)
+        except ValueError:
+            if "OBSERV" in claim_type_str:
+                return ClaimType.OBSERVACION
+            if "RECOMEND" in claim_type_str:
+                return ClaimType.RECOMENDACION
+            return ClaimType.INTERPRETACION
+
+    @staticmethod
+    def _normalize_finding_ids(
+        finding_ids: Any,
+        request: ExplainRequest,
+        valid_finding_ids: set[str],
+    ) -> list[str]:
+        if isinstance(finding_ids, str):
+            finding_ids = [finding_ids]
+        filtered_finding_ids = [fid for fid in finding_ids if fid in valid_finding_ids]
+        if not filtered_finding_ids and request.findings:
+            return [request.findings[0].finding_id]
+        return filtered_finding_ids
+
+    @staticmethod
+    def _normalize_kb_fragment_id(
+        kb_fragment_id: Any,
+        claim_type: ClaimType,
+        request: ExplainRequest,
+        valid_fragment_ids: set[str],
+    ) -> str | None:
+        if kb_fragment_id:
+            kb_fragment_id = kb_fragment_id.strip()
+
+        requires_fragment = claim_type in (
+            ClaimType.INTERPRETACION,
+            ClaimType.RECOMENDACION,
+        )
+        if not requires_fragment:
+            return kb_fragment_id
+
+        if kb_fragment_id and (
+            not valid_fragment_ids or kb_fragment_id in valid_fragment_ids
+        ):
+            return kb_fragment_id
+        if request.kb_fragments:
+            return request.kb_fragments[0].fragment_id
+        return "KB-GENERAL-01"

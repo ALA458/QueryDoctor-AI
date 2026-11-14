@@ -53,12 +53,7 @@ class OpenRouterProvider(BaseLLMProvider):
             "response_format": {"type": "json_object"},
         }
 
-        # En el perfil de pago, exigir política de cero retención y denegación de recolección (ADR-10 §8.3)
-        if self.is_paid:
-            payload["provider"] = {
-                "data_collection": "deny",
-                "zdr": True,
-            }
+        self._apply_paid_provider_policy(payload)
 
         start_time = time.perf_counter()
         timeout = httpx.Timeout(self.settings.LLM_TIMEOUT_SECONDS, connect=10.0)
@@ -114,3 +109,11 @@ class OpenRouterProvider(BaseLLMProvider):
         finally:
             if should_close_client and client is not None:
                 await client.aclose()
+
+    def _apply_paid_provider_policy(self, payload: Dict[str, Any]) -> None:
+        # En el perfil de pago, exigir política de cero retención y denegación de recolección (ADR-10 §8.3)
+        if self.is_paid:
+            payload["provider"] = {
+                "data_collection": "deny",
+                "zdr": True,
+            }

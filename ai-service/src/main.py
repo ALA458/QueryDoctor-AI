@@ -1,7 +1,7 @@
 """Aplicación FastAPI para el microservicio de IA de Query Doctor (ADR-02, ADR-10, RF-IA-02)."""
 
 from contextlib import asynccontextmanager
-from typing import Any, Dict
+from typing import Annotated, Any, Dict
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 from src.config import Settings, get_settings
@@ -28,7 +28,9 @@ app = FastAPI(
 )
 
 
-def get_provider(settings: Settings = Depends(get_settings)) -> BaseLLMProvider:
+def get_provider(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> BaseLLMProvider:
     """Inyección de dependencias para el proveedor de LLM."""
     return get_llm_provider(settings)
 
@@ -40,7 +42,9 @@ async def health_check() -> Dict[str, str]:
 
 
 @app.get("/info", summary="Metadatos del servicio", tags=["Monitoreo"])
-async def get_service_info(settings: Settings = Depends(get_settings)) -> Dict[str, Any]:
+async def get_service_info(
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Dict[str, Any]:
     """Devuelve el estado de gobernanza y perfil activo de LLM."""
     return {
         "app_name": "QueryDoctor-AI-Service",
@@ -56,14 +60,13 @@ async def get_service_info(settings: Settings = Depends(get_settings)) -> Dict[s
 
 @app.post(
     "/explain",
-    response_model=ExplainResponse,
     status_code=status.HTTP_200_OK,
     summary="Generar explicación diagnóstica estructurada",
     tags=["Explicación"],
 )
 async def explain_query(
     request: ExplainRequest,
-    provider: BaseLLMProvider = Depends(get_provider),
+    provider: Annotated[BaseLLMProvider, Depends(get_provider)],
 ) -> ExplainResponse:
     """Genera una explicación estructurada en afirmaciones tipadas (RF-IA-02).
 

@@ -2,8 +2,10 @@
 
 import asyncio
 import time
-from typing import Optional
+from typing import Any, Optional
+
 import httpx
+
 from src.config import Settings
 from src.models.schemas import ExplainRequest, ExplainResponse
 from src.prompts.prompt_v1 import build_prompt_v1
@@ -33,17 +35,9 @@ class GeminiProvider(BaseLLMProvider):
             f"https://generativelanguage.googleapis.com/v1beta/models/"
             f"{self.model_name}:generateContent?key={api_key}"
         )
-
         payload = {
-            "system_instruction": {
-                "parts": [{"text": system_prompt}]
-            },
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": user_prompt}]
-                }
-            ],
+            "system_instruction": {"parts": [{"text": system_prompt}]},
+            "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
             "generationConfig": {
                 "responseMimeType": "application/json",
                 "temperature": 0.1,
@@ -60,42 +54,61 @@ class GeminiProvider(BaseLLMProvider):
             client = httpx.AsyncClient(timeout=timeout)
             should_close_client = True
 
-        max_attempts = 1 + self.settings.LLM_MAX_RETRIES
-
         try:
-            for attempt in range(1, max_attempts + 1):
-                try:
-                    response = await client.post(url, json=payload)
-                    if response.status_code in (429, 500, 502, 503, 504):
-                        if attempt < max_attempts:
-                            await asyncio.sleep(1.0 * (2 ** (attempt - 1)))
-                            continue
-                    response.raise_for_status()
-
-                    data = response.json()
-                    candidates = data.get("candidates", [])
-                    if not candidates:
-                        raise ValueError("Gemini no devolvió candidatos de respuesta.")
-
-                    parts = candidates[0].get("content", {}).get("parts", [])
-                    if not parts or "text" not in parts[0]:
-                        raise ValueError("Candidato de respuesta de Gemini vacío o sin texto.")
-
-                    raw_content = parts[0]["text"]
-                    return self.parse_and_validate_llm_json(
-                        raw_text=raw_content,
-                        request=request,
-                        model_name=self.model_name,
-                        served_by="google-gemini-api",
-                        start_time=start_time,
-                    )
-                except (httpx.RequestError, httpx.HTTPStatusError) as exc:
-                    if attempt < max_attempts:
-                        await asyncio.sleep(1.0 * (2 ** (attempt - 1)))
-                        continue
-                    raise RuntimeError(f"Fallo al conectar con Gemini tras {max_attempts} intentos: {exc}") from exc
-
-            raise RuntimeError("Fallo inesperado al invocar Gemini.")
+            data = await self._post_with_retries(client, url, payload)
+            raw_content = self._extract_response_text(data)
+            return self.parse_and_validate_llm_json(
+                raw_text=raw_content,
+                request=request,
+                model_name=self.model_name,
+                served_by="google-gemini-api",
+                start_time=start_time,
+            )
         finally:
             if should_close_client and client is not None:
                 await client.aclose()
+
+    async def _post_with_retries(
+        self,
+        client: httpx.AsyncClient,
+        url: str,
+        payload: dict[str, Any],
+    ) -> Any:
+        max_attempts = 1 + self.settings.LLM_MAX_RETRIES
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = await client.post(url, json=payload)
+                if (
+                    response.status_code in (429, 500, 502, 503, 504)
+                    and attempt < max_attempts
+                ):
+                    await self._wait_before_retry(attempt)
+                    continue
+                response.raise_for_status()
+                return response.json()
+            except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+                if attempt < max_attempts:
+                    await self._wait_before_retry(attempt)
+                    continue
+                raise RuntimeError(
+                    f"Fallo al conectar con Gemini tras {max_attempts} intentos: {exc}"
+                ) from exc
+
+        raise RuntimeError("Fallo inesperado al invocar Gemini.")
+
+    @staticmethod
+    async def _wait_before_retry(attempt: int) -> None:
+        await asyncio.sleep(1.0 * (2 ** (attempt - 1)))
+
+    @staticmethod
+    def _extract_response_text(data: Any) -> str:
+        candidates = data.get("candidates", [])
+        if not candidates:
+            raise ValueError("Gemini no devolvió candidatos de respuesta.")
+
+        parts = candidates[0].get("content", {}).get("parts", [])
+        if not parts or "text" not in parts[0]:
+            raise ValueError("Candidato de respuesta de Gemini vacío o sin texto.")
+
+        return parts[0]["text"]

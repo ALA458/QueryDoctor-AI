@@ -3,7 +3,7 @@
 > **Se sobrescribe, no se acumula.** Máximo ~50 líneas. Lo escribe quien cierra una
 > sesión (humano o agente). La historia vive en los PR y en git.
 
-**Actualizado:** 2026-11-13 · **Por:** Joel · **Rama:** `feat/S1-03-pruebas-arquitectura`
+**Actualizado:** 2026-11-14 · **Por:** Copilot · **Rama:** `feat/S1-18-servicio-ia`
 **Actualizado:** 2026-11-12 · **Por:** Joel · **Rama:** `feat/S1-14-reglas-debe`
 **Actualizado:** 2026-11-12 · **Por:** Joel · **Rama:** `feat/S1-13-catalogo-reglas`
 **Actualizado:** 2026-11-11 · **Por:** Joel · **Rama:** `feat/S1-12-plan-parser`
@@ -34,6 +34,15 @@
 **Actualizado:** 2026-11-13 · **Por:** Álvaro · **Rama:** `feat/S1-11-ingesta` (sale de `main`, no apilada)
 
 ## Estado
+- 🔒 `ai-service` instala dependencias solo desde ruedas precompiladas (`--only-binary=:all:`).
+  La resolución para Linux/Python 3.12 pasó; falta validar el build Docker cuando el daemon esté disponible.
+- `ai-service` usa anotaciones `Annotated` para las dependencias FastAPI en `main.py`.
+- `/explain` infiere su esquema de respuesta `ExplainResponse` desde la anotación de retorno.
+- `GeminiProvider.generate_explanation` delega reintentos y extracción de texto; hay regresión de 503 en `test_providers.py`.
+- `BaseLLMProvider` elimina la cerca Markdown final con operaciones de cadena, evitando backtracking en la regex.
+- `parse_and_validate_llm_json` delega parseo, construcción y normalización de afirmaciones en helpers.
+- `OpenRouterProvider` aplica la política de privacidad del perfil pago desde un helper dedicado.
+- El candado de producción bloquea perfiles que comparten datos con una condición compuesta.
 - ✅ En `main`: S1-01, S1-02, S1-04 a S1-10.
 - 🔄 **S1-11** (Álvaro, esta rama, PR por abrir): ingesta incremental. `/verify` VERDE con corrida real del
   laboratorio (14/14). Cierra CA-HU03.1–03.3, CA-HU03.4 con fallo inyectado (corte de red real **recortado** al

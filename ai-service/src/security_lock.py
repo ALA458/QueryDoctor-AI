@@ -59,14 +59,13 @@ def enforce_security_lock(settings: Settings) -> None:
         )
 
     # Candado estricto en producción: NUNCA permitir perfiles que comparten datos
-    if env in PROD_ENVIRONMENTS:
-        if profile in DATA_SHARING_PROFILES:
-            raise SecurityLockViolationError(
-                f"[CANDADO DE DATOS - ADR-10 / RES-06 BLOQUEADO] "
-                f"El perfil '{profile}' comparte datos con el proveedor y está estrictamente "
-                f"prohibido en entorno de producción (APP_ENV={settings.APP_ENV}). "
-                f"Utilice 'openrouter_paid' o 'ollama_local'."
-            )
+    if env in PROD_ENVIRONMENTS and profile in DATA_SHARING_PROFILES:
+        raise SecurityLockViolationError(
+            f"[CANDADO DE DATOS - ADR-10 / RES-06 BLOQUEADO] "
+            f"El perfil '{profile}' comparte datos con el proveedor y está estrictamente "
+            f"prohibido en entorno de producción (APP_ENV={settings.APP_ENV}). "
+            f"Utilice 'openrouter_paid' o 'ollama_local'."
+        )
 
     # Candado en entornos de desarrollo y laboratorio: exige confirmación explícita
     if profile in DATA_SHARING_PROFILES:

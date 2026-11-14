@@ -34,6 +34,92 @@ async def test_mock_provider_generates_valid_response(sample_request: ExplainReq
             assert claim.kb_fragment_id.startswith("KB-")
 
 
+def test_base_provider_normalizes_fenced_claim_data(sample_request: ExplainRequest):
+    provider = MockProvider(Settings(APP_ENV="dev", LLM_PROFILE="mock"))
+    raw_text = "```json\n" + json.dumps(
+        {
+            "claims": [
+                None,
+                {
+                    "claim_type": "UNKNOWN",
+                    "statement": "",
+                    "finding_ids": "invented-finding",
+                    "kb_fragment_id": "unknown-fragment",
+                },
+            ]
+        }
+    ) + "\n   ```"
+
+    response = provider.parse_and_validate_llm_json(
+        raw_text=raw_text,
+        request=sample_request,
+        model_name="test-model",
+        served_by="test-provider",
+        start_time=0.0,
+    )
+
+    assert response.summary == "Diagnóstico de rendimiento de consulta SQL Server."
+    assert len(response.claims) == 1
+    assert response.claims[0].claim_type == ClaimType.INTERPRETACION
+    assert response.claims[0].statement == "Afirmación diagnóstica generada #2"
+    assert response.claims[0].finding_ids == [
+        sample_request.findings[0].finding_id
+    ]
+    assert response.claims[0].kb_fragment_id == sample_request.kb_fragments[0].fragment_id
+
+
+def test_base_provider_uses_general_kb_fragment_when_none_are_available(
+    sample_request: ExplainRequest,
+):
+    provider = MockProvider(Settings(APP_ENV="dev", LLM_PROFILE="mock"))
+    request_without_kb = sample_request.model_copy(update={"kb_fragments": []})
+    raw_text = json.dumps(
+        {
+            "claims": [
+                {
+                    "claim_type": "RECOMENDACION",
+                    "statement": "Revisar el plan.",
+                    "finding_ids": [sample_request.findings[0].finding_id],
+                }
+            ]
+        }
+    )
+
+    response = provider.parse_and_validate_llm_json(
+        raw_text=raw_text,
+        request=request_without_kb,
+        model_name="test-model",
+        served_by="test-provider",
+        start_time=0.0,
+    )
+
+    assert response.claims[0].kb_fragment_id == "KB-GENERAL-01"
+
+
+@pytest.mark.parametrize(
+    ("claims", "error"),
+    [
+        ([], "debe contener una lista no vacía"),
+        ([None], "No se pudieron validar afirmaciones válidas"),
+    ],
+)
+def test_base_provider_rejects_empty_valid_claims(
+    sample_request: ExplainRequest,
+    claims: list[object],
+    error: str,
+):
+    provider = MockProvider(Settings(APP_ENV="dev", LLM_PROFILE="mock"))
+
+    with pytest.raises(ValueError, match=error):
+        provider.parse_and_validate_llm_json(
+            raw_text=json.dumps({"claims": claims}),
+            request=sample_request,
+            model_name="test-model",
+            served_by="test-provider",
+            start_time=0.0,
+        )
+
+
 @pytest.mark.asyncio
 async def test_openrouter_provider_missing_key_raises_value_error(sample_request: ExplainRequest):
     """OpenRouter sin clave configurada lanza ValueError inmediatamente."""
@@ -158,6 +244,69 @@ async def test_openrouter_retries_on_transient_failure(sample_request: ExplainRe
 
     assert attempt_count == 2
     assert response.summary == "Explicación tras reintento exitoso."
+
+
+@pytest.mark.asyncio
+async def test_gemini_provider_retries_and_parses_response(
+    sample_request: ExplainRequest,
+):
+    """Gemini reintenta ante un 503 y valida la respuesta estructurada."""
+    settings = Settings(
+        APP_ENV="dev",
+        LLM_PROFILE="gemini_free",
+        ALLOW_DATA_SHARING_PROVIDER=True,
+        GEMINI_API_KEY="test-gemini-key",
+        LLM_MAX_RETRIES=1,
+    )
+    attempt_count = 0
+    captured_request = {}
+    llm_response = json.dumps(
+        {
+            "summary": "Respuesta de Gemini.",
+            "claims": [
+                {
+                    "claim_type": "OBSERVACION",
+                    "statement": "Se encontró REG-01.",
+                    "finding_ids": [sample_request.findings[0].finding_id],
+                    "kb_fragment_id": None,
+                }
+            ],
+        }
+    )
+
+    def mock_transport(req: httpx.Request):
+        nonlocal attempt_count
+        attempt_count += 1
+        if attempt_count == 1:
+            return httpx.Response(
+                503, json={"error": "Service Temporarily Unavailable"}
+            )
+
+        captured_request["url"] = str(req.url)
+        captured_request["body"] = json.loads(req.content)
+        return httpx.Response(
+            200,
+            json={
+                "candidates": [{"content": {"parts": [{"text": llm_response}]}}]
+            },
+        )
+
+    async with httpx.AsyncClient(
+        transport=httpx.MockTransport(mock_transport)
+    ) as client:
+        provider = GeminiProvider(settings, client=client)
+        response = await provider.generate_explanation(sample_request)
+
+    assert attempt_count == 2
+    assert "models/gemini-1.5-flash:generateContent" in captured_request["url"]
+    assert captured_request["url"].endswith("?key=test-gemini-key")
+    assert (
+        captured_request["body"]["generationConfig"]["responseMimeType"]
+        == "application/json"
+    )
+    assert response.query_id == sample_request.query_id
+    assert response.summary == "Respuesta de Gemini."
+    assert response.metadata.served_by == "google-gemini-api"
 
 
 @pytest.mark.asyncio
