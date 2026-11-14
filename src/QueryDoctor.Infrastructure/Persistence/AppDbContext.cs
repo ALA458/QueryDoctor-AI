@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using QueryDoctor.Domain.Ai;
+using QueryDoctor.Domain.Analysis;
 using QueryDoctor.Domain.Core;
 using QueryDoctor.Domain.Ops;
 
@@ -8,7 +10,7 @@ namespace QueryDoctor.Infrastructure.Persistence;
 
 /// <summary>
 /// Contexto de EF Core sobre PostgreSQL. S1-04 cubre los esquemas core y ops;
-/// analysis, ai y audit llegan en sus propias tareas (S1-13, S1-17, S2-06).
+/// S1-13 agrega las tablas del motor en el esquema analysis; health_score (S2-02), ai (S1-17) y audit (S2-06) llegan en sus propias tareas.
 /// </summary>
 public sealed class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
 {
@@ -32,6 +34,18 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser, Applicatio
     public DbSet<IngestionRun> IngestionRuns => Set<IngestionRun>();
 
     public DbSet<UserConnection> UserConnections => Set<UserConnection>();
+
+    public DbSet<RuleCatalogEntry> RuleCatalog => Set<RuleCatalogEntry>();
+
+    public DbSet<ThresholdSet> ThresholdSets => Set<ThresholdSet>();
+
+    public DbSet<AnalysisRun> AnalysisRuns => Set<AnalysisRun>();
+
+    public DbSet<Finding> Findings => Set<Finding>();
+
+    public DbSet<KbFragment> KbFragments => Set<KbFragment>();
+
+    public DbSet<KbCausalRelation> KbCausalRelations => Set<KbCausalRelation>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

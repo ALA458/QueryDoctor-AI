@@ -143,6 +143,729 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                     b.ToTable("user_tokens", "ops");
                 });
 
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.KbCausalRelation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("FragmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("fragment_id");
+
+                    b.Property<string>("RelationType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("relation_type");
+
+                    b.Property<string>("RuleId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("rule_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FragmentId");
+
+                    b.HasIndex("RuleId");
+
+                    b.HasIndex("RuleId", "FragmentId", "RelationType")
+                        .IsUnique();
+
+                    b.ToTable("kb_causal_relation", "ai");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("b1010001-0001-0000-0000-000000000001"),
+                            FragmentId = new Guid("a1010001-0001-0000-0000-000000000001"),
+                            RelationType = "Interpretacion",
+                            RuleId = "REG-01"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010001-0001-0000-0000-000000000002"),
+                            FragmentId = new Guid("a1010001-0001-0000-0000-000000000002"),
+                            RelationType = "Recomendacion",
+                            RuleId = "REG-01"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010002-0002-0000-0000-000000000001"),
+                            FragmentId = new Guid("a1010002-0002-0000-0000-000000000001"),
+                            RelationType = "Interpretacion",
+                            RuleId = "REG-02"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010002-0002-0000-0000-000000000002"),
+                            FragmentId = new Guid("a1010002-0002-0000-0000-000000000002"),
+                            RelationType = "Recomendacion",
+                            RuleId = "REG-02"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010003-0003-0000-0000-000000000001"),
+                            FragmentId = new Guid("a1010003-0003-0000-0000-000000000001"),
+                            RelationType = "Interpretacion",
+                            RuleId = "REG-03"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010003-0003-0000-0000-000000000002"),
+                            FragmentId = new Guid("a1010003-0003-0000-0000-000000000002"),
+                            RelationType = "Recomendacion",
+                            RuleId = "REG-03"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010004-0004-0000-0000-000000000001"),
+                            FragmentId = new Guid("a1010004-0004-0000-0000-000000000001"),
+                            RelationType = "Interpretacion",
+                            RuleId = "REG-04"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010004-0004-0000-0000-000000000002"),
+                            FragmentId = new Guid("a1010004-0004-0000-0000-000000000002"),
+                            RelationType = "Recomendacion",
+                            RuleId = "REG-04"
+                        });
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.KbFragment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("RuleId")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("rule_id");
+
+                    b.Property<string>("SourceCitation")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("source_citation");
+
+                    b.Property<string>("SourceTitle")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("source_title");
+
+                    b.Property<string>("SourceUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("source_url");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RuleId");
+
+                    b.ToTable("kb_fragment", "ai");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("a1010001-0001-0000-0000-000000000001"),
+                            Content = "En SQL Server, cuando un operador combina expresiones con tipos de datos diferentes, la precedencia de tipos determina que el tipo con menor precedencia se convierta al de mayor precedencia (por ejemplo, varchar a nvarchar). Si una columna indexada tiene menor precedencia que el parámetro o literal evaluado, el motor aplica la función escalar CONVERT_IMPLICIT sobre la columna. Esta transformación anula la sargabilidad del predicado, impidiendo que el optimizador realice una búsqueda puntual (Index Seek) y forzando un recorrido completo del índice (Index Scan), lo que incrementa notablemente el consumo de CPU y las lecturas lógicas.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-01",
+                            SourceCitation = "Sección 'Precedencia de los operadores' y 'Conversión de tipos de datos en el motor de base de datos'.",
+                            SourceTitle = "Microsoft Learn: Precedencia de tipo de datos (Transact-SQL)",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/t-sql/data-types/data-type-precedence-transact-sql",
+                            Title = "Precedencia de tipos de datos y degradación a Index Scan por CONVERT_IMPLICIT"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010001-0001-0000-0000-000000000002"),
+                            Content = "Para solucionar la advertencia de conversión implícita, alinee el tipo de datos del parámetro o variable con el tipo exacto definido en la columna de la tabla. En clientes y capas de datos (como SqlClient, EF Core o Dapper), evite enviar parámetros Unicode (nvarchar con prefijo N) cuando la columna destino sea varchar o char, o altere la columna subyacente para unificar tipos. Al eliminar CONVERT_IMPLICIT sobre la columna indexada, el optimizador recupera la sargabilidad y puede generar un operador Index Seek con predicado puntual eficiente.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-01",
+                            SourceCitation = "Sección 'Recomendaciones de diseño de índices' y 'Predicados sargables'.",
+                            SourceTitle = "Microsoft Learn: Guía de arquitectura y diseño de índices de SQL Server",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/sql-server-index-design-guide",
+                            Title = "Alineación de tipos de datos entre parámetros y columnas para habilitar Index Seek"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010002-0002-0000-0000-000000000001"),
+                            Content = "Durante la fase de optimización basada en costos, el procesador de consultas evalúa los índices existentes frente a los predicados de filtro y unión. Si determina que un predicado carece de un índice que cubra las columnas evaluadas, genera una sugerencia en el elemento MissingIndexes del Showplan XML con un porcentaje de impacto estimado (Impact). Dicho porcentaje cuantifica la reducción teórica del costo total del plan si existiera un índice no agrupado óptimo con las columnas de igualdad (EqualityColumns), desigualdad (InequalityColumns) e inclusión (IncludeColumns).",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-02",
+                            SourceCitation = "Sección 'Uso de la característica de índices faltantes para ajustar índices no agrupados'.",
+                            SourceTitle = "Microsoft Learn: Optimización de índices no agrupados con sugerencias de índices que faltan",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/indexes/tune-nonclustered-missing-index-suggestions",
+                            Title = "Detección de índices faltantes por el optimizador basado en costos"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010002-0002-0000-0000-000000000002"),
+                            Content = "Antes de crear un índice sugerido por MissingIndexes, examine si un índice existente puede adaptarse incorporando columnas en la cláusula INCLUDE, en lugar de crear un índice nuevo. Cada índice adicional consume almacenamiento y penaliza las operaciones DML (INSERT, UPDATE, DELETE), ya que el motor debe mantener actualizadas todas las páginas del árbol B. Diseñe el índice colocando las columnas de igualdad al inicio de la clave, seguidas por las columnas de desigualdad, y asigne las columnas proyectadas a la cláusula INCLUDE para no engrosar los niveles intermedios.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-02",
+                            SourceCitation = "Sección 'Costo de mantenimiento de índices frente a beneficio en consultas de lectura'.",
+                            SourceTitle = "Microsoft Learn: Directrices generales para el diseño de índices",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/sql-server-index-design-guide#general-index-design-guidelines",
+                            Title = "Diseño ponderado de índices no agrupados y evaluación del costo de escritura"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010003-0003-0000-0000-000000000001"),
+                            Content = "Un Clustered Index Scan o Table Scan obliga al motor de base de datos a leer secuencialmente todas las páginas de datos asignadas a la tabla. Cuando la consulta especifica una cláusula WHERE selectiva pero no existe un índice ordenado que permita recorrer el árbol B hasta las filas requeridas, el procesador evalúa el filtro fila por fila como un predicado residual (Predicate) tras cargar cada página en el buffer pool, lo que satura la memoria intermedia, multiplica las lecturas lógicas y eleva el uso de CPU.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-03",
+                            SourceCitation = "Sección 'Operadores lógicos y físicos de Showplan: Recorrido de índice agrupado y Recorrido de tabla'.",
+                            SourceTitle = "Microsoft Learn: Guía de arquitectura de procesamiento de consultas",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/query-processing-architecture-guide",
+                            Title = "Lectura secuencial completa de páginas por falta de acceso indexado sargable"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010003-0003-0000-0000-000000000002"),
+                            Content = "Para sustituir un escaneo completo de tabla por un Index Seek altamente eficiente, determine las columnas del predicado de búsqueda más selectivo y cree un índice no agrupado adecuado. Si las consultas filtran con frecuencia sobre un subconjunto conocido de filas (por ejemplo, registros con estado activo o pedidos pendientes), implemente un índice filtrado (Filtered Index) con una cláusula WHERE. Los índices filtrados tienen menor tamaño, requieren menos mantenimiento en operaciones DML y garantizan búsquedas directas en el árbol B.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-03",
+                            SourceCitation = "Sección 'Uso de índices no agrupados para optimizar consultas con predicados selectivos'.",
+                            SourceTitle = "Microsoft Learn: Crear índices no agrupados",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/indexes/create-nonclustered-indexes",
+                            Title = "Creación de índice no agrupado selectivo o índice filtrado para reemplazar escaneos"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010004-0004-0000-0000-000000000001"),
+                            Content = "Un operador Key Lookup (Clustered) ocurre cuando una consulta aprovecha un índice no agrupado para localizar filas mediante un Index Seek, pero la lista de selección (SELECT) o condiciones posteriores requieren columnas que no están presentes en dicho índice. Por cada fila recuperada en el Index Seek, el operador Nested Loops realiza una búsqueda puntual individual en el índice agrupado base para recuperar las columnas faltantes. Cuando la cardinalidad resultante es alta, la multiplicación de búsquedas puntuales supera ampliamente el costo de un escaneo completo y dispara las lecturas lógicas.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-04",
+                            SourceCitation = "Operador físico 'Clustered Index Seek' con Lookup='true' / 'Key Lookup'.",
+                            SourceTitle = "Microsoft Learn: Referencia de operadores lógicos y físicos de Showplan",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/showplan-logical-and-physical-operators-reference",
+                            Title = "Sobrecarga de lecturas por saltos al índice agrupado base en Key Lookup"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010004-0004-0000-0000-000000000002"),
+                            Content = "Para eliminar de forma definitiva un Key Lookup costoso, convierta el índice no agrupado en un índice de cobertura (Covering Index) agregando las columnas proyectadas faltantes a la cláusula INCLUDE de la instrucción CREATE INDEX. Las columnas en INCLUDE se almacenan exclusivamente en las páginas del nivel hoja del índice y no participan en las claves de ordenación, permitiendo que la consulta se resuelva íntegramente desde el índice no agrupado sin incrementar la profundidad del árbol B ni sobrecargar los costos de mantenimiento de las claves.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-04",
+                            SourceCitation = "Sección 'Directrices de diseño para columnas incluidas'.",
+                            SourceTitle = "Microsoft Learn: Crear índices con columnas incluidas",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/indexes/create-indexes-with-included-columns",
+                            Title = "Cobertura de índice mediante cláusula INCLUDE para erradicar Key Lookups"
+                        });
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Analysis.AnalysisRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CatalogVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("catalog_version");
+
+                    b.Property<Guid>("ConnectionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("connection_id");
+
+                    b.Property<string>("EngineVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("engine_version");
+
+                    b.Property<string>("ErrorCause")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("error_cause");
+
+                    b.Property<int>("FindingsCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("findings_count");
+
+                    b.Property<DateTimeOffset?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("finished_at");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("plan_id");
+
+                    b.Property<Guid>("QueryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("query_id");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("ThresholdSetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("threshold_set_id");
+
+                    b.Property<string>("ThresholdsUsedJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("thresholds_used_json");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId");
+
+                    b.HasIndex("QueryId");
+
+                    b.HasIndex("ThresholdSetId");
+
+                    b.HasIndex("PlanId", "StartedAt");
+
+                    b.ToTable("analysis_run", "analysis");
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Analysis.Finding", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AnalysisRunId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("analysis_run_id");
+
+                    b.Property<DateTimeOffset>("AnalyzedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("analyzed_at");
+
+                    b.Property<string>("CatalogVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("catalog_version");
+
+                    b.Property<Guid>("ConnectionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("connection_id");
+
+                    b.Property<string>("ContextJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("context_json");
+
+                    b.Property<string>("EncryptedEvidenceJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("encrypted_evidence_json");
+
+                    b.Property<string>("EngineVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("engine_version");
+
+                    b.Property<string>("EvidenceClass")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("evidence_class");
+
+                    b.Property<string>("FindingCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("finding_code");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("NodesJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("nodes_json");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("plan_id");
+
+                    b.Property<Guid>("QueryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("query_id");
+
+                    b.Property<string>("RuleId")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("rule_id");
+
+                    b.Property<string>("RuleVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("rule_version");
+
+                    b.Property<string>("SchemaVersion")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("schema_version");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("severity");
+
+                    b.Property<string>("ThresholdsUsedJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("thresholds_used_json");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("QueryId");
+
+                    b.HasIndex("AnalysisRunId", "FindingCode")
+                        .IsUnique();
+
+                    b.HasIndex("ConnectionId", "Severity");
+
+                    b.ToTable("finding", "analysis");
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Analysis.RuleCatalogEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BaseSeverity")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("base_severity");
+
+                    b.Property<string>("CatalogVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("catalog_version");
+
+                    b.Property<string>("DefaultThresholdsJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("default_thresholds_json");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("DocumentationSource")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)")
+                        .HasColumnName("documentation_source");
+
+                    b.Property<string>("EvidenceClass")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("evidence_class");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("priority");
+
+                    b.Property<string>("RuleClass")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("rule_class");
+
+                    b.Property<string>("RuleId")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("rule_id");
+
+                    b.Property<string>("RuleVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("rule_version");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RuleId", "CatalogVersion", "RuleVersion")
+                        .IsUnique();
+
+                    b.ToTable("rule_catalog", "analysis");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0001"),
+                            BaseSeverity = "Alta",
+                            CatalogVersion = "1.0.0",
+                            DefaultThresholdsJson = "{}",
+                            Description = "Advertencia PlanAffectingConvert del plan, con el tipo de problema (ConvertIssue) y la expresión afectada.",
+                            DocumentationSource = "Microsoft Learn: Showplan XML Warnings (PlanAffectingConvert) [4, 11]",
+                            EvidenceClass = "Estimada",
+                            Name = "Conversión implícita que afecta el plan",
+                            Priority = "Must",
+                            RuleClass = "ClassA",
+                            RuleId = "REG-01",
+                            RuleVersion = "1.0.0"
+                        },
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0002"),
+                            BaseSeverity = "Media",
+                            CatalogVersion = "1.0.0",
+                            DefaultThresholdsJson = "{}",
+                            Description = "Grupo MissingIndexes del plan, con el impacto estimado y las columnas por tipo de uso, acompañado de la advertencia de costo de escritura.",
+                            DocumentationSource = "Microsoft Learn: Tune nonclustered indexes with missing index suggestions [30]",
+                            EvidenceClass = "Estimada",
+                            Name = "Índice faltante",
+                            Priority = "Must",
+                            RuleClass = "ClassA",
+                            RuleId = "REG-02",
+                            RuleVersion = "1.0.0"
+                        },
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0003"),
+                            BaseSeverity = "Media",
+                            CatalogVersion = "1.0.0",
+                            DefaultThresholdsJson = "{\"min_estimated_rows\":10000,\"min_query_consumption_pct\":1,\"rows_read_to_returned_ratio\":10}",
+                            Description = "Operadores de recorrido completo de tabla o de índice que cumplen una condición de contexto: predicado con alta razón entre filas leídas y devueltas estimadas, o volumen estimado alto en una consulta con consumo relevante en la ventana.",
+                            DocumentationSource = "Microsoft Learn: Display the estimated execution plan & Table/Index Scan operators [4, 6]",
+                            EvidenceClass = "Estimada",
+                            Name = "Lectura completa costosa (contextual)",
+                            Priority = "Must",
+                            RuleClass = "ClassA",
+                            RuleId = "REG-03",
+                            RuleVersion = "1.0.0"
+                        },
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0004"),
+                            BaseSeverity = "Media",
+                            CatalogVersion = "1.0.0",
+                            DefaultThresholdsJson = "{\"min_estimated_executions\":1000,\"min_query_consumption_pct\":1}",
+                            Description = "Operador de búsqueda por clave (Key Lookup o RID Lookup) con un número estimado de ejecuciones por encima de un umbral configurable, en una consulta con consumo relevante en la ventana.",
+                            DocumentationSource = "Microsoft Learn: Showplan Logical and Physical Operators Reference (Key Lookup / RID Lookup) [4, 6]",
+                            EvidenceClass = "Estimada",
+                            Name = "Búsqueda por clave excesiva (contextual)",
+                            Priority = "Must",
+                            RuleClass = "ClassA",
+                            RuleId = "REG-04",
+                            RuleVersion = "1.0.0"
+                        },
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0005"),
+                            BaseSeverity = "Media",
+                            CatalogVersion = "1.0.0",
+                            DefaultThresholdsJson = "{}",
+                            Description = "Advertencia ColumnsWithNoStatistics en el plan compilado, con las columnas afectadas.",
+                            DocumentationSource = "Microsoft Learn: Showplan XML Warnings (ColumnsWithNoStatistics) [4, 11]",
+                            EvidenceClass = "Estimada",
+                            Name = "Ausencia de estadísticas",
+                            Priority = "Should",
+                            RuleClass = "ClassA",
+                            RuleId = "REG-05",
+                            RuleVersion = "1.0.0"
+                        },
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0006"),
+                            BaseSeverity = "Alta",
+                            CatalogVersion = "1.0.0",
+                            DefaultThresholdsJson = "{}",
+                            Description = "Advertencia de unión sin predicado explícito de cruce (NoJoinPredicate) en un operador del plan.",
+                            DocumentationSource = "Microsoft Learn: Showplan XML Warnings (NoJoinPredicate) [4, 11]",
+                            EvidenceClass = "Estimada",
+                            Name = "Unión sin predicado",
+                            Priority = "Should",
+                            RuleClass = "ClassA",
+                            RuleId = "REG-06",
+                            RuleVersion = "1.0.0"
+                        },
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0007"),
+                            BaseSeverity = "Media",
+                            CatalogVersion = "1.0.0",
+                            DefaultThresholdsJson = "{\"cardinality_ratio\":10}",
+                            Description = "Comparación entre las filas estimadas de la sentencia y las filas devueltas promedio de las estadísticas de ejecución en Query Store.",
+                            DocumentationSource = "Microsoft Learn: How Query Store collects data & sys.query_store_runtime_stats [3, 5]",
+                            EvidenceClass = "EjecucionAgregada",
+                            Name = "Discrepancia de cardinalidad a nivel de sentencia",
+                            Priority = "Should",
+                            RuleClass = "ClassB",
+                            RuleId = "REG-07",
+                            RuleVersion = "1.0.0"
+                        },
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0008"),
+                            BaseSeverity = "Alta",
+                            CatalogVersion = "1.0.0",
+                            DefaultThresholdsJson = "{\"min_executions_per_plan\":100,\"regression_increase_pct\":50}",
+                            Description = "Comparación de las estadísticas agregadas de duración y CPU entre múltiples planes de una misma consulta a lo largo del tiempo.",
+                            DocumentationSource = "Microsoft Learn: sys.query_store_plan & sys.query_store_runtime_stats [4, 5]",
+                            EvidenceClass = "EjecucionAgregada",
+                            Name = "Regresión de rendimiento entre planes",
+                            Priority = "Should",
+                            RuleClass = "ClassD",
+                            RuleId = "REG-08",
+                            RuleVersion = "1.0.0"
+                        },
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0009"),
+                            BaseSeverity = "Media",
+                            CatalogVersion = "1.0.0",
+                            DefaultThresholdsJson = "{}",
+                            Description = "Advertencias de desbordamiento presentes en un plan real; de no existir plan real, un uso elevado del espacio de almacenamiento temporal en las estadísticas agregadas se reporta únicamente como indicio.",
+                            DocumentationSource = "Microsoft Learn: sys.dm_exec_query_plan_stats & TempDB spill events in Showplan [7, 10]",
+                            EvidenceClass = "PlanReal",
+                            Name = "Desbordamiento a almacenamiento temporal y advertencias de memoria",
+                            Priority = "Could",
+                            RuleClass = "ClassC",
+                            RuleId = "REG-09",
+                            RuleVersion = "1.0.0"
+                        },
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0010"),
+                            BaseSeverity = "Baja",
+                            CatalogVersion = "1.0.0",
+                            DefaultThresholdsJson = "{\"duration_max_min_ratio\":5}",
+                            Description = "Variabilidad significativa de duración entre múltiples planes compilados de la misma consulta reportada como indicio no confirmado.",
+                            DocumentationSource = "Microsoft Learn: How Query Store collects data [3, 5]",
+                            EvidenceClass = "EjecucionAgregada",
+                            Name = "Sensibilidad a parámetros (indicio)",
+                            Priority = "Could",
+                            RuleClass = "ClassD",
+                            RuleId = "REG-10",
+                            RuleVersion = "1.0.0"
+                        },
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0011"),
+                            BaseSeverity = "Informativa",
+                            CatalogVersion = "1.0.0",
+                            DefaultThresholdsJson = "{}",
+                            Description = "Estructura XML nula, inválida, truncada o no reconocida por el analizador Showplan.",
+                            DocumentationSource = "Microsoft Learn: sys.dm_exec_query_plan_stats (XML nesting limit, F8) [7]",
+                            EvidenceClass = "NoAplica",
+                            Name = "Plan no analizable",
+                            Priority = "Must",
+                            RuleClass = "None",
+                            RuleId = "REG-11",
+                            RuleVersion = "1.0.0"
+                        });
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Analysis.ThresholdSet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CatalogVersion")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("catalog_version");
+
+                    b.Property<string>("ConfigurationHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("configuration_hash");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<string>("ThresholdsJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("thresholds_json");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CatalogVersion", "ConfigurationHash")
+                        .IsUnique();
+
+                    b.ToTable("threshold_set", "analysis");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a1001"),
+                            CatalogVersion = "1.0.0",
+                            ConfigurationHash = "8182349B6FF3DAD35F1B6FCCBD38C6AA8B0AFDDF9E7B91C28EBB061D8502E61E",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 28, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            IsDefault = true,
+                            ThresholdsJson = "{\"min_query_consumption_pct\":1,\"reg03_min_estimated_rows\":10000,\"reg03_rows_read_to_returned_ratio\":10,\"reg04_min_estimated_executions\":1000,\"reg07_cardinality_ratio\":10,\"reg08_min_executions_per_plan\":100,\"reg08_regression_increase_pct\":50,\"reg10_duration_max_min_ratio\":5}"
+                        });
+                });
+
             modelBuilder.Entity("QueryDoctor.Domain.Core.CapabilityProfile", b =>
                 {
                     b.Property<Guid>("Id")
@@ -791,6 +1514,71 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.KbCausalRelation", b =>
+                {
+                    b.HasOne("QueryDoctor.Domain.Ai.KbFragment", "Fragment")
+                        .WithMany("CausalRelations")
+                        .HasForeignKey("FragmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Fragment");
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Analysis.AnalysisRun", b =>
+                {
+                    b.HasOne("QueryDoctor.Domain.Core.Connection", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QueryDoctor.Domain.Core.Plan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QueryDoctor.Domain.Core.Query", null)
+                        .WithMany()
+                        .HasForeignKey("QueryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QueryDoctor.Domain.Analysis.ThresholdSet", null)
+                        .WithMany()
+                        .HasForeignKey("ThresholdSetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Analysis.Finding", b =>
+                {
+                    b.HasOne("QueryDoctor.Domain.Analysis.AnalysisRun", null)
+                        .WithMany()
+                        .HasForeignKey("AnalysisRunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QueryDoctor.Domain.Core.Connection", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QueryDoctor.Domain.Core.Plan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QueryDoctor.Domain.Core.Query", null)
+                        .WithMany()
+                        .HasForeignKey("QueryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("QueryDoctor.Domain.Core.CapabilityProfile", b =>
                 {
                     b.HasOne("QueryDoctor.Domain.Core.Connection", null)
@@ -875,6 +1663,11 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.KbFragment", b =>
+                {
+                    b.Navigation("CausalRelations");
                 });
 #pragma warning restore 612, 618
         }

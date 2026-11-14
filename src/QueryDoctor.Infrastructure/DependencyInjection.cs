@@ -10,8 +10,14 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Connections;
+using QueryDoctor.Application.Engine.Parsing;
+using QueryDoctor.Application.Engine.Rules;
+using QueryDoctor.Application.Ingestion;
+using QueryDoctor.Application.KnowledgeBase;
 using QueryDoctor.Application.Telemetry;
+using QueryDoctor.Domain.Analysis;
 using QueryDoctor.Infrastructure.Connections;
+using QueryDoctor.Infrastructure.Ingestion;
 using QueryDoctor.Infrastructure.Persistence;
 using QueryDoctor.Infrastructure.Security;
 using QueryDoctor.Infrastructure.Telemetry;
@@ -34,6 +40,31 @@ public static class DependencyInjection
         services.AddSingleton<IFieldEncryptor, SecretProtector>();
         services.TryAddSingleton(TimeProvider.System);
 
+        // Motor determinístico: parser de Showplan XML en memoria sin E/S (S1-12, RF-MOT-01, RF-MOT-16)
+        services.TryAddSingleton<PlanParserOptions>();
+        services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
+
+        // Motor determinístico: parser de Showplan XML, catálogo versionado y motor de reglas sin E/S (S1-12, S1-13, RF-MOT-01..17)
+        services.TryAddSingleton<PlanParserOptions>();
+        services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
+        services.TryAddSingleton(_ => BindRuleThresholds(configuration));
+        services.TryAddSingleton<IRuleCatalog, VersionedRuleCatalog>();
+        services.TryAddSingleton<IRuleEngine, DeterministicRuleEngine>();
+
+        // Motor determinístico: parser de Showplan XML, catálogo versionado y motor de reglas sin E/S (S1-12, S1-13, S1-14, RF-MOT-01..17, RNF-MAN-01)
+        services.TryAddSingleton<PlanParserOptions>();
+        services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
+        services.TryAddSingleton(_ => BindRuleThresholds(configuration));
+        foreach (var builtInRule in VersionedRuleCatalog.DiscoverBuiltInRules())
+        {
+            services.TryAddEnumerable(ServiceDescriptor.Singleton<IRule>(builtInRule));
+        }
+
+        services.TryAddSingleton<IRuleCatalog, VersionedRuleCatalog>();
+        services.TryAddSingleton<IRuleEngine, DeterministicRuleEngine>();
+
+        // Telemetría e ingesta de SQL Server (S1-08, RNF-SEG-01, RF-TRZ-04)
+        services.TryAddSingleton<IStatementLogWriter, InMemoryStatementLogWriter>();
         // S1-09: el Gateway hacia las bases objetivo ya NO se registra aquí, porque la Api también llama a
         // AddInfrastructure y nunca debe conectarse a bases objetivo (invariante 2). Ver AddTargetTelemetry.
 
@@ -46,6 +77,8 @@ public static class DependencyInjection
             services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
             services.AddScoped<IConnectionRepository, EfConnectionRepository>();
             services.AddScoped<IConnectionQueries, EfConnectionQueries>();
+            services.AddScoped<IIngestionQueries, EfIngestionQueries>();
+            services.AddScoped<IKnowledgeBaseRepository, EfKnowledgeBaseRepository>();
         }
 
         return services;
@@ -59,6 +92,48 @@ public static class DependencyInjection
     {
         services.AddScoped<IProbeJobScheduler, HangfireProbeJobScheduler>();
         services.AddScoped<RegisterConnection>();
+        return services;
+    }
+
+    /// <summary>
+    /// Ingesta manual para la Api (S1-11): valida y encola ingest_connection. No registra el Gateway ni el lector de
+    /// Query Store: la Api nunca se conecta a bases objetivo (invariante 2).
+    /// </summary>
+    public static IServiceCollection AddIngestionRequests(this IServiceCollection services)
+    {
+        services.AddScoped<IIngestionJobScheduler, HangfireIngestionJobScheduler>();
+        services.AddScoped<RequestIngestion>();
+        return services;
+    }
+
+    /// <summary>
+    /// Ingesta incremental: SOLO para el Worker, junto con <see cref="AddTargetTelemetry"/> (S1-11, §6.2). Necesita
+    /// PostgreSQL: sin cadena de conexión no se registra (igual que la persistencia).
+    /// </summary>
+    public static IServiceCollection AddIngestion(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var connectionString = GetPostgresConnectionString(configuration);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return services;
+        }
+
+        services.Configure<IngestionOptions>(configuration.GetSection(IngestionOptions.SectionName));
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<IngestionOptions>>().Value;
+            options.Validate();
+            return options;
+        });
+
+        services.AddSingleton<IIngestionLock>(_ => new PostgresIngestionLock(connectionString));
+        services.AddScoped<IQueryStoreReader, QueryStoreReader>();
+        services.AddScoped<IIngestionStore, EfIngestionStore>();
+        services.AddScoped<IngestConnection>();
+        services.AddScoped<IngestConnectionJob>();
+
         return services;
     }
 
@@ -163,4 +238,35 @@ public static class DependencyInjection
 
         return builder.ConnectionString;
     }
+
+    private static RuleThresholds BindRuleThresholds(IConfiguration configuration)
+    {
+        var section = configuration.GetSection(RuleThresholds.SectionName);
+        if (!section.Exists())
+        {
+            return RuleThresholds.Default;
+        }
+
+        return new RuleThresholds
+        {
+            Reg03MinEstimatedRows = ReadDouble(section, nameof(RuleThresholds.Reg03MinEstimatedRows), RuleThresholds.DefaultReg03MinEstimatedRows),
+            Reg03RowsReadToReturnedRatio = ReadDouble(section, nameof(RuleThresholds.Reg03RowsReadToReturnedRatio), RuleThresholds.DefaultReg03RowsReadToReturnedRatio),
+            MinQueryConsumptionPct = ReadDouble(section, nameof(RuleThresholds.MinQueryConsumptionPct), RuleThresholds.DefaultMinQueryConsumptionPct),
+            Reg04MinEstimatedExecutions = ReadDouble(section, nameof(RuleThresholds.Reg04MinEstimatedExecutions), RuleThresholds.DefaultReg04MinEstimatedExecutions),
+            Reg07CardinalityRatio = ReadDouble(section, nameof(RuleThresholds.Reg07CardinalityRatio), RuleThresholds.DefaultReg07CardinalityRatio),
+            Reg08RegressionIncreasePct = ReadDouble(section, nameof(RuleThresholds.Reg08RegressionIncreasePct), RuleThresholds.DefaultReg08RegressionIncreasePct),
+            Reg08MinExecutionsPerPlan = ReadLong(section, nameof(RuleThresholds.Reg08MinExecutionsPerPlan), RuleThresholds.DefaultReg08MinExecutionsPerPlan),
+            Reg10DurationMaxMinRatio = ReadDouble(section, nameof(RuleThresholds.Reg10DurationMaxMinRatio), RuleThresholds.DefaultReg10DurationMaxMinRatio),
+        };
+    }
+
+    private static double ReadDouble(IConfigurationSection section, string key, double fallback) =>
+        double.TryParse(section[key], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : fallback;
+
+    private static long ReadLong(IConfigurationSection section, string key, long fallback) =>
+        long.TryParse(section[key], NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : fallback;
 }

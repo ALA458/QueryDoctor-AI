@@ -11,6 +11,9 @@ builder.Services.AddQueryDoctorHangfire(builder.Configuration);
 // Solo el Worker llega a bases objetivo (invariante 2): Gateway, CapabilityProbe y probe_connection (S1-09).
 builder.Services.AddTargetTelemetry(builder.Configuration);
 
+// S1-11: ingest_connection en la cola ingest (la atiende el servidor principal de abajo).
+builder.Services.AddIngestion(builder.Configuration);
+
 // Invariante 3: la excepción de TLS del laboratorio (docker-compose.lab.yml) no arranca fuera de Development.
 LabCertificateGuard.EnsureAllowed(builder.Configuration, builder.Environment.EnvironmentName);
 
