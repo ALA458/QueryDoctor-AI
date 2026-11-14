@@ -14,6 +14,9 @@ builder.Services.AddTargetTelemetry(builder.Configuration);
 // S1-11: ingest_connection en la cola ingest (la atiende el servidor principal de abajo).
 builder.Services.AddIngestion(builder.Configuration);
 
+// S2-04: el contexto hacia la IA se arma y enmascara en el Worker (invariante 5). Sin configuración: no se apaga.
+builder.Services.AddLiteralMasking();
+
 // Invariante 3: la excepción de TLS del laboratorio (docker-compose.lab.yml) no arranca fuera de Development.
 LabCertificateGuard.EnsureAllowed(builder.Configuration, builder.Environment.EnvironmentName);
 
