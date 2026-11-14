@@ -387,11 +387,11 @@ public sealed class MustRulesEvaluationTests
         var catalog = provider.GetRequiredService<IRuleCatalog>();
         var activeRuleIds = catalog.GetActiveRules().Select(r => r.Descriptor.RuleId).ToArray();
 
-        Assert.Equal(["REG-01", "REG-02", "REG-04"], activeRuleIds);
+        Assert.Equal(["REG-01", "REG-02", "REG-03", "REG-04"], activeRuleIds);
 
         var engine = provider.GetRequiredService<IRuleEngine>();
 
-        // En ESC01.qs.1.sqlplan están presentes tanto PlanAffectingConvert (REG-01) como el Key Lookup con 20 ejecuciones (REG-04 con umbral 15)
+        // En ESC01.qs.1.sqlplan están presentes PlanAffectingConvert (REG-01), Index Scan contextual con predicado (REG-03) y el Key Lookup con 20 ejecuciones (REG-04 con umbral 15)
         var esc01Result = engine.Analyze(new PlanAnalysisRequest(
             ShowplanXml: LoadFixture("ESC01.qs.1.sqlplan"),
             QueryStoreQueryId: 10,
@@ -399,10 +399,10 @@ public sealed class MustRulesEvaluationTests
             QueryConsumptionPct: 5.0));
 
         Assert.Equal(
-            ["REG-01", "REG-04"],
+            ["REG-01", "REG-03", "REG-04"],
             esc01Result.Findings.Select(f => f.Rule.Id).ToArray());
 
-        // En ESC03.qs.1.sqlplan está presente MissingIndexes (REG-02)
+        // En ESC03.qs.1.sqlplan están presentes MissingIndexes (REG-02) y el Clustered Index Scan contextual con predicado residual (REG-03)
         var esc03Result = engine.Analyze(new PlanAnalysisRequest(
             ShowplanXml: LoadFixture("ESC03.qs.1.sqlplan"),
             QueryStoreQueryId: 30,
@@ -410,7 +410,7 @@ public sealed class MustRulesEvaluationTests
             QueryConsumptionPct: 5.0));
 
         Assert.Equal(
-            ["REG-02"],
+            ["REG-02", "REG-03"],
             esc03Result.Findings.Select(f => f.Rule.Id).ToArray());
     }
 

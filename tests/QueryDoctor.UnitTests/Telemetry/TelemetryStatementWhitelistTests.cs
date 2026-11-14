@@ -52,12 +52,12 @@ public class TelemetryStatementWhitelistTests
         Assert.Contains(column, TelemetryStatementWhitelist.GetQueryStoreOptionsSql, StringComparison.Ordinal);
     }
 
-    public static TheoryData<string> IngestionStatementKeys =>
-    [
+    public static TheoryData<string> IngestionStatementKeys => new()
+    {
         TelemetryStatementWhitelist.Keys.GetIngestionRuntimeStats,
         TelemetryStatementWhitelist.Keys.GetIngestionRuntimeStatsWithoutTempDbLog,
         TelemetryStatementWhitelist.Keys.GetQueryTextById,
-    ];
+    };
 
     [Theory]
     [MemberData(nameof(IngestionStatementKeys))]

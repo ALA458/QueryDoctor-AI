@@ -24,7 +24,11 @@ public sealed record RuleThresholds
     /// <summary>Instancia inmutable con todos los umbrales por defecto del Cuadro 4.5 del SRS.</summary>
     public static RuleThresholds Default { get; } = new();
 
-    /// <summary>REG-03: Filas estimadas mínimas para señalar un recorrido completo por volumen (por defecto 10 000 †).</summary>
+    /// <summary>
+    /// REG-03: Filas estimadas mínimas para señalar un recorrido completo por volumen (por defecto 10 000 †, Cuadro 4.5 del SRS).
+    /// Recomendación de ajuste por perfil de carga: 1 000 – 5 000 filas en sistemas OLTP de alta concurrencia;
+    /// 50 000 – 100 000 filas en cargas OLAP / Data Warehouse.
+    /// </summary>
     public double Reg03MinEstimatedRows { get; init; } = DefaultReg03MinEstimatedRows;
 
     /// <summary>REG-03: Razón mínima entre filas leídas estimadas y filas devueltas estimadas cuando hay predicado (por defecto 10 †).</summary>
