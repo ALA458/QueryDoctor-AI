@@ -15,7 +15,10 @@ public class TelemetryStatementWhitelistTests
             TelemetryStatementWhitelist.Keys.CheckUserPermissions,
             TelemetryStatementWhitelist.Keys.GetTopQueriesByTotalDuration,
             TelemetryStatementWhitelist.Keys.GetPlanXmlByPlanId,
-            TelemetryStatementWhitelist.Keys.GetQueryStoreViewColumns
+            TelemetryStatementWhitelist.Keys.GetQueryStoreViewColumns,
+            TelemetryStatementWhitelist.Keys.GetIngestionRuntimeStats,
+            TelemetryStatementWhitelist.Keys.GetIngestionRuntimeStatsWithoutTempDbLog,
+            TelemetryStatementWhitelist.Keys.GetQueryTextById
         };
 
         foreach (var key in registeredKeys)
@@ -34,6 +37,99 @@ public class TelemetryStatementWhitelistTests
             // Validar que pase la regla estricta de solo lectura (CA-HU15.2)
             TelemetryStatementWhitelist.EnsureReadOnlySelectStatement(sql);
         }
+    }
+
+    [Theory]
+    [InlineData("actual_state_desc")]
+    [InlineData("desired_state_desc")]
+    [InlineData("readonly_reason")]
+    [InlineData("interval_length_minutes")]
+    [InlineData("query_capture_mode_desc")]
+    [InlineData("stale_query_threshold_days")]
+    public void QueryStoreOptionsReadsEveryFieldRequiredByRfCfg04(string column)
+    {
+        // RF-CFG-04 / CA-HU02.1: estado actual y deseado, motivo de solo lectura, intervalo, modo de captura y retención.
+        Assert.Contains(column, TelemetryStatementWhitelist.GetQueryStoreOptionsSql, StringComparison.Ordinal);
+    }
+
+    public static TheoryData<string> IngestionStatementKeys =>
+    [
+        TelemetryStatementWhitelist.Keys.GetIngestionRuntimeStats,
+        TelemetryStatementWhitelist.Keys.GetIngestionRuntimeStatsWithoutTempDbLog,
+        TelemetryStatementWhitelist.Keys.GetQueryTextById,
+    ];
+
+    [Theory]
+    [MemberData(nameof(IngestionStatementKeys))]
+    public void IngestionStatementsStartWithSelectAndNotWith(string key)
+    {
+        // S1-11: statement_log de la ingesta solo muestra SELECT (CA-HU15.2); por eso el Top-N es subconsulta, no CTE.
+        var sql = TelemetryStatementWhitelist.GetSql(key);
+
+        Assert.StartsWith("SELECT ", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("WITH ", sql, StringComparison.OrdinalIgnoreCase);
+        TelemetryStatementWhitelist.ValidateStatementOrThrow(key, sql);
+    }
+
+    [Theory]
+    [InlineData("rs.count_executions")]
+    [InlineData("rs.avg_duration")]
+    [InlineData("rs.avg_cpu_time")]
+    [InlineData("rs.avg_logical_io_reads")]
+    [InlineData("rs.avg_physical_io_reads")]
+    [InlineData("rs.avg_logical_io_writes")]
+    [InlineData("rs.avg_rowcount")]
+    [InlineData("rs.avg_dop")]
+    [InlineData("rs.avg_query_max_used_memory")]
+    [InlineData("rs.execution_type")]
+    [InlineData("rs.runtime_stats_interval_id")]
+    [InlineData("i.start_time")]
+    [InlineData("i.end_time")]
+    public void IngestionStatementsReadEveryMetricOfRfIng02(string column)
+    {
+        // RF-ING-02: las dos variantes leen las mismas métricas obligatorias por plan, tipo de ejecución e intervalo.
+        Assert.Contains(column, TelemetryStatementWhitelist.GetIngestionRuntimeStatsSql, StringComparison.Ordinal);
+        Assert.Contains(column, TelemetryStatementWhitelist.GetIngestionRuntimeStatsWithoutTempDbLogSql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void OnlyTheFullIngestionStatementReadsTempDbAndLogColumns()
+    {
+        // RF-ING-03 / RNF-COM-04: en 2016 esas columnas no existen y nombrarlas haría fallar la sentencia.
+        foreach (var column in new[] { "rs.avg_tempdb_space_used", "rs.avg_log_bytes_used" })
+        {
+            Assert.Contains(column, TelemetryStatementWhitelist.GetIngestionRuntimeStatsSql, StringComparison.Ordinal);
+            Assert.DoesNotContain(column, TelemetryStatementWhitelist.GetIngestionRuntimeStatsWithoutTempDbLogSql, StringComparison.Ordinal);
+        }
+
+        Assert.Contains(
+            "CAST(NULL AS float) AS avg_tempdb_space_used, CAST(NULL AS float) AS avg_log_bytes_used",
+            TelemetryStatementWhitelist.GetIngestionRuntimeStatsWithoutTempDbLogSql,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void IngestionTopNRanksByTotalDurationWithDeterministicTieBreak()
+    {
+        // RF-ING-10 + D1 (S1-11): Top-N por duración total ponderada por ejecuciones, desempate por query_id.
+        var sql = TelemetryStatementWhitelist.GetIngestionRuntimeStatsSql;
+
+        Assert.Contains("SELECT TOP (@TopCount) p2.query_id", sql, StringComparison.Ordinal);
+        Assert.Contains("ORDER BY SUM(rs2.avg_duration * rs2.count_executions) DESC, p2.query_id)", sql, StringComparison.Ordinal);
+        Assert.Contains("rs2.runtime_stats_interval_id > @AfterIntervalId", sql, StringComparison.Ordinal);
+        Assert.Contains("rs.runtime_stats_interval_id > @AfterIntervalId", sql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void QueryStoreViewColumnsUsesAllCatalogViews()
+    {
+        // S1-07: las vistas sys.query_store_* solo aparecen en sys.all_objects / sys.all_columns.
+        var sql = TelemetryStatementWhitelist.GetQueryStoreViewColumnsSql;
+
+        Assert.Contains("FROM sys.all_columns c", sql, StringComparison.Ordinal);
+        Assert.Contains("JOIN sys.all_objects o", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("sys.columns ", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("sys.objects ", sql, StringComparison.Ordinal);
     }
 
     [Fact]

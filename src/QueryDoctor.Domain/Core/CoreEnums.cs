@@ -20,11 +20,22 @@ public enum ConnectionEncryption
     Strict,
 }
 
-/// <summary>Estado de una conexión registrada.</summary>
+/// <summary>Estado de una conexión registrada (CA-HU01.1 a CA-HU01.3).</summary>
 public enum ConnectionStatus
 {
+    /// <summary>Sondeo correcto; la conexión se puede ingerir (Query Store OFF se avisa, no la desactiva).</summary>
     Active,
+
     Disabled,
+
+    /// <summary>Registrada, con el sondeo encolado o en curso.</summary>
+    Pending,
+
+    /// <summary>El sondeo falló (credenciales, red, TLS, permisos, tiempo): no se activa (CA-HU01.2).</summary>
+    Failed,
+
+    /// <summary>Versión anterior a 2016: registro rechazado y credenciales borradas (CA-HU01.3).</summary>
+    Rejected,
 }
 
 /// <summary>Nivel de soporte según la matriz de soporte del SRS (RF-CFG-07).</summary>
