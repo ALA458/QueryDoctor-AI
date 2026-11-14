@@ -14,11 +14,13 @@ using QueryDoctor.Application.Engine.Parsing;
 using QueryDoctor.Application.Engine.Rules;
 using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Application.KnowledgeBase;
+using QueryDoctor.Application.Scoring;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Domain.Analysis;
 using QueryDoctor.Infrastructure.Connections;
 using QueryDoctor.Infrastructure.Ingestion;
 using QueryDoctor.Infrastructure.Persistence;
+using QueryDoctor.Infrastructure.Scoring;
 using QueryDoctor.Infrastructure.Security;
 using QueryDoctor.Infrastructure.Telemetry;
 
@@ -40,18 +42,7 @@ public static class DependencyInjection
         services.AddSingleton<IFieldEncryptor, SecretProtector>();
         services.TryAddSingleton(TimeProvider.System);
 
-        // Motor determinístico: parser de Showplan XML en memoria sin E/S (S1-12, RF-MOT-01, RF-MOT-16)
-        services.TryAddSingleton<PlanParserOptions>();
-        services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
-
-        // Motor determinístico: parser de Showplan XML, catálogo versionado y motor de reglas sin E/S (S1-12, S1-13, RF-MOT-01..17)
-        services.TryAddSingleton<PlanParserOptions>();
-        services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
-        services.TryAddSingleton(_ => BindRuleThresholds(configuration));
-        services.TryAddSingleton<IRuleCatalog, VersionedRuleCatalog>();
-        services.TryAddSingleton<IRuleEngine, DeterministicRuleEngine>();
-
-        // Motor determinístico: parser de Showplan XML, catálogo versionado y motor de reglas sin E/S (S1-12, S1-13, S1-14, RF-MOT-01..17, RNF-MAN-01)
+        // Motor determinístico: parser de Showplan XML, catálogo versionado y motor de reglas sin E/S (S1-12, S1-13, S1-14, S2-01, RF-MOT-01..17, RNF-MAN-01)
         services.TryAddSingleton<PlanParserOptions>();
         services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
         services.TryAddSingleton(_ => BindRuleThresholds(configuration));
@@ -62,6 +53,10 @@ public static class DependencyInjection
 
         services.TryAddSingleton<IRuleCatalog, VersionedRuleCatalog>();
         services.TryAddSingleton<IRuleEngine, DeterministicRuleEngine>();
+
+        // Calculadora pura del puntaje compuesto de salud H(q) (S2-02, RF-SCO-01..06, Invariante 7)
+        services.TryAddSingleton(_ => BindHealthScoreParameters(configuration));
+        services.TryAddSingleton<IHealthScoreCalculator, HealthScoreCalculator>();
 
         // Telemetría e ingesta de SQL Server (S1-08, RNF-SEG-01, RF-TRZ-04)
         services.TryAddSingleton<IStatementLogWriter, InMemoryStatementLogWriter>();
@@ -79,6 +74,9 @@ public static class DependencyInjection
             services.AddScoped<IConnectionQueries, EfConnectionQueries>();
             services.AddScoped<IIngestionQueries, EfIngestionQueries>();
             services.AddScoped<IKnowledgeBaseRepository, EfKnowledgeBaseRepository>();
+            services.AddScoped<IScoreRecalculationStore, EfScoreRecalculationStore>();
+            services.AddScoped<RecalculateConnectionScores>();
+            services.AddScoped<RecalculateScoresJob>();
         }
 
         return services;
@@ -131,6 +129,9 @@ public static class DependencyInjection
         services.AddSingleton<IIngestionLock>(_ => new PostgresIngestionLock(connectionString));
         services.AddScoped<IQueryStoreReader, QueryStoreReader>();
         services.AddScoped<IIngestionStore, EfIngestionStore>();
+        services.TryAddScoped<IScoreRecalculationStore, EfScoreRecalculationStore>();
+        services.TryAddScoped<RecalculateConnectionScores>();
+        services.TryAddScoped<RecalculateScoresJob>();
         services.AddScoped<IngestConnection>();
         services.AddScoped<IngestConnectionJob>();
 
@@ -258,6 +259,35 @@ public static class DependencyInjection
             Reg08MinExecutionsPerPlan = ReadLong(section, nameof(RuleThresholds.Reg08MinExecutionsPerPlan), RuleThresholds.DefaultReg08MinExecutionsPerPlan),
             Reg10DurationMaxMinRatio = ReadDouble(section, nameof(RuleThresholds.Reg10DurationMaxMinRatio), RuleThresholds.DefaultReg10DurationMaxMinRatio),
         };
+    }
+
+    private static HealthScoreParameters BindHealthScoreParameters(IConfiguration configuration)
+    {
+        var section = configuration.GetSection(HealthScoreParameters.SectionName);
+        if (!section.Exists())
+        {
+            return HealthScoreParameters.Default;
+        }
+
+        var parameters = new HealthScoreParameters
+        {
+            CpuWeight = ReadDouble(section, nameof(HealthScoreParameters.CpuWeight), HealthScoreParameters.DefaultCpuWeight),
+            DurationWeight = ReadDouble(section, nameof(HealthScoreParameters.DurationWeight), HealthScoreParameters.DefaultDurationWeight),
+            LogicalReadsWeight = ReadDouble(section, nameof(HealthScoreParameters.LogicalReadsWeight), HealthScoreParameters.DefaultLogicalReadsWeight),
+            SaturationCapTau = ReadDouble(section, nameof(HealthScoreParameters.SaturationCapTau), HealthScoreParameters.DefaultSaturationCapTau),
+            BasePriorityAlpha = ReadDouble(section, nameof(HealthScoreParameters.BasePriorityAlpha), HealthScoreParameters.DefaultBasePriorityAlpha),
+            LowSeverityWeight = ReadDouble(section, nameof(HealthScoreParameters.LowSeverityWeight), HealthScoreParameters.DefaultLowSeverityWeight),
+            MediumSeverityWeight = ReadDouble(section, nameof(HealthScoreParameters.MediumSeverityWeight), HealthScoreParameters.DefaultMediumSeverityWeight),
+            HighSeverityWeight = ReadDouble(section, nameof(HealthScoreParameters.HighSeverityWeight), HealthScoreParameters.DefaultHighSeverityWeight),
+            EstimatedConfidenceWeight = ReadDouble(section, nameof(HealthScoreParameters.EstimatedConfidenceWeight), HealthScoreParameters.DefaultEstimatedConfidenceWeight),
+            AggregatedExecutionConfidenceWeight = ReadDouble(section, nameof(HealthScoreParameters.AggregatedExecutionConfidenceWeight), HealthScoreParameters.DefaultAggregatedExecutionConfidenceWeight),
+            ActualPlanConfidenceWeight = ReadDouble(section, nameof(HealthScoreParameters.ActualPlanConfidenceWeight), HealthScoreParameters.DefaultActualPlanConfidenceWeight),
+            CriticalUpperExclusive = ReadDouble(section, nameof(HealthScoreParameters.CriticalUpperExclusive), HealthScoreParameters.DefaultCriticalUpperExclusive),
+            AttentionUpperExclusive = ReadDouble(section, nameof(HealthScoreParameters.AttentionUpperExclusive), HealthScoreParameters.DefaultAttentionUpperExclusive),
+        };
+
+        parameters.Validate();
+        return parameters;
     }
 
     private static double ReadDouble(IConfigurationSection section, string key, double fallback) =>

@@ -1,5 +1,6 @@
 using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Connections;
+using QueryDoctor.Application.Scoring;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Domain.Core;
 
@@ -50,6 +51,7 @@ public sealed class IngestConnection
     private readonly TimeProvider _clock;
     private readonly IngestionOptions _options;
     private readonly ProbeOptions _probeOptions;
+    private readonly RecalculateConnectionScores? _scoreRecalculator;
 
     public IngestConnection(
         IIngestionStore store,
@@ -58,7 +60,8 @@ public sealed class IngestConnection
         IFieldEncryptor encryptor,
         TimeProvider clock,
         IngestionOptions options,
-        ProbeOptions probeOptions)
+        ProbeOptions probeOptions,
+        RecalculateConnectionScores? scoreRecalculator = null)
     {
         _store = store ?? throw new ArgumentNullException(nameof(store));
         _reader = reader ?? throw new ArgumentNullException(nameof(reader));
@@ -67,6 +70,7 @@ public sealed class IngestConnection
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _probeOptions = probeOptions ?? throw new ArgumentNullException(nameof(probeOptions));
+        _scoreRecalculator = scoreRecalculator;
         _options.Validate();
     }
 
@@ -221,6 +225,15 @@ public sealed class IngestConnection
         var rows = await _store.ApplyAsync(
             new IngestionBatch(connection.Id, runId, watermark, newWatermark, texts, queries, plans, aggregated, _clock.GetUtcNow()),
             cancellationToken);
+
+        if (_scoreRecalculator is not null)
+        {
+            await _scoreRecalculator.ExecuteAsync(
+                connection.Id,
+                runId,
+                TimeSpan.FromHours(_options.InitialLookbackHours),
+                cancellationToken);
+        }
 
         return new IngestionOutcome(
             connection.Id, IngestionStatus.Succeeded, null, rows, watermark, newWatermark, omitted, read.DiscardedRows, false);
