@@ -1,0 +1,1938 @@
+\documentclass[11pt,a4paper]{report}
+
+% ---------- Idioma y codificación ----------
+\usepackage[spanish,es-noindentfirst]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+% ---------- Geometría y maquetación ----------
+\usepackage[a4paper,margin=2.5cm,headheight=14pt]{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{setspace}
+\onehalfspacing
+
+% ---------- Tablas ----------
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{ltablex}
+\usepackage{xltabular}
+\usepackage{pdflscape}
+\usepackage{multirow}
+\usepackage{colortbl}
+\keepXColumns
+
+% ---------- Gráficos y diagramas (marcadores de espacio) ----------
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+
+% ---------- Listas y código ----------
+\usepackage{enumitem}
+\usepackage{listings}
+\usepackage{xcolor}
+
+% ---------- Enlaces internos y bibliografía ----------
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  citecolor=teal!60!black,
+  urlcolor=blue!50!black,
+  bookmarksopen=true,
+  pdftitle={SRS -- Query Doctor AI},
+  pdfauthor={Equipo Query Doctor AI -- Universidad Tecnol\'ogica de Bol\'ivar}
+}
+
+% ---------- Símbolos ----------
+\usepackage{textcomp}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% ---------- Estilo de listados (JSON de ejemplo) ----------
+\lstdefinelanguage{json}{
+  basicstyle=\ttfamily\small,
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{gray!60},
+  backgroundcolor=\color{gray!5},
+  literate=
+   *{0}{{{\color{blue}0}}}{1}
+    {1}{{{\color{blue}1}}}{1}
+    {2}{{{\color{blue}2}}}{1}
+    {3}{{{\color{blue}3}}}{1}
+    {4}{{{\color{blue}4}}}{1}
+    {5}{{{\color{blue}5}}}{1}
+    {6}{{{\color{blue}6}}}{1}
+    {7}{{{\color{blue}7}}}{1}
+    {8}{{{\color{blue}8}}}{1}
+    {9}{{{\color{blue}9}}}{1}
+}
+
+% ---------- Encabezados y pies de página ----------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Especificaci\'on de Requisitos de Software -- Query Doctor AI}
+
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\chapter}[display]
+  {\normalfont\huge\bfseries}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
+\titlespacing*{\chapter}{0pt}{0pt}{30pt}
+
+% ---------- Encabezados de tabla en color ----------
+\definecolor{headerblue}{RGB}{31,73,125}
+\arrayrulecolor{black}
+
+\newcommand{\dagsym}{\ensuremath{^{\dagger}}}
+
+\begin{document}
+
+% =================================================================== PORTADA
+\begin{titlepage}
+\centering
+\vspace*{1.5cm}
+
+{\Large\bfseries UNIVERSIDAD TECNOL\'OGICA DE BOL\'IVAR}\\[0.3cm]
+{\large Escuela de Transformación Digital}\\[0.2cm]
+{\large Programa de Ingenier\'ia de Sistemas y Computaci\'on}\\[1.5cm]
+
+\rule{0.8\linewidth}{0.4pt}\\[0.6cm]
+{\Huge\bfseries Especificaci\'on de Requisitos de Software (SRS)}\\[0.5cm]
+{\LARGE Query Doctor AI}\\[0.3cm]
+{\large Plataforma inteligente para el an\'alisis, diagn\'ostico y recomendaci\'on\\
+de optimizaciones de consultas SQL basada en evidencia observable}\\[0.6cm]
+\rule{0.8\linewidth}{0.4pt}\\[2cm]
+
+\begin{tabular}{rl}
+\textbf{Curso:} & Proyecto de Ingenier\'ia I \\
+\textbf{Versi\'on del documento:} & 1.1 (definitivo) \\
+\textbf{Fecha:} & 14 de Noviembre de 2026 \\
+\textbf{Tutor del proyecto:} & Aisner Marrugo \\
+\end{tabular}
+
+\vspace{1.2cm}
+{\large\textbf{Equipo de desarrollo}}\\[0.4cm]
+\begin{tabular}{ll}
+\'Alvaro Jes\'us Ayala Alcal\'a & Ingesta y conectividad de datos \\
+Joel David Gonz\'alez Barros & Motor determin\'istico de an\'alisis \\
+Maykol Stiven Madrid Romero & Componente de inteligencia artificial \\
+Daniel Alejandro Tache Lara & Interfaz y experiencia de usuario \\
+\end{tabular}
+
+\vfill
+{\small Este documento sigue la estructura y los criterios de calidad de la norma ISO/IEC/IEEE~29148:2018 para la ingenier\'ia de requisitos, y la norma ISO/IEC~25010:2023 para la clasificaci\'on de los requisitos no funcionales.}
+\end{titlepage}
+
+% =================================================================== HISTORIAL Y APROBACIÓN
+\chapter*{Control del documento}
+\addcontentsline{toc}{chapter}{Control del documento}
+
+\section*{Historial de versiones}
+\begin{table}[h]
+\centering
+\begin{tabularx}{\linewidth}{lllX}
+\toprule
+\textbf{Versi\'on} & \textbf{Fecha} & \textbf{Autor} & \textbf{Descripci\'on del cambio} \\
+\midrule
+0.9 & 2026-09-24 & Equipo de desarrollo & Primer borrador completo del SRS, para revisi\'on interna. \\
+1.0 & 2026-09-27 & Equipo de desarrollo & Versi\'on formal, para presentaci\'on al interesado (\textit{stakeholder}) del proyecto. \\
+1.1 & 2026-10-27 & Equipo de desarrollo & Respuesta a la revisi\'on del evaluador. \\
+1.1 (definitivo) & 2026-11-14 & Equipo de desarrollo & Integraci\'on definitiva de la Adenda v1.1 (Secciones 9 y 12): verificaci\'on de la matriz de soporte, cierre de DA-12, correcci\'on de referencias cruzadas y unificaci\'on de cuadros. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\section*{Aprobaci\'on}
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Rol} & \textbf{Nombre} \\
+\midrule
+Responsable de m\'odulo -- Ingesta & \'Alvaro Jes\'us Ayala Alcal\'a  \\[0.3cm]
+Responsable de m\'odulo -- Motor & Joel David Gonz\'alez Barros  \\[0.3cm]
+Responsable de m\'odulo -- IA & Maykol Stiven Madrid Romero  \\[0.3cm]
+Responsable de m\'odulo -- Interfaz & Daniel Alejandro Tache Lara  \\[0.3cm]
+Tutor del proyecto & Aisner Marrugo  \\[0.3cm]
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Convenciones del documento}
+\begin{itemize}[leftmargin=1.5em]
+\item Se usa \textbf{deber\'a} para toda obligaci\'on del sistema; la prioridad se expresa por separado con la escala MoSCoW (Debe / Deber\'ia / Podr\'ia).
+\item Los requisitos siguen una sintaxis controlada (Ubicuo, Por evento, Por estado, Comportamiento no deseado, Opcional) para eliminar la ambig\"uedad, con base en el enfoque EARS de ingenier\'ia de requisitos~\cite{R23}.
+\item El s\'imbolo \dagsym{} indica una \textbf{meta de ingenier\'ia}: un valor objetivo fijado por el equipo, sin respaldo en una fuente externa, que no constituye una afirmaci\'on factual y que se ratifica con el tutor y se contrasta con datos emp\'iricos antes de la entrega final (DA-06). Los valores respaldados por una fuente se citan; los que no pueden respaldarse no se fijan y se declaran \textbf{por calibrar}. El Ap\'endice~\ref{ap:valores} clasifica cada valor num\'erico del documento.
+\item Los m\'etodos de verificaci\'on son: \textbf{I} (Inspecci\'on), \textbf{A} (An\'alisis), \textbf{D} (Demostraci\'on) y \textbf{T} (Prueba).
+\item Las referencias bibliogr\'aficas se citan entre corchetes num\'ericos como [1], [2], etc., y se listan completas en el Ap\'endice~\ref{ap:referencias}.
+\end{itemize}
+
+\tableofcontents
+\listoftables
+\listoffigures
+
+\chapter{Introducci\'on}
+
+\section{Prop\'osito del documento}
+
+Este documento especifica, de manera completa y verificable, los requisitos funcionales y no funcionales de la primera versi\'on (\textit{Release}~1.0, en adelante MVP) de \textbf{Query Doctor AI}, una plataforma de diagn\'ostico de rendimiento de bases de datos relacionales. Query Doctor AI se desarrolla como Proyecto de Ingenier\'ia I en la Universidad Tecnol\'ogica de Bol\'ivar, con un calendario de desarrollo comprendido entre el 31 de agosto y el 15 de noviembre de 2026.
+
+El documento tiene tres audiencias principales:
+
+\begin{enumerate}[label=\alph*)]
+\item El \textbf{equipo de desarrollo}, para quien constituye la base de dise\~no, de implementaci\'on y de pruebas de aceptaci\'on.
+\item El \textbf{tutor acad\'emico y los eval\'uadores} del proyecto, para quienes constituye la referencia de lo que el sistema debe hacer y de c\'omo se comprobar\'a que lo hace.
+\item El \textbf{interesado (\textit{stakeholder})} del proyecto, para quien constituye una descripci\'on completa, aut\'onoma y comprensible del alcance, del valor y de las garant\'ias t\'ecnicas del producto que se le entregar\'a.
+\end{enumerate}
+
+Un requisito que no est\'e contenido en este documento no forma parte del alcance comprometido para el MVP; cualquier cambio posterior a los requisitos aqu\'i descritos deber\'a documentarse como una nueva versi\'on de este SRS, con su respectivo historial de cambios (v\'ease la p\'agina de control del documento).
+
+Este SRS sigue la estructura y los criterios de calidad de la norma \textbf{ISO/IEC/IEEE~29148:2018}, \textit{Systems and software engineering -- Life cycle processes -- Requirements engineering}~\cite{R1}, que establece el contenido m\'inimo de una especificaci\'on de requisitos de software y las nueve caracter\'isticas que debe cumplir cada requisito individual (necesario, apropiado, no ambiguo, completo, singular, factible, verificable, correcto y conforme). Los requisitos no funcionales se clasifican de acuerdo con el modelo de calidad de producto de nueve caracter\'isticas de la norma \textbf{ISO/IEC~25010:2023}~\cite{R2}.
+
+\section{Alcance del producto}
+
+\subsection{Descripci\'on general}
+
+\textbf{Query Doctor AI} es una plataforma web de diagn\'ostico de rendimiento para bases de datos \textbf{Microsoft SQL Server (2016 o superior) y Azure SQL Database}. La plataforma se conecta \'unicamente en modo de lectura a la funci\'on nativa \textit{Query Store} del motor de base de datos, de la cual extrae texto de las consultas, planes de ejecuci\'on y estad\'isticas de desempe\~no ya recolectadas por el propio motor. A partir de esa informaci\'on, el sistema:
+
+\begin{enumerate}
+\item aplica un \textbf{motor determin\'istico de reglas t\'ecnicas} sobre los planes de ejecuci\'on, que detecta patrones conocidos de bajo rendimiento (conversiones impl\'icitas de tipo, \'indices faltantes, lecturas completas de tabla, b\'usquedas por clave excesivas, entre otros) con evidencia expl\'icita y reproducible;
+\item calcula un \textbf{indicador num\'erico de prioridad} (\textit{Query Health Score}) que permite ordenar las consultas de una carga de trabajo seg\'un su impacto real sobre el consumo de recursos;
+\item emplea un \textbf{componente de inteligencia artificial generativa} para traducir los hallazgos t\'ecnicos del motor en explicaciones en lenguaje natural y en recomendaciones de mejora, con la restricci\'on de que cada afirmaci\'on generada debe poder trazarse autom\'aticamente hasta la evidencia que la origin\'o; y
+\item presenta todo lo anterior en un \textbf{tablero de control (\textit{dashboard})} que permite priorizar, entender y auditar cada diagn\'ostico.
+\end{enumerate}
+
+El principio de dise\~no que gobierna todo el sistema, y que se refleja de manera transversal en los requisitos de este documento, es el siguiente: \textbf{el motor determin\'istico es la \'unica fuente de verdad t\'ecnica de la plataforma; el componente de inteligencia artificial \'unicamente explica y comunica lo que el motor ya demostr\'o con evidencia}. Ninguna explicaci\'on generada por inteligencia artificial se presenta al usuario como \textbf{trazada} si no supera un proceso autom\'atico de validaci\'on contra esa evidencia; una explicaci\'on trazada est\'a vinculada a la evidencia del motor, pero \textbf{no equivale a un diagn\'ostico confirmado}.
+
+\subsection{Dentro del alcance del MVP}
+
+\begin{itemize}
+\item Registro y administraci\'on de conexiones cifradas y de solo lectura a bases de datos SQL Server (2016 o superior) y Azure SQL Database.
+\item Autenticaci\'on de los usuarios de la plataforma, control de acceso por roles y registro de auditor\'ia.
+\item Ingesta peri\'odica o manual de texto de consultas, planes de ejecuci\'on y estad\'isticas de ejecuci\'on desde \textit{Query Store}, con persistencia en un repositorio local propio y sin alterar la base de datos monitoreada.
+\item An\'alisis est\'atico determin\'istico del plan de ejecuci\'on (formato \textit{Showplan XML}) mediante un cat\'alogo versionado de reglas t\'ecnicas.
+\item C\'alculo de un \textit{Query Health Score} con desglose de sus componentes.
+\item Generaci\'on de explicaciones y recomendaciones mediante inteligencia artificial, sometidas a un validador autom\'atico y registradas en un historial de trazabilidad de solo adici\'on.
+\item Tablero de consultas cr\'iticas, tendencias hist\'oricas, visualizaci\'on de planes y evidencia de cada hallazgo.
+\item Arneses de evaluaci\'on reproducibles para medir la precisi\'on del motor y la fidelidad de las explicaciones generadas por inteligencia artificial.
+\end{itemize}
+
+\subsection{Fuera del alcance del MVP}
+
+\begin{itemize}
+\item \textbf{El sistema no modifica la base de datos monitoreada bajo ninguna circunstancia.} No ejecuta sentencias de definici\'on de datos (\texttt{CREATE}, \texttt{ALTER}, \texttt{DROP}), de manipulaci\'on de datos (\texttt{INSERT}, \texttt{UPDATE}, \texttt{DELETE}) ni de cambio de configuraci\'on sobre dicha base. Toda acci\'on correctiva sugerida debe ser revisada, decidida y ejecutada manualmente por un administrador de bases de datos.
+\item Motores de base de datos distintos de SQL Server y Azure SQL Database (por ejemplo, Azure SQL Managed Instance en esta versi\'on, PostgreSQL, MySQL u Oracle); soporte multiempresa (\textit{multi-tenant}) a gran escala; integraci\'on con canalizaciones de integraci\'on y despliegue continuos. Estas capacidades quedan previstas para una fase posterior del proyecto, fuera del alcance de este documento.
+\item Monitoreo en tiempo real y alertas autom\'aticas; la plataforma analiza telemetr\'ia hist\'orica capturada peri\'odicamente, no eventos en el instante en que ocurren.
+\item Una garant\'ia absoluta de ausencia de errores en las explicaciones generadas por inteligencia artificial, y la afirmaci\'on de que una explicaci\'on sea verdadera. En su lugar, el sistema garantiza que \textbf{ninguna explicaci\'on se presenta como trazada si no super\'o el proceso de validaci\'on autom\'atica descrito en este documento}, y reporta de forma medible y reproducible la tasa de afirmaciones sustentadas y la tasa de falsos pasantes (v\'ease la Secci\'on~\ref{sec:verificacion-ia}).
+\end{itemize}
+
+\section{Definiciones, acr\'onimos y abreviaturas}
+\label{sec:definiciones}
+
+\begin{xltabular}{\linewidth}{@{}lX@{}}
+\toprule
+\textbf{T\'ermino} & \textbf{Definici\'on} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{T\'ermino} & \textbf{Definici\'on} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+\textit{Query Store} & Funci\'on nativa de SQL Server y de Azure SQL Database que persiste de forma autom\'atica el texto de las consultas ejecutadas, sus planes de ejecuci\'on y estad\'isticas agregadas de su desempe\~no a lo largo del tiempo~\cite{R3}. \\
+Plan de ejecuci\'on estimado & Plan que produce el optimizador de consultas en el momento de compilar una sentencia, antes de ejecutarla. No contiene informaci\'on real de ejecuci\'on (filas devueltas, tiempo consumido, advertencias de desbordamiento de memoria). Es el tipo de plan que \textit{Query Store} almacena por defecto~\cite{R3,R6}. \\
+Plan de ejecuci\'on real & Plan de ejecuci\'on enriquecido con la informaci\'on efectivamente observada durante una ejecuci\'on concreta de la sentencia. En SQL Server, su disponibilidad posterior a la ejecuci\'on es una funci\'on opcional que el administrador de la base de datos debe habilitar expl\'icitamente~\cite{R7}. \\
+\textit{Showplan XML} & Representaci\'on en formato XML de un plan de ejecuci\'on de SQL Server, con un esquema documentado y estable entre versiones del motor. \\
+Hallazgo & Resultado estructurado que produce una regla del motor determin\'istico al evaluar un plan de ejecuci\'on; incluye la evidencia concreta que lo origin\'o y su clase de evidencia. \\
+Se\~nal & Hallazgo del motor que indica una condici\'on t\'ecnica que merece ser investigada. Una se\~nal no es un diagn\'ostico concluyente: su relevancia depende del contexto de la consulta (volumen, frecuencia, predicado, esquema). \\
+Clase de evidencia & Categor\'ia que indica el origen de la evidencia de un hallazgo: \texttt{ESTIMADA} (proviene del plan compilado), \texttt{EJECUCION\_AGREGADA} (proviene de estad\'isticas agregadas de \textit{Query Store}) o \texttt{PLAN\_REAL} (proviene de un plan real, de disponibilidad opcional). \\
+Regla (\texttt{REG}) & Unidad independiente del cat\'alogo del motor que detecta un patr\'on t\'ecnico problem\'atico espec\'ifico (v\'ease la Secci\'on~\ref{sec:catalogo-reglas}). \\
+\textit{Query Health Score} & Indicador num\'erico compuesto, en una escala de 0 a 100, que resume el impacto relativo de una consulta sobre el consumo de recursos y la severidad de sus hallazgos, construido con el m\'etodo de indicadores compuestos de~\cite{R32}. Es un \'indice de prioridad de revisi\'on relativo a la carga analizada y no una medida absoluta de calidad; los valores bajos indican mayor prioridad (v\'ease la Secci\'on~\ref{sec:rf-sco}). \\
+Explicaci\'on trazada & Explicaci\'on cuyas afirmaciones superaron el validador autom\'atico: los identificadores referenciados existen en el contexto, los valores num\'ericos coinciden con la evidencia y las interpretaciones y recomendaciones citan una relaci\'on curada de la base de conocimiento. \textbf{No equivale a un diagn\'ostico confirmado.} \\
+Diagn\'ostico validado & Diagn\'ostico cuya veracidad fue contrastada por un especialista humano. Solo se usa en el contexto de la evaluaci\'on emp\'irica (Cap\'itulo~\ref{ch:verificacion}), nunca como estado autom\'atico del producto. \\
+Falso pasante & Explicaci\'on que super\'o el validador autom\'atico y que, en la auditor\'ia manual, dos revisores independientes juzgaron incorrecta. \\
+Coeficiente kappa de Cohen & Medida estad\'istica de concordancia entre dos evaluadores que clasifican elementos en categor\'ias, corregida por el acuerdo esperado por azar~\cite{R31}. \\
+RAG (\textit{Retrieval-Augmented Generation}) & T\'ecnica de generaci\'on de lenguaje natural en la que el modelo recibe, adem\'as de la instrucci\'on del usuario, fragmentos relevantes recuperados de una base de conocimiento externa curada, con el fin de fundamentar su respuesta~\cite{R16}. \\
+Alucinaci\'on & En el contexto de modelos de lenguaje, una afirmaci\'on generada que no est\'a sustentada por la evidencia o el contexto disponible~\cite{R18}. \\
+DBA & Administrador de bases de datos (\textit{Database Administrator}). \\
+DMV & Vista de administraci\'on din\'amica de SQL Server (\textit{Dynamic Management View}). \\
+DDL / DML & Lenguaje de definici\'on de datos / lenguaje de manipulaci\'on de datos. \\
+DOP & Grado de paralelismo (\textit{Degree of Parallelism}) de un plan de ejecuci\'on. \\
+MVP & Producto m\'inimo viable (\textit{Minimum Viable Product}); en este documento, equivalente a la Versi\'on 1.0 (\textit{Release}~1.0) del producto. \\
+MoSCoW & Esquema de priorizaci\'on de requisitos con cuatro niveles: Debe (\textit{Must}), Deber\'ia (\textit{Should}), Podr\'ia (\textit{Could}) y No en esta versi\'on (\textit{Won't})~\cite{R24}. \\
+EARS & \textit{Easy Approach to Requirements Syntax}: conjunto de patrones de redacci\'on controlada de requisitos que reduce la ambig\"uedad~\cite{R23}. \\
+OIDC & OpenID Connect, protocolo est\'andar de autenticaci\'on federada que permite delegar la identidad de los usuarios en un proveedor de identidad. \\
+p95 & Percentil 95 de una distribuci\'on de mediciones; es decir, el valor por debajo del cual se ubica el 95\,\% de las observaciones. \\
+SUS & \textit{System Usability Scale}, cuestionario est\'andar de diez preguntas para medir la usabilidad percibida de un sistema~\cite{R28}. \\
+TLS & \textit{Transport Layer Security}, protocolo criptogr\'afico de cifrado de comunicaciones~\cite{R15}. \\
+TPC-H / JOB & Conjuntos est\'andar de datos y consultas anal\'iticas usados como referencia para evaluar motores y optimizadores de bases de datos~\cite{R21,R20}. \\
+\end{xltabular}
+
+\section{Referencias normativas y t\'ecnicas}
+
+Este documento se apoya en normas, documentaci\'on t\'ecnica oficial y literatura acad\'emica que se citan en el cuerpo del texto mediante el formato numérico [\#] y se listan de forma completa en el Ap\'endice~\ref{ap:referencias} (\textbf{Referencias}). Las normas y gu\'ias principales adoptadas son:
+
+\begin{itemize}
+\item \textbf{ISO/IEC/IEEE~29148:2018} para la estructura de este documento y los criterios de calidad de cada requisito~\cite{R1}.
+\item \textbf{ISO/IEC~25010:2023} para la clasificaci\'on de los requisitos no funcionales seg\'un caracter\'isticas de calidad de producto~\cite{R2}.
+\item \textbf{OWASP Top 10 for LLM Applications (2025)} y \textbf{OWASP ASVS 5.0} para los requisitos de seguridad relacionados con el componente de inteligencia artificial~\cite{R12,R13}.
+\item Documentaci\'on t\'ecnica oficial de Microsoft sobre \textit{Query Store}, los planes de ejecuci\'on de SQL Server y las sugerencias de \'indices faltantes, que sustenta las decisiones de dise\~no descritas en la Secci\'on~\ref{sec:limitacion-evidencia} y detalladas en el Ap\'endice~\ref{ap:spike}~\cite{R3,R4,R5,R6,R7,R8,R9,R10,R11,R30}.
+\item La \textbf{Ley Estatutaria 1581 de 2012} de la Rep\'ublica de Colombia, sobre protecci\'on de datos personales, que sustenta los requisitos de minimizaci\'on de datos hacia el proveedor de inteligencia artificial~\cite{R14}.
+\end{itemize}
+
+\section{Visi\'on general del documento}
+
+El resto de este documento se organiza as\'i: el Cap\'itulo~\ref{ch:descripcion} presenta una descripci\'on general del producto, sus usuarios, su entorno operativo y sus restricciones; el Cap\'itulo~\ref{ch:interesados} contiene las historias de usuario y los casos de uso que expresan las necesidades de los interesados; el Cap\'itulo~\ref{ch:requisitos} contiene la especificaci\'on detallada de los requisitos funcionales y no funcionales, organizados por m\'odulo del sistema y por caracter\'istica de calidad; el Cap\'itulo~\ref{ch:priorizacion} presenta la priorizaci\'on y el alcance concreto del MVP; el Cap\'itulo~\ref{ch:verificacion} describe c\'omo se verificar\'a y validar\'a cada requisito; el Cap\'itulo~\ref{ch:trazabilidad} presenta las matrices de trazabilidad; y el Cap\'itulo~\ref{ch:riesgos} documenta las decisiones a\'un abiertas y los riesgos identificados sobre los propios requisitos. Los ap\'endices incluyen el sustento t\'ecnico emp\'irico de las decisiones de dise\~no relacionadas con \textit{Query Store}, un ejemplo del contrato de datos de un hallazgo, y la lista completa de referencias.
+
+\chapter{Descripci\'on general}
+\label{ch:descripcion}
+
+\section{Objetivos espec\'ificos del proyecto}
+\label{sec:objetivos}
+
+La totalidad de los requisitos de este documento se organiza alrededor de seis objetivos espec\'ificos. Cada requisito, en el Cap\'itulo~\ref{ch:requisitos}, declara expl\'icitamente a cu\'al o cu\'ales de estos objetivos contribuye.
+
+\begin{enumerate}[label=\textbf{OBJ-\arabic*}]
+\item Implementar la ingesta segura y de solo lectura de m\'etricas y planes de ejecuci\'on desde \textit{Query Store}, y persistirlos en un modelo de datos local propio de la plataforma.
+\item Implementar un motor determin\'istico de reglas t\'ecnicas que analice los planes de ejecuci\'on capturados y produzca hallazgos reproducibles y trazables.
+\item Desarrollar un \textit{Query Health Score} que priorice las consultas de una carga de trabajo seg\'un su impacto real sobre el consumo de recursos.
+\item Integrar un componente de inteligencia artificial generativa cuyas explicaciones sean siempre trazables a evidencia observable y verificables de forma autom\'atica.
+\item Construir un tablero de control funcional que presente las consultas cr\'iticas, sus tendencias hist\'oricas y sus recomendaciones respaldadas por evidencia.
+\item Validar emp\'iricamente la precisi\'on y la utilidad de la plataforma mediante escenarios controlados, conjuntos de datos de referencia est\'andar de la industria y el contraste con el criterio de un especialista humano.
+\end{enumerate}
+
+\section{Perspectiva del producto}
+
+Query Doctor AI es un sistema independiente (\textit{standalone}) que se integra con dos tipos de sistemas externos: (i) las bases de datos que monitorea, de las cuales \'unicamente lee informaci\'on ya recolectada por \textit{Query Store}, sin ejecutar en ning\'un momento sentencias que las modifiquen; y (ii) un proveedor externo de inteligencia artificial generativa, al cual env\'ia \'unicamente el contexto m\'inimo necesario para producir una explicaci\'on, despojado de todo literal.
+
+
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\linewidth]{c4_context.pdf}
+\caption{Diagrama de contexto del sistema (Modelo C4, Nivel 1)}
+\label{fig:contexto}
+\end{figure}
+
+
+\textbf{Descripci\'on textual del diagrama de contexto (Figura~\ref{fig:contexto}):}
+
+\begin{itemize}
+\item \textbf{Actor DBA:} registra conexiones, revisa diagn\'osticos, decide y ejecuta manualmente cualquier cambio sobre la base de datos.
+\item \textbf{Actor Desarrollador:} consulta explicaciones y tendencias de sus propias consultas.
+\item \textbf{Sistema Query Doctor AI:} \'unico sistema central del diagrama.
+\item \textbf{Sistema externo -- Base de datos objetivo:} SQL Server (2016 o superior) o Azure SQL Database, con \textit{Query Store} habilitado. La \'unica interacci\'on permitida es de lectura (\texttt{SELECT}) sobre vistas de cat\'alogo y de administraci\'on din\'amica.
+\item \textbf{Sistema externo -- Proveedor de inteligencia artificial:} recibe, por un canal cifrado, \'unicamente los hallazgos, las m\'etricas agregadas y los fragmentos pertinentes de la base de conocimiento; nunca recibe literales (ni del texto SQL original, ni de sus comentarios, ni de los par\'ametros y predicados del plan) ni credenciales.
+\end{itemize}
+
+\section{Funciones principales del producto}
+
+El flujo conceptual de datos dentro de la plataforma es el siguiente: la telemetr\'ia se ingiere desde \textit{Query Store}, se persiste localmente, se analiza mediante el motor determin\'istico, y los hallazgos resultantes alimentan en paralelo el c\'alculo del \textit{Query Health Score} y la generaci\'on de explicaciones de inteligencia artificial; estas \'ultimas pasan obligatoriamente por un validador autom\'atico antes de mostrarse, y cada explicaci\'on generada queda registrada, con el resultado de su validaci\'on, en un historial de trazabilidad de solo adici\'on.
+
+
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\linewidth]{capas.pdf}
+\caption{Diagrama conceptual de las tres capas de la plataforma}
+\label{fig:capas}
+\end{figure}
+
+
+\section{Clases y caracter\'isticas de los usuarios}
+
+\begin{xltabular}{\linewidth}{@{}p{3.3cm}p{3.3cm}X@{}}
+\toprule
+\textbf{Clase de usuario} & \textbf{Frecuencia de uso esperada} & \textbf{Caracter\'isticas y necesidades} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Clase de usuario} & \textbf{Frecuencia de uso esperada} & \textbf{Caracter\'isticas y necesidades} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+Administrador de bases de datos (DBA) -- usuario principal & Diaria o varias veces por semana & Conoce en profundidad los planes de ejecuci\'on y el optimizador de consultas. Necesita velocidad de diagn\'ostico, evidencia verificable y control total sobre cualquier cambio que se aplique a la base de datos. \\
+Desarrollador de \textit{backend} -- usuario secundario & Semanal, principalmente al depurar una funcionalidad lenta & Conoce SQL pero no necesariamente el optimizador de consultas ni la lectura de planes de ejecuci\'on. Necesita explicaciones en lenguaje natural para actuar sin depender permanentemente de un DBA. \\
+Docente o eval\'uador acad\'emico & Puntual, en cada hito de evaluaci\'on del proyecto & Punto de vista externo cuyo inter\'es es evaluar el rigor metodol\'ogico, la trazabilidad de las explicaciones de IA y la reproducibilidad de los resultados. \\
+Interesado (\textit{stakeholder}) del proyecto & Puntual, en revisiones de avance & Punto de vista de negocio cuyo inter\'es es el valor entregado, el alcance comprometido y las garant\'ias de seguridad y de no intrusi\'on sobre la base de datos productiva. \\
+Organizaci\'on due\~na de la base de datos (beneficiario indirecto) & No interact\'ua directamente & Se beneficia de una menor carga de trabajo sobre su infraestructura y de menos incidentes de rendimiento; no opera la plataforma. \\
+\end{xltabular}
+
+\section{Entorno operativo}
+
+Query Doctor AI es una aplicaci\'on web pensada para el uso de una \'unica organizaci\'on (un solo \textit{tenant}) por instalaci\'on. Las bases de datos objetivo soportadas son instancias de \textbf{Microsoft SQL Server 2016 o superior} y \textbf{Azure SQL Database}; el nivel de soporte efectivo de cada versi\'on (probado, compatible sin pruebas o no soportado) y las funciones disponibles en cada una se declaran en la matriz de soporte del Cuadro~\ref{tab:matriz-soporte}. La interfaz de usuario se sirve a trav\'es de un navegador web est\'andar (versiones estables recientes de Chrome, Edge o Firefox). Las decisiones concretas de lenguaje de programaci\'on, motor de persistencia local y proveedor de inteligencia artificial son decisiones de arquitectura que el equipo tomar\'a durante la fase de dise\~no detallado, dentro de las restricciones descritas en la Secci\'on~\ref{sec:restricciones}, y no condicionan el cumplimiento de los requisitos de este documento.
+
+\section{Restricciones de dise\~no e implementaci\'on}
+\label{sec:restricciones}
+
+\begin{xltabular}{\linewidth}{@{}p{1.6cm}X@{}}
+\toprule
+\textbf{ID} & \textbf{Restricci\'on} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Restricci\'on} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+RES-01 & \textbf{Solo lectura sobre la base de datos monitoreada.} La plataforma no ejecutar\'a, bajo ninguna circunstancia, sentencias de definici\'on de datos, de manipulaci\'on de datos ni de cambio de configuraci\'on sobre la base de datos objetivo. Toda acci\'on correctiva propuesta debe ser evaluada, decidida y ejecutada manualmente por el administrador de la base de datos. Esta es la restricci\'on m\'as estricta del proyecto y condiciona el dise\~no de todos los dem\'as m\'odulos. \\
+RES-02 & Los \'unicos motores de base de datos soportados en esta versi\'on son SQL Server 2016 (versi\'on 13.x) o superior y Azure SQL Database, con el nivel de soporte declarado en la matriz del Cuadro~\ref{tab:matriz-soporte}. \\
+RES-03 & La profundidad del diagn\'ostico hist\'orico depende de que \textit{Query Store} est\'e habilitado en la base de datos objetivo; sin \'el, la capacidad de diagn\'ostico de la plataforma se reduce de forma expl\'icita y comunicada al usuario. \\
+RES-04 & El calendario del proyecto exige una demostraci\'on de \textit{software} real y funcionando desde el cuarto hito de avance del curso. \\
+RES-05 & El equipo de desarrollo est\'a compuesto por cuatro integrantes; el costo y los l\'imites de tasa de uso del proveedor de inteligencia artificial son un factor externo que condiciona el volumen de explicaciones que la plataforma puede generar. \\
+RES-06 & Toda informaci\'on enviada al proveedor de inteligencia artificial sale del per\'imetro de la organizaci\'on due\~na de la base de datos; por ello debe minimizarse y no debe incluir literales del texto SQL original ni credenciales de ning\'un tipo, sin excepci\'on configurable. \\
+RES-07 & La evidencia de ejecuci\'on disponible por defecto en \textit{Query Store} es evidencia agregada por intervalo de tiempo, no evidencia por operador individual del plan; la evidencia de ejecuci\'on real, m\'as detallada, es una funci\'on opcional que exige una acci\'on expl\'icita del administrador de la base de datos (v\'ease la Secci\'on~\ref{sec:limitacion-evidencia}). \\
+RES-08 & El tratamiento de cualquier dato personal que pudiera aparecer incidentalmente en el texto de una consulta SQL debe cumplir la normativa colombiana de protecci\'on de datos personales~\cite{R14}. \\
+\end{xltabular}
+
+\section{Supuestos y dependencias}
+
+\begin{xltabular}{\linewidth}{@{}p{1.6cm}X@{}}
+\toprule
+\textbf{ID} & \textbf{Supuesto o dependencia -- consecuencia si no se cumple} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Supuesto o dependencia -- consecuencia si no se cumple} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+SUP-01 & Se asume que la base de datos objetivo tiene \textit{Query Store} habilitado y en un estado que permite la lectura. \textit{Si no se cumple:} la ingesta de esa base de datos se omite de forma expl\'icita y comunicada (v\'ease el requisito RF-ING-08). \\
+SUP-02 & Se asume que el administrador de la base de datos proporciona una cuenta con el permiso m\'inimo de visualizaci\'on de estado de la base de datos. \textit{Si no se cumple:} la plataforma no puede leer la telemetr\'ia necesaria. \\
+SUP-03 & Se asume la disponibilidad de acceso, cuota y credenciales de un proveedor de inteligencia artificial generativa. \textit{Si no se cumple:} la plataforma opera \'unicamente con los hallazgos determin\'isticos del motor, sin explicaciones en lenguaje natural (v\'ease el requisito RF-IA-06). \\
+SUP-04 & Se asume la disponibilidad de conjuntos de datos de referencia est\'andar de la industria para la validaci\'on emp\'irica del motor. \textit{Si no se cumple:} la validaci\'on emp\'irica se reduce a los escenarios controlados dise\~nados por el propio equipo. \\
+SUP-05 & Se asume la disponibilidad de al menos un especialista en bases de datos para contrastar los diagn\'osticos de la plataforma. \textit{Si no se cumple:} la validaci\'on por contraste experto se difiere o se reduce en alcance. \\
+SUP-06 & Se asume que todos los usuarios de una instalaci\'on de la plataforma pertenecen a una \'unica organizaci\'on, pero cada acceso se autentica y se autoriza conforme a RNF-SEG-11 a RNF-SEG-13. \textit{Si no se cumple:} el aislamiento multiempresa (\textit{multi-tenant}) queda fuera del alcance de esta versi\'on. \\
+\end{xltabular}
+
+\section{Limitaci\'on de la evidencia disponible en \textit{Query Store}}
+\label{sec:limitacion-evidencia}
+
+Esta secci\'on resume una decisi\'on de dise\~no cr\'itica del proyecto, cuyo sustento t\'ecnico completo se documenta en el Ap\'endice~\ref{ap:spike}.
+
+Un an\'alisis t\'ecnico documental, apoyado en la documentaci\'on oficial del fabricante del motor de base de datos, estableci\'o que los planes de ejecuci\'on que \textit{Query Store} almacena son \textbf{planes estimados}: el plan que el optimizador produjo al compilar la sentencia, equivalente al que se obtendr\'ia con la instrucci\'on de diagn\'ostico \texttt{SET SHOWPLAN\_XML ON}~\cite{R3}. Un plan estimado \textbf{no contiene} informaci\'on real de ejecuci\'on: no incluye las filas efectivamente devueltas por cada operador, ni las advertencias de desbordamiento de memoria hacia el almacenamiento temporal (\textit{TempDB}) que solo se generan durante una ejecuci\'on real~\cite{R6}.
+
+Por otro lado, las estad\'isticas de ejecuci\'on que \textit{Query Store} s\'i registra (n\'umero de ejecuciones, duraci\'on, tiempo de procesador, lecturas, filas devueltas, entre otras) est\'an agregadas por plan y por intervalo de tiempo, no est\'an desglosadas por operador individual del plan~\cite{R5}. Un plan de ejecuci\'on real, con el detalle completo por operador, existe en SQL Server como una capacidad, pero \textbf{es una funci\'on opcional} que el administrador de la base de datos debe habilitar expl\'icitamente y que exige un permiso adicional a nivel de servidor~\cite{R7}; la plataforma nunca la activa por s\'i misma, en cumplimiento estricto de la restricci\'on de solo lectura (RES-01).
+
+Esta limitaci\'on t\'ecnica, lejos de ser una debilidad oculta, se convierte en un principio expl\'icito de dise\~no: \textbf{cada hallazgo que produce el motor declara la clase de evidencia que lo sustenta} (\texttt{ESTIMADA}, \texttt{EJECUCION\_AGREGADA} o \texttt{PLAN\_REAL}), y ni el motor ni el componente de inteligencia artificial pueden presentar un dato estimado como si fuera un hecho observado durante una ejecuci\'on real. Esta clasificaci\'on determina directamente la prioridad y el dise\~no de cada regla del cat\'alogo del motor (Secci\'on~\ref{sec:catalogo-reglas}).
+
+\chapter{Requisitos de las partes interesadas}
+\label{ch:interesados}
+
+Este cap\'itulo expresa, en el lenguaje de los usuarios, las necesidades que el sistema debe satisfacer. La Secci\'on~\ref{sec:historias} presenta las historias de usuario con sus criterios de aceptaci\'on; la Secci\'on~\ref{sec:casos-uso} presenta los casos de uso que describen la interacci\'on paso a paso. La correspondencia precisa entre estos elementos y los requisitos formales del Cap\'itulo~\ref{ch:requisitos} se documenta en la matriz de trazabilidad del Cap\'itulo~\ref{ch:trazabilidad}.
+
+\section{Historias de usuario}
+\label{sec:historias}
+
+Cada historia sigue el formato est\'andar \textit{Como \textless rol\textgreater{} quiero \textless capacidad\textgreater{} para \textless beneficio\textgreater}~\cite{R22}, y cada criterio de aceptaci\'on se redacta en el estilo Dado/Cuando/Entonces, propio del desarrollo guiado por comportamiento~\cite{R26}.
+
+\subsection{E1 Conexión y captura}
+\paragraph{HU-01 -- Prioridad: Debe (Must) -- Objetivos: OBJ-1}
+\textit{Como} DBA \textit{quiero} registrar una conexión a mi base de datos SQL Server o Azure SQL Database con una cuenta de solo lectura \textit{para} que la plataforma pueda analizarla sin riesgo de modificarla.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU01.1}] Dado un servidor, una base de datos y credenciales válidas, cuando registro la conexión, entonces el sistema confirma la conectividad y muestra la versión del motor detectada.
+\item[\textbf{CA-HU01.2}] Dado que las credenciales son inválidas o el servidor no responde, cuando registro la conexión, entonces el sistema muestra la causa del fallo y no activa la conexión.
+\item[\textbf{CA-HU01.3}] Dado que la versión del motor es anterior a SQL Server 2016, cuando registro la conexión, entonces el sistema la rechaza e indica la versión mínima soportada.
+\item[\textbf{CA-HU01.4}] Dado que elimino una conexión, cuando confirmo la eliminación, entonces se borran sus credenciales y, si lo confirmo, los datos ingeridos asociados.
+\item[\textbf{CA-HU01.5}] Dado un usuario sin sesión válida, cuando intenta acceder a conexiones, consultas, planes, hallazgos, explicaciones o al registro de trazabilidad, entonces el sistema deniega el acceso.
+\item[\textbf{CA-HU01.6}] Dado un usuario con rol Desarrollador, cuando intenta registrar, editar o eliminar una conexión, entonces el sistema lo deniega.
+\end{itemize}
+
+\paragraph{HU-02 -- Prioridad: Debe (Must) -- Objetivos: OBJ-1}
+\textit{Como} DBA \textit{quiero} ver si Query Store está habilitado y en qué estado se encuentra en mi base de datos \textit{para} saber si la plataforma podrá obtener datos y, si no, por qué.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU02.1}] Dado que Query Store está en READ\_WRITE, cuando consulto el estado, entonces veo estado, intervalo de agregación, modo de captura y retención.
+\item[\textbf{CA-HU02.2}] Dado que Query Store está deshabilitado, cuando ejecuto una ingesta, entonces el sistema la omite, informa la causa y mantiene disponibles los datos ya almacenados.
+\item[\textbf{CA-HU02.3}] Dado cualquier estado de Query Store, cuando la plataforma lo consulta, entonces no modifica su configuración.
+\end{itemize}
+
+\paragraph{HU-03 -- Prioridad: Debe (Must) -- Objetivos: OBJ-1}
+\textit{Como} DBA \textit{quiero} que la plataforma capture consultas, planes y métricas desde Query Store de forma periódica o manual \textit{para} disponer de un historial sin instrumentar la aplicación.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU03.1}] Dado una conexión activa con Query Store operativo, cuando ejecuto una ingesta manual, entonces se almacenan textos, planes y métricas por intervalo y veo la fecha de la última ingesta.
+\item[\textbf{CA-HU03.2}] Dado que ejecuto dos veces la misma ingesta, cuando reviso los datos, entonces no hay registros duplicados.
+\item[\textbf{CA-HU03.3}] Dado un plan que no puede recuperarse, cuando se ejecuta la ingesta, entonces se registra como no analizable con su causa y la ingesta continúa.
+\item[\textbf{CA-HU03.4}] Dado que la conexión se interrumpe durante la ingesta, cuando se restablece, entonces la ingesta se reanuda desde el último intervalo consolidado sin pérdida ni duplicación.
+\end{itemize}
+
+\subsection{E2 Diagnóstico y priorización}
+\paragraph{HU-04 -- Prioridad: Debe (Must) -- Objetivos: OBJ-3, OBJ-5}
+\textit{Como} DBA \textit{quiero} ver las consultas ordenadas por su impacto sobre la carga de trabajo \textit{para} decidir cuál revisar primero.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU04.1}] Dado que hay datos ingeridos, cuando abro el listado, entonces veo las consultas ordenadas por score o por porcentaje de consumo, con filtros por base de datos, ventana de tiempo y severidad.
+\item[\textbf{CA-HU04.2}] Dado 5 000 consultas ingeridas, cuando abro el listado, entonces este responde en $\leq$ 2 s (percentil 95).
+\item[\textbf{CA-HU04.3}] Dado que cambio el orden a porcentaje de consumo, cuando se actualiza el listado, entonces el orden refleja la participación de cada consulta en el total de la ventana.
+\end{itemize}
+
+\paragraph{HU-05 -- Prioridad: Debe (Must) -- Objetivos: OBJ-2}
+\textit{Como} DBA \textit{quiero} ver los anti-patrones detectados en el plan de una consulta junto con la evidencia que los originó \textit{para} verificarlos por mí mismo antes de actuar.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU05.1}] Dado un plan con una advertencia \texttt{PlanAffectingConvert}, cuando abro la consulta, entonces veo un hallazgo con el tipo de problema, la expresión afectada y el nodo del plan.
+\item[\textbf{CA-HU05.2}] Dado un plan con un Key Lookup por encima del umbral, cuando abro la consulta, entonces veo el hallazgo con el número estimado de ejecuciones y el umbral aplicado.
+\item[\textbf{CA-HU05.3}] Dado un plan con XML inválido, cuando se analiza, entonces veo el hallazgo \texttt{PLAN\_NO\_ANALIZABLE} y el resto de las consultas sigue disponible.
+\item[\textbf{CA-HU05.4}] Dado cualquier hallazgo, cuando lo consulto, entonces indica su clase de evidencia (\texttt{ESTIMADA}, \texttt{EJECUCION\_AGREGADA} o \texttt{PLAN\_REAL}).
+\end{itemize}
+
+\paragraph{HU-06 -- Prioridad: Debe (Must) -- Objetivos: OBJ-2}
+\textit{Como} DBA \textit{quiero} ver las sugerencias de índices faltantes de un plan decodificadas (tabla, columnas e impacto estimado) \textit{para} evaluarlas sin que se aplique ningún cambio.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU06.1}] Dado un plan con \texttt{MissingIndexes}, cuando abro la consulta, entonces veo la tabla, las columnas de igualdad, desigualdad e incluidas y el impacto estimado.
+\item[\textbf{CA-HU06.2}] Dado cualquier sugerencia de índice, cuando la reviso, entonces la plataforma no ejecuta ninguna sentencia \texttt{CREATE INDEX}.
+\item[\textbf{CA-HU06.3}] Dado cualquier sugerencia de índice, cuando la reviso, entonces veo la advertencia de que debe evaluarse su costo de escritura antes de aplicarla.
+\end{itemize}
+
+\paragraph{HU-07 -- Prioridad: Debe (Must) -- Objetivos: OBJ-3, OBJ-5}
+\textit{Como} desarrollador \textit{quiero} ver cómo evolucionan la duración, el CPU y las lecturas de mi consulta en el tiempo \textit{para} saber si empeoró después de un cambio.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU07.1}] Dado al menos dos intervalos ingeridos, cuando abro la consulta, entonces veo series temporales de duración, CPU y lecturas lógicas.
+\item[\textbf{CA-HU07.2}] Dado que la consulta tuvo un cambio de plan, cuando veo las series, entonces estas distinguen los planes.
+\end{itemize}
+
+\paragraph{HU-08 -- Prioridad: Debe (Must) -- Objetivos: OBJ-3}
+\textit{Como} DBA \textit{quiero} ver el Query Health Score de cada consulta con los componentes que lo determinan \textit{para} entender por qué está priorizada.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU08.1}] Dado una consulta analizada, cuando abro su detalle, entonces veo un score de 0 a 100 y el desglose de sus componentes con su peso.
+\item[\textbf{CA-HU08.2}] Dados los mismos datos y los mismos pesos, cuando se calcula el score dos veces, entonces el resultado es idéntico.
+\item[\textbf{CA-HU08.3}] Dado un score calculado, cuando lo consulto, entonces veo su posición relativa dentro de la ventana analizada (sin bandas absolutas) y la dirección de la escala (100 corresponde a la menor prioridad de revisión; los valores bajos indican mayor prioridad).
+\end{itemize}
+
+\paragraph{HU-16 -- Prioridad: Debería (Should) -- Objetivos: OBJ-2, OBJ-5}
+\textit{Como} DBA \textit{quiero} que el sistema señale las consultas cuyo plan más reciente rinde peor que el anterior y me permita compararlos \textit{para} detectar regresiones de rendimiento.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU16.1}] Dado una consulta con dos planes, donde el más reciente supera el umbral de duración del anterior, cuando se analiza, entonces aparece un hallazgo de regresión con las métricas comparadas.
+\item[\textbf{CA-HU16.2}] Dado dos planes seleccionados de una consulta, cuando los comparo, entonces veo las diferencias de operadores y de métricas.
+\end{itemize}
+
+\subsection{E3 Explicación con IA}
+\paragraph{HU-09 -- Prioridad: Debe (Must) -- Objetivos: OBJ-4}
+\textit{Como} desarrollador sin experiencia en tuning \textit{quiero} leer una explicación en español de por qué mi consulta es problemática y qué opciones tengo \textit{para} actuar sin depender de un DBA.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU09.1}] Dado una consulta con al menos un hallazgo, cuando solicito la explicación, entonces recibo afirmaciones en español y cada una muestra sus referencias.
+\item[\textbf{CA-HU09.2}] Dado una consulta sin hallazgos, cuando solicito la explicación, entonces el sistema no genera una explicación y lo indica.
+\item[\textbf{CA-HU09.3}] Dado una explicación ya generada con el mismo contexto, cuando la solicito de nuevo, entonces se muestra desde caché en $\leq$ 2 s.
+\item[\textbf{CA-HU09.4}] Dado una afirmación de tipo interpretación que se apoya en hallazgos de clase \texttt{ESTIMADA} o \texttt{EJECUCION\_AGREGADA}, cuando la veo, entonces aparece etiquetada como indicio.
+\end{itemize}
+
+\paragraph{HU-10 -- Prioridad: Debe (Must) -- Objetivos: OBJ-4, OBJ-5}
+\textit{Como} DBA \textit{quiero} navegar desde cada afirmación de la IA hasta los hallazgos y los nodos del plan que la sustentan \textit{para} confiar únicamente en lo trazable a evidencia.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU10.1}] Dado una explicación trazada, cuando selecciono una afirmación, entonces veo los hallazgos y los nodos del plan que referencia.
+\item[\textbf{CA-HU10.2}] Dado una explicación que no supera el validador, cuando se muestra, entonces se descarta o aparece como no verificada (\texttt{NO\_VERIFICADA}) y nunca como trazada.
+\item[\textbf{CA-HU10.3}] Dado un valor numérico citado que no coincide con la evidencia, cuando se valida la explicación, entonces la validación falla.
+\end{itemize}
+
+\paragraph{HU-11 -- Prioridad: Debe (Must) -- Objetivos: OBJ-4, OBJ-5}
+\textit{Como} DBA \textit{quiero} que las recomendaciones se presenten como opciones a evaluar, con su impacto potencial \textit{para} decidir yo si las aplico.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU11.1}] Dado cualquier recomendación, cuando se muestra, entonces incluye el aviso persistente de que no ha sido aplicada y requiere revisión humana.
+\item[\textbf{CA-HU11.2}] Dado cualquier recomendación, cuando la reviso, entonces no incluye acciones ejecutables por la plataforma.
+\item[\textbf{CA-HU11.3}] Dado una recomendación de índice, cuando la reviso, entonces incluye la advertencia sobre el costo de escritura.
+\item[\textbf{CA-HU11.4}] Dado una explicación trazada, cuando se muestra, entonces incluye el aviso persistente \textquotedblleft Trazada a evidencia del motor; no equivale a un diagnóstico confirmado\textquotedblright.
+\end{itemize}
+
+\paragraph{HU-12 -- Prioridad: Debe (Must) -- Objetivos: OBJ-4}
+\textit{Como} DBA \textit{quiero} seguir viendo los hallazgos y las métricas aunque el proveedor de IA falle \textit{para} no perder capacidad de diagnóstico.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU12.1}] Dado que el proveedor de IA no responde dentro del tiempo límite, cuando solicito la explicación, entonces veo los hallazgos determinísticos y un aviso de indisponibilidad.
+\item[\textbf{CA-HU12.2}] Dado un fallo del proveedor de IA, cuando navego por el resto de la plataforma, entonces las demás vistas siguen funcionando.
+\end{itemize}
+
+\paragraph{HU-21 -- Prioridad: Debe (Must) -- Objetivos: OBJ-4}
+\textit{Como} DBA \textit{quiero} que los literales de mis consultas no se envíen al proveedor de IA \textit{para} proteger datos personales y cumplir la normativa aplicable.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU21.1}] Dado una consulta con literales sembrados (por ejemplo, un número de documento), cuando se genera una explicación, entonces las solicitudes registradas contienen marcadores y 0 ocurrencias de esos literales.
+\item[\textbf{CA-HU21.2}] Dado una consulta con un comentario que contiene instrucciones maliciosas, cuando se genera la explicación, entonces se mantiene el formato de salida y la explicación pasa por el validador sin alteración.
+\item[\textbf{CA-HU21.3}] Dado cualquier solicitud al proveedor de IA, cuando se registra, entonces no contiene credenciales de la base de datos ni claves de API.
+\item[\textbf{CA-HU21.4}] Dado cualquier configuración o pantalla del sistema, cuando la reviso, entonces no existe ninguna opción para desactivar el enmascarado de literales.
+\end{itemize}
+
+\subsection{E4 Visualización}
+\paragraph{HU-13 -- Prioridad: Debe (Must) -- Objetivos: OBJ-5}
+\textit{Como} DBA \textit{quiero} ver los operadores de un plan de forma jerárquica con los nodos problemáticos resaltados \textit{para} ubicar rápidamente el origen del problema.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU13.1}] Dado un plan ingerido, cuando lo abro, entonces veo sus operadores en jerarquía con el costo estimado y las advertencias.
+\item[\textbf{CA-HU13.2}] Dado un plan con hallazgos, cuando lo abro, entonces los nodos asociados a hallazgos aparecen resaltados.
+\end{itemize}
+
+\paragraph{HU-17 -- Prioridad: Podría (Could) -- Objetivos: OBJ-2, OBJ-5}
+\textit{Como} DBA \textit{quiero} ajustar los umbrales de las reglas a mi carga de trabajo \textit{para} reducir los falsos positivos.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU17.1}] Dado un cambio de umbral, cuando se ejecuta el siguiente análisis, entonces se usa el nuevo valor y se registra.
+\item[\textbf{CA-HU17.2}] Dado un valor de umbral inválido, cuando intento guardarlo, entonces el sistema lo rechaza con un mensaje que indica el rango permitido.
+\end{itemize}
+
+\paragraph{HU-18 -- Prioridad: Podría (Could) -- Objetivos: OBJ-5}
+\textit{Como} DBA \textit{quiero} exportar el diagnóstico de una consulta en un reporte técnico \textit{para} compartirlo con mi equipo.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU18.1}] Dado una consulta analizada, cuando exporto el diagnóstico, entonces obtengo un documento con sus métricas, hallazgos, score, explicación y evidencia.
+\end{itemize}
+
+\paragraph{HU-19 -- Prioridad: Podría (Could) -- Objetivos: OBJ-5}
+\textit{Como} DBA \textit{quiero} registrar la fecha en que apliqué manualmente un cambio y comparar el rendimiento antes y después \textit{para} medir el efecto de mi optimización.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU19.1}] Dado una fecha de cambio, cuando abro la comparación, entonces veo las métricas promedio de cada periodo con el número de ejecuciones que las sustenta.
+\end{itemize}
+
+\subsection{E5 Gobernanza y validación}
+\paragraph{HU-14 -- Prioridad: Debe (Must) -- Objetivos: OBJ-4, OBJ-5}
+\textit{Como} DBA o docente evaluador \textit{quiero} consultar el registro de qué evidencia, modelo y plantilla produjo cada explicación \textit{para} auditar y reproducir los resultados.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU14.1}] Dado una explicación generada, cuando consulto el registro, entonces existe una entrada con los identificadores de hallazgos, la versión del catálogo, el modelo y su versión, la versión del prompt, el hash del contexto, la marca de tiempo y el resultado de la validación.
+\item[\textbf{CA-HU14.2}] Dado el registro de trazabilidad, cuando uso la interfaz, entonces no existe ninguna operación para modificar o borrar sus entradas.
+\item[\textbf{CA-HU14.3}] Dado el registro de trazabilidad, cuando filtro por consulta o por rango de fechas, entonces obtengo solo las entradas correspondientes.
+\item[\textbf{CA-HU14.4}] Dado el log de auditoría, cuando lo consulto, entonces contiene los inicios de sesión exitosos y fallidos, el registro y la edición de conexiones, las ingestas manuales, los cambios de umbrales y los borrados de datos, cada uno con usuario y marca de tiempo.
+\end{itemize}
+
+\paragraph{HU-15 -- Prioridad: Debe (Must) -- Objetivos: OBJ-1}
+\textit{Como} DBA \textit{quiero} tener evidencia de que la plataforma nunca modifica mi base de datos \textit{para} autorizar su uso en mi entorno.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU15.1}] Dado una cuenta con solo \texttt{VIEW DATABASE STATE}, cuando uso la plataforma, entonces todas las funciones del MVP operan.
+\item[\textbf{CA-HU15.2}] Dado el registro de sentencias emitidas, cuando lo reviso, entonces contiene únicamente SELECT sobre las vistas permitidas.
+\item[\textbf{CA-HU15.3}] Dado una cuenta con permisos de escritura, cuando registro la conexión, entonces el sistema me advierte y recomienda una cuenta de privilegios mínimos.
+\end{itemize}
+
+\paragraph{HU-20 -- Prioridad: Debe (Must) -- Objetivos: OBJ-6}
+\textit{Como} docente evaluador \textit{quiero} reproducir la evaluación del motor y de la IA con escenarios controlados y benchmarks \textit{para} verificar la exactitud y la trazabilidad declaradas.
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item[\textbf{CA-HU20.1}] Dado el repositorio y su README, cuando ejecuto el arnés del motor, entonces obtengo la precisión y la exhaustividad por regla.
+\item[\textbf{CA-HU20.2}] Dado el repositorio y su README, cuando ejecuto el arnés de IA, entonces obtengo el porcentaje de afirmaciones con evidencia válida, el de afirmaciones sin sustento y la concordancia numérica.
+\item[\textbf{CA-HU20.3}] Dado los resultados del arnés, cuando los comparo con la memoria de grado, entonces coinciden.
+\item[\textbf{CA-HU20.4}] Dado el repositorio y la memoria de grado, cuando reviso los anexos, entonces existe el informe versionado del laboratorio y toda afirmación de eficacia, precisión o exhaustividad remite a él.
+\end{itemize}
+
+
+\section{Casos de uso}
+\label{sec:casos-uso}
+
+Los casos de uso se describen con la plantilla ligera propuesta por Cockburn~\cite{R25} y complementan a las historias de usuario al mostrar la secuencia de interacci\'on entre los actores y el sistema.
+
+
+\begin{figure}[htbp]
+\centering
+% Nota S1-19 (RF-IA-10): verificar que el archivo externo casos_uso.pdf muestre "CU-05 Obtener una explicacion de IA trazada" (no "verificada").
+\includegraphics[width=0.95\linewidth]{casos_uso.pdf}
+\caption{Diagrama de casos de uso}
+\label{fig:casos-uso}
+\end{figure}
+
+\subsection{CU-01 -- Registrar y validar una conexión}
+\begin{description}[leftmargin=3.3cm,style=nextline]
+\item[Actor principal] DBA
+\item[Actor secundario] Base de datos objetivo (SQL Server / Azure SQL)
+\item[Precondiciones] El DBA ha iniciado sesión con rol DBA y dispone de servidor, base de datos y credenciales de la cuenta de solo lectura.
+\item[Flujo principal]~
+\begin{enumerate}[leftmargin=1.3em,itemsep=1pt]
+\item El DBA ingresa los datos de conexión.
+\item El sistema prueba la conectividad y detecta la versión del motor.
+\item El sistema verifica los permisos de la cuenta y el estado de Query Store.
+\item El sistema guarda la conexión con las credenciales cifradas y la marca como activa.
+\end{enumerate}
+\item[Flujos alternos]~
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item 2a. Conexión fallida: el sistema muestra la causa y no activa la conexión.
+\item 2b. Versión < SQL Server 2016: el sistema rechaza el registro.
+\item 2c. Versión con soporte parcial: el sistema muestra el nivel de soporte y las funciones que quedarán omitidas.
+\item 3a. La cuenta tiene permisos de escritura: el sistema advierte.
+\item 3b. Query Store deshabilitado: el sistema registra la conexión y avisa que la ingesta se omitirá.
+\end{itemize}
+\item[Postcondici\'on] Existe una conexión activa o rechazada con su causa.
+\item[Historias relacionadas] HU-01, HU-02, HU-15
+\item[Requisitos relacionados] RF-CFG-01..07, RNF-SEG-02..04, RNF-SEG-11..13, RNF-COM-04
+\end{description}
+
+\subsection{CU-02 -- Ingerir telemetría de Query Store}
+\begin{description}[leftmargin=3.3cm,style=nextline]
+\item[Actor principal] Sistema (programador) o DBA
+\item[Actor secundario] Base de datos objetivo
+\item[Precondiciones] Existe una conexión activa con Query Store operativo.
+\item[Flujo principal]~
+\begin{enumerate}[leftmargin=1.3em,itemsep=1pt]
+\item El actor inicia la ingesta (manual o programada).
+\item El sistema determina los intervalos nuevos desde la última ingesta.
+\item El sistema lee consultas, planes y estadísticas mediante SELECT de solo lectura.
+\item El sistema agrega las estadísticas por plan e intervalo y las persiste.
+\item El sistema registra el resultado de la ingesta.
+\end{enumerate}
+\item[Flujos alternos]~
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item 3a. Conexión perdida: el sistema reintenta con espera exponencial y reanuda.
+\item 3b. Plan no recuperable: se registra como no analizable y continúa.
+\item 1a. Query Store deshabilitado: se omite la ingesta y se informa la causa.
+\end{itemize}
+\item[Postcondici\'on] Datos y planes nuevos persistidos sin duplicados.
+\item[Historias relacionadas] HU-02, HU-03
+\item[Requisitos relacionados] RF-ING-01..10, RNF-FIA-01, RNF-RND-01
+\end{description}
+
+\subsection{CU-03 -- Analizar un plan y generar hallazgos}
+\begin{description}[leftmargin=3.3cm,style=nextline]
+\item[Actor principal] Sistema
+\item[Actor secundario] ---
+\item[Precondiciones] Existen planes ingeridos sin analizar o con un catálogo de reglas nuevo.
+\item[Flujo principal]~
+\begin{enumerate}[leftmargin=1.3em,itemsep=1pt]
+\item El sistema toma un plan pendiente y su contexto de métricas.
+\item El motor evalúa cada regla del catálogo aplicable a las clases de evidencia disponibles.
+\item El motor genera los hallazgos con su evidencia y su clase.
+\item El sistema persiste los hallazgos y dispara el cálculo del score.
+\end{enumerate}
+\item[Flujos alternos]~
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item 2a. XML inválido: el motor genera \texttt{PLAN\_NO\_ANALIZABLE} y continúa con el siguiente plan.
+\end{itemize}
+\item[Postcondici\'on] Hallazgos persistidos, deterministas y trazables a nodos del plan.
+\item[Historias relacionadas] HU-05, HU-06, HU-16
+\item[Requisitos relacionados] RF-MOT-01..17, RNF-COM-02, RNF-MAN-01
+\end{description}
+
+\subsection{CU-04 -- Priorizar consultas críticas}
+\begin{description}[leftmargin=3.3cm,style=nextline]
+\item[Actor principal] DBA / Desarrollador
+\item[Actor secundario] ---
+\item[Precondiciones] Existen consultas con métricas y hallazgos.
+\item[Flujo principal]~
+\begin{enumerate}[leftmargin=1.3em,itemsep=1pt]
+\item El usuario abre el listado de consultas críticas.
+\item El sistema calcula o recupera el score y el porcentaje de consumo de cada consulta.
+\item El usuario aplica filtros y ordena por score o por consumo.
+\item El usuario abre el detalle de una consulta.
+\end{enumerate}
+\item[Flujos alternos]~
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item 2a. Sin datos ingeridos: el sistema indica que debe ejecutarse una ingesta.
+\end{itemize}
+\item[Postcondici\'on] El usuario identifica qué consulta revisar primero.
+\item[Historias relacionadas] HU-04, HU-07, HU-08, HU-13
+\item[Requisitos relacionados] RF-SCO-01..06, RF-DASH-01..04, RNF-RND-02
+\end{description}
+
+\subsection{CU-05 -- Obtener una explicación de IA trazada}
+\begin{description}[leftmargin=3.3cm,style=nextline]
+\item[Actor principal] Desarrollador / DBA
+\item[Actor secundario] Proveedor de IA
+\item[Precondiciones] La consulta tiene al menos un hallazgo.
+\item[Flujo principal]~
+\begin{enumerate}[leftmargin=1.3em,itemsep=1pt]
+\item El usuario solicita la explicación.
+\item El sistema enmascara todos los literales y arma el contexto con hallazgos, métricas y fragmentos de la base de conocimiento.
+\item El sistema envía el contexto al proveedor de IA por un canal cifrado.
+\item El sistema recibe la explicación estructurada en afirmaciones tipificadas con referencias.
+\item El validador comprueba las referencias, los valores numéricos y las relaciones causa-efecto curadas.
+\item El sistema muestra la explicación trazada con enlaces a la evidencia y registra la entrada de trazabilidad.
+\end{enumerate}
+\item[Flujos alternos]~
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item 4a. Proveedor no disponible o tiempo excedido: el sistema muestra los hallazgos sin explicación.
+\item 5a. La validación falla: la explicación se descarta o se marca como \texttt{NO\_VERIFICADA}.
+\item 1a. Existe una explicación en caché para el mismo contexto: el sistema la reutiliza.
+\end{itemize}
+\item[Postcondici\'on] Explicación trazada (o marcada como no verificada), registrada y con aviso de revisión humana.
+\item[Historias relacionadas] HU-09, HU-10, HU-11, HU-12, HU-21
+\item[Requisitos relacionados] RF-IA-01..12, RF-TRZ-01, RNF-SEG-05..07
+\end{description}
+
+\subsection{CU-06 -- Auditar la trazabilidad}
+\begin{description}[leftmargin=3.3cm,style=nextline]
+\item[Actor principal] DBA / docente evaluador
+\item[Actor secundario] ---
+\item[Precondiciones] Existen explicaciones generadas.
+\item[Flujo principal]~
+\begin{enumerate}[leftmargin=1.3em,itemsep=1pt]
+\item El actor abre el registro de trazabilidad.
+\item El actor filtra por consulta, explicación o fechas.
+\item El actor abre una entrada y revisa hallazgos, versiones y resultado de validación.
+\end{enumerate}
+\item[Flujos alternos]~
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item 2a. Sin entradas: el sistema lo indica.
+\end{itemize}
+\item[Postcondici\'on] El actor puede reconstruir cómo se generó cada explicación.
+\item[Historias relacionadas] HU-14
+\item[Requisitos relacionados] RF-TRZ-01..03, RNF-FUN-02
+\end{description}
+
+\subsection{CU-07 -- Comparar planes de una consulta}
+\begin{description}[leftmargin=3.3cm,style=nextline]
+\item[Actor principal] DBA
+\item[Actor secundario] ---
+\item[Precondiciones] La consulta tiene al menos dos planes ingeridos.
+\item[Flujo principal]~
+\begin{enumerate}[leftmargin=1.3em,itemsep=1pt]
+\item El DBA abre la consulta y selecciona dos planes.
+\item El sistema muestra las diferencias de operadores y las métricas de cada plan.
+\item El sistema muestra, si existe, el hallazgo de regresión.
+\end{enumerate}
+\item[Flujos alternos]~
+\begin{itemize}[leftmargin=1.3em,itemsep=1pt]
+\item 1a. La consulta tiene un solo plan: el sistema lo indica.
+\end{itemize}
+\item[Postcondici\'on] El DBA entiende qué cambió entre los planes.
+\item[Historias relacionadas] HU-16
+\item[Requisitos relacionados] RF-MOT-13, RF-DASH-08
+\end{description}
+
+\chapter{Requisitos espec\'ificos}
+\label{ch:requisitos}
+
+Este cap\'itulo contiene la especificaci\'on formal y verificable de los requisitos del sistema. Cada requisito tiene un identificador \'unico e inmutable, una prioridad seg\'un la escala MoSCoW, los objetivos y las historias de usuario a los que contribuye, su m\'etodo de verificaci\'on y la justificaci\'on t\'ecnica o normativa que lo origina. Los requisitos funcionales se redactan con verbos de obligaci\'on (\textbf{deber\'a}) y, cuando aplica, con los patrones de la sintaxis EARS (\textit{Ubicuo}, \textit{Por evento} -- \textquotedblleft Cuando\ldots{}\textquotedblright, \textit{Por estado} -- \textquotedblleft Mientras\ldots{}\textquotedblright, \textit{Comportamiento no deseado} -- \textquotedblleft Si\ldots{}, entonces\ldots{}\textquotedblright, y \textit{Opcional} -- \textquotedblleft Donde\ldots{}\textquotedblright)~\cite{R23}.
+
+\section{Interfaces externas}
+
+\begin{xltabular}{\linewidth}{@{}p{1.4cm}p{2.6cm}X@{}}
+\caption{Interfaces externas del sistema}\label{tab:interfaces}\\
+\toprule
+\textbf{ID} & \textbf{Interfaz} & \textbf{Descripci\'on} \\
+\midrule
+\endfirsthead
+\multicolumn{3}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:interfaces})}} \\
+\toprule
+\textbf{ID} & \textbf{Interfaz} & \textbf{Descripci\'on} \\
+\midrule
+\endhead
+\midrule \multicolumn{3}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+RI-01 & \textit{Query Store} (SQL Server / Azure SQL Database) & Interfaz de solo lectura mediante sentencias \texttt{SELECT} sobre las vistas de cat\'alogo y de administraci\'on din\'amica de \textit{Query Store} (texto de consultas, planes de ejecuci\'on, estad\'isticas de ejecuci\'on y opciones de configuraci\'on de \textit{Query Store}), sobre un canal cifrado y con una cuenta de privilegio m\'inimo. \\
+RI-02 & Proveedor de inteligencia artificial & API externa por HTTPS, con solicitudes y respuestas en formato JSON, autenticada mediante clave de API. Las solicitudes nunca incluyen literales (del texto SQL original, de sus comentarios, de los par\'ametros y predicados del plan ni de la evidencia de los hallazgos) ni credenciales de bases de datos. \\
+RI-03 & Interfaz web de usuario & Aplicaci\'on web servida por el componente de backend de la plataforma, accesible desde navegadores web est\'andar. \\
+RI-04 & Repositorio de persistencia local & Almacenamiento propio de la plataforma para m\'etricas, planes, hallazgos, puntajes, explicaciones y el registro de trazabilidad. \\
+RI-05 & Arn\'es de evaluaci\'on & Conjunto de comandos reproducibles que ejecutan la evaluaci\'on autom\'atica del motor determin\'istico y del componente de inteligencia artificial. \\
+\end{xltabular}
+
+\section{Requisitos funcionales}
+\label{sec:rf}
+
+\subsection{Conexiones y configuraci\'on (\texttt{RF-CFG})}
+\textit{Encargado principal: componente de conectividad.}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos funcionales del m\'odulo Conexiones y configuraci\'on}\label{tab:rf-CFG}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rf-CFG})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RF-CFG-01} & El sistema deberá permitir a un usuario con rol DBA registrar una conexión a una base de datos objetivo indicando servidor, base de datos, tipo de plataforma (SQL Server o Azure SQL Database), método de autenticación y credenciales.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-1 & HU-01 & T \\
+\textbf{RF-CFG-02} & Cuando el usuario registre o edite una conexión, el sistema deberá probar la conectividad y mostrar el resultado (éxito o causa del fallo) dentro de un tiempo límite configurable (por defecto, 15 s).\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-1 & HU-01 & T \\
+\textbf{RF-CFG-03} & Si la versión del motor de la base de datos objetivo es anterior a SQL Server 2016 (13.x), entonces el sistema deberá rechazar el registro e indicar la versión mínima soportada.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); \cite{R4}} & Debe & OBJ-1 & HU-01 & T \\
+\textbf{RF-CFG-04} & El sistema deberá consultar y mostrar el estado de Query Store de la base de datos objetivo (estado actual y deseado, motivo de solo lectura, intervalo de agregación, modo de captura y retención) sin modificar su configuración.\newline{\small\textit{Justificaci\'on: } \cite{R8}} & Debe & OBJ-1 & HU-02 & T \\
+\textbf{RF-CFG-05} & Si la cuenta de conexión pertenece a \texttt{db\_owner}, \texttt{db\_datawriter} o \texttt{db\_ddladmin}, o posee el permiso \texttt{ALTER} sobre la base de datos, entonces el sistema deberá advertir al usuario y recomendar una cuenta de privilegios mínimos.\newline{\small\textit{Justificaci\'on: } \cite{R5}; el plan de trabajo interno del equipo} & Debería & OBJ-1 & HU-15 & T \\
+\textbf{RF-CFG-06} & El sistema deberá permitir editar y eliminar conexiones; al eliminar una conexión, el sistema deberá borrar sus credenciales y, previa confirmación del usuario, los datos ingeridos asociados.\newline{\small\textit{Justificaci\'on: } \cite{R14}} & Debería & OBJ-1 & HU-01 & T \\
+\textbf{RF-CFG-07} & Cuando el usuario registre una conexión, el sistema deberá mostrar el nivel de soporte de la versión detectada y las funciones que quedarán omitidas.\newline{\small\textit{Justificaci\'on: } la matriz de soporte (Cuadro~\ref{tab:matriz-soporte}); la decisi\'on DA-12 (Sección~\ref{sec:decisiones})} & Debería & OBJ-1 & HU-01 & D \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{Ingesta y persistencia de telemetr\'ia (\texttt{RF-ING})}
+\textit{Encargado principal: componente de ingesta.}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos funcionales del m\'odulo Ingesta y persistencia de telemetr\'ia}\label{tab:rf-ING}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rf-ING})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RF-ING-01} & El sistema deberá extraer, desde Query Store de cada base de datos registrada, los textos de consulta, las consultas, los planes y las estadísticas de ejecución por intervalo (\texttt{sys.query\_store\_query\_text}, \texttt{sys.query\_store\_query}, \texttt{sys.query\_store\_plan}, \texttt{sys.query\_store\_runtime\_stats} y \texttt{sys.query\_store\_runtime\_stats\_interval}).\newline{\small\textit{Justificaci\'on: } \cite{R4}; \cite{R5}} & Debe & OBJ-1 & HU-03 & T \\
+\textbf{RF-ING-02} & El sistema deberá capturar, por plan e intervalo, al menos: número de ejecuciones, duración promedio, tiempo de CPU promedio, lecturas lógicas y físicas promedio, escrituras lógicas promedio, filas devueltas promedio, DOP promedio y memoria máxima utilizada promedio.\newline{\small\textit{Justificaci\'on: } \cite{R5}} & Debe & OBJ-1 & HU-03 & T \\
+\textbf{RF-ING-03} & Donde el motor exponga las columnas de uso de TempDB y de bytes de log (SQL Server 2017 o superior y Azure SQL Database), el sistema deberá capturar además el espacio promedio en TempDB y los bytes de log promedio.\newline{\small\textit{Justificaci\'on: } \cite{R5}} & Debería & OBJ-1 & HU-03 & T \\
+\textbf{RF-ING-04} & El sistema deberá agregar las filas de estadísticas de ejecución por plan, tipo de ejecución e intervalo, ponderando los promedios por el número de ejecuciones, antes de persistirlas, porque la vista puede devolver varias filas para el intervalo activo.\newline{\small\textit{Justificaci\'on: } \cite{R5}} & Debe & OBJ-1 & HU-03 & T \\
+\textbf{RF-ING-05} & El sistema deberá procesar en cada ingesta únicamente los intervalos posteriores al último intervalo consolidado y los intervalos aún activos, de modo que ejecutar dos veces la misma ingesta no genere registros duplicados.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-1 & HU-03 & T \\
+\textbf{RF-ING-06} & El sistema deberá permitir iniciar una ingesta de forma manual y de forma programada con una periodicidad configurable.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); la decisión abierta DA-03 (Sección~\ref{sec:decisiones})} & Debe & OBJ-1 & HU-03 & T \\
+\textbf{RF-ING-07} & El sistema deberá persistir en un repositorio local, con marca de tiempo de ingesta y base de datos de origen, las métricas, los planes (texto XML) y los metadatos capturados.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-1 & HU-03, HU-07 & T \\
+\textbf{RF-ING-08} & Si Query Store está deshabilitado o su estado impide la lectura, entonces el sistema deberá omitir la ingesta de esa base de datos, informar la causa al usuario y continuar operando con los datos ya almacenados.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); \cite{R9}} & Debe & OBJ-1 & HU-02 & T \\
+\textbf{RF-ING-09} & Si el plan de una consulta no puede recuperarse (XML nulo, truncado o inválido), entonces el sistema deberá registrarlo como no analizable con su causa y continuar con los demás planes.\newline{\small\textit{Justificaci\'on: } \cite{R7}} & Debe & OBJ-1, OBJ-2 & HU-03 & T \\
+\textbf{RF-ING-10} & El sistema deberá permitir configurar la ventana histórica de captura y un máximo de consultas por ciclo (las N de mayor consumo) para acotar el volumen leído de la base monitoreada.\newline{\small\textit{Justificaci\'on: } RNF-RND-01} & Debería & OBJ-1 & HU-03 & T \\
+\textbf{RF-ING-11} & Donde el usuario active el análisis de índices existentes, el sistema deberá capturar los metadatos de índices de las tablas referenciadas por los planes ingeridos.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Podría & OBJ-1 & HU-03 & T \\
+\textbf{RF-ING-12} & Donde la base objetivo tenga habilitada la opción \texttt{LAST\_QUERY\_PLAN\_STATS} y la cuenta posea el permiso requerido, el sistema deberá capturar el último plan real de las consultas seleccionadas sin modificar dicha configuración.\newline{\small\textit{Justificaci\'on: } \cite{R7}; el spike técnico documentado en el Apéndice~\ref{ap:spike}} & Podría & OBJ-1, OBJ-2 & HU-05 & T \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{Motor determin\'istico de an\'alisis (\texttt{RF-MOT})}
+\textit{Encargado principal: motor de reglas.}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos funcionales del m\'odulo Motor determin\'istico de an\'alisis}\label{tab:rf-MOT}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rf-MOT})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RF-MOT-01} & El sistema deberá analizar el Showplan XML de cada plan ingerido y generar cero o más hallazgos estructurados por plan.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-2 & HU-05 & T \\
+\textbf{RF-MOT-02} & Ante un mismo plan XML, la misma versión del catálogo de reglas y la misma configuración de umbrales, el motor deberá producir el mismo conjunto de hallazgos.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); el plan de trabajo interno del equipo} & Debe & OBJ-2 & HU-05 & T \\
+\textbf{RF-MOT-03} & Cada hallazgo deberá incluir: identificador único, identificador y versión de la regla, severidad, identificadores de consulta y de plan, identificadores de los nodos del plan involucrados, valores de los atributos que lo originan y clase de evidencia (\texttt{ESTIMADA}, \texttt{EJECUCION\_AGREGADA} o \texttt{PLAN\_REAL}). Además, cada hallazgo deberá declarar su naturaleza como señal e incluir los datos de contexto usados para evaluarlo (por ejemplo, filas estimadas leídas y devueltas, ejecuciones, porcentaje de consumo de la consulta).\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); \cite{R12}; la revisión del evaluador: un hallazgo es una señal a investigar, no un diagnóstico concluyente} & Debe & OBJ-2, OBJ-4 & HU-05, HU-10 & I,T \\
+\textbf{RF-MOT-04} & El motor deberá detectar las advertencias \texttt{PlanAffectingConvert} del plan y reportar el tipo de problema (\texttt{ConvertIssue}) y la expresión afectada (REG-01).\newline{\small\textit{Justificaci\'on: } el spike técnico documentado en el Apéndice~\ref{ap:spike}; \cite{R11}} & Debe & OBJ-2 & HU-05 & T \\
+\textbf{RF-MOT-05} & El motor deberá señalar un recorrido completo de tabla o de índice (Table Scan, Clustered Index Scan e Index Scan; REG-03) solo cuando se cumpla alguna de estas condiciones: (a) el operador tiene predicado y la razón entre filas leídas estimadas y filas devueltas estimadas supera un umbral configurable; (b) las filas estimadas superan el umbral de volumen y la consulta supera el porcentaje mínimo de consumo en la ventana. Un recorrido completo sin predicado y sobre una tabla de bajo volumen no deberá señalarse.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); la revisión del evaluador: un recorrido completo adecuado debe distinguirse de uno problemático según su contexto; \cite{R33}: las filas leídas estimadas (\texttt{EstimatedRowsRead}) solo existen desde SQL Server 2016 SP1} & Debe & OBJ-2 & HU-05 & T \\
+\textbf{RF-MOT-06} & El motor deberá señalar un Key Lookup o RID Lookup (REG-04) cuando su número estimado de ejecuciones supere un umbral configurable y la consulta supere el porcentaje mínimo de consumo en la ventana.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); la revisión del evaluador} & Debe & OBJ-2 & HU-05 & T \\
+\textbf{RF-MOT-07} & El motor deberá decodificar cada grupo de índices faltantes del plan en una estructura que contenga tabla, columnas de igualdad, de desigualdad e incluidas, e impacto estimado (REG-02). Toda sugerencia de índice decodificada deberá acompañarse de la advertencia de que la sugerencia es una estimación previa a la ejecución, no se prueba posteriormente y puede solaparse con índices existentes, y de que todo índice nuevo agrega sobrecarga a las operaciones de escritura~\cite{R30}.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); \cite{R30}} & Debe & OBJ-2 & HU-06 & I,T \\
+\textbf{RF-MOT-08} & El motor deberá detectar las advertencias \texttt{ColumnsWithNoStatistics} y reportar las columnas afectadas (REG-05).\newline{\small\textit{Justificaci\'on: } el spike técnico documentado en el Apéndice~\ref{ap:spike}} & Debería & OBJ-2 & HU-05 & T \\
+\textbf{RF-MOT-09} & El motor deberá detectar las uniones sin predicado (\texttt{NoJoinPredicate}) y reportar el operador afectado (REG-06).\newline{\small\textit{Justificaci\'on: } el spike técnico documentado en el Apéndice~\ref{ap:spike}} & Debería & OBJ-2 & HU-05 & T \\
+\textbf{RF-MOT-10} & El motor deberá señalar, a nivel de sentencia, la discrepancia entre las filas estimadas del plan y las filas devueltas promedio registradas en Query Store cuando la razón entre ambas supere un umbral configurable, con evidencia clasificada como \texttt{EJECUCION\_AGREGADA} (REG-07).\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); \cite{R3}; \cite{R5}; \cite{R35} (el \textit{q-error} como m\'etrica de desviaci\'on de cardinalidad; su uso a nivel de sentencia es una decisi\'on de dise\~no)} & Debería & OBJ-2 & HU-05 & T \\
+\textbf{RF-MOT-11} & Donde exista un plan real, el motor deberá detectar los desbordamientos a TempDB y las advertencias de concesión de memoria (REG-09); sin plan real, un uso de TempDB promedio elevado se reportará solo como indicio no confirmado.\newline{\small\textit{Justificaci\'on: } el plan de trabajo interno del equipo; el spike técnico documentado en el Apéndice~\ref{ap:spike}} & Podría & OBJ-2 & HU-05 & T \\
+\textbf{RF-MOT-12} & El motor deberá señalar como indicio la posible sensibilidad a parámetros cuando una consulta presente varios planes y una variabilidad de duración superior a un umbral configurable (REG-10).\newline{\small\textit{Justificaci\'on: } el plan de trabajo interno del equipo} & Podría & OBJ-2 & HU-05 & T \\
+\textbf{RF-MOT-13} & El motor deberá identificar las consultas con más de un plan cuyo plan más reciente supere, en un umbral configurable, la duración o el tiempo de CPU promedio ponderados del plan anterior (REG-08); la ganancia estimada de CPU de referencia es la que utiliza el propio motor para recomendar la corrección de un plan~\cite{R36}.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); \cite{R36}} & Debería & OBJ-2 & HU-16 & T \\
+\textbf{RF-MOT-14} & El sistema deberá permitir configurar los umbrales de cada regla mediante un archivo de configuración con valores por defecto documentados cuando existe fundamento y marcados como por calibrar en caso contrario (Cuadro~\ref{tab:umbrales}) y deberá registrar, junto con cada análisis, los valores de umbral utilizados.\newline{\small\textit{Justificaci\'on: } el spike técnico documentado en el Apéndice~\ref{ap:spike}} & Debe & OBJ-2 & HU-05, HU-17 & T \\
+\textbf{RF-MOT-15} & El sistema deberá mantener un catálogo de reglas versionado en el que cada regla declare identificador, nombre, descripción, fuente documental, clase de evidencia requerida y umbrales por defecto.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-2 & HU-05 & I,D \\
+\textbf{RF-MOT-16} & Si el XML de un plan es inválido o contiene estructuras no soportadas, entonces el motor deberá generar un hallazgo \texttt{PLAN\_NO\_ANALIZABLE} con la causa y no deberá interrumpir el análisis de los demás planes (REG-11).\newline{\small\textit{Justificaci\'on: } \cite{R7}} & Debe & OBJ-2 & HU-05 & T \\
+\textbf{RF-MOT-17} & El motor deberá exponer sus hallazgos como objetos JSON conformes a un esquema versionado (v\'ease el ejemplo del contrato de datos en el Ap\'endice~\ref{ap:contrato}).\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-2, OBJ-4 & HU-05 & I,T \\
+\end{xltabular}
+\end{footnotesize}
+
+\medskip
+\textbf{Par\'ametros de umbral y su fundamento.} El Cuadro~\ref{tab:umbrales} completa el requisito RF-MOT-14 y la decisi\'on abierta DA-02. Este SRS \textbf{no fija} valores num\'ericos de umbral que no tengan respaldo en una fuente: el \'unico valor con ancla documental es el de REG-08; los dem\'as se declaran \textbf{por calibrar} y se determinan con el procedimiento de la Secci\'on~\ref{sec:protocolo-motor} (distribuci\'on observada en los escenarios sembrados y en las cargas de referencia, y contraste con la anotaci\'on experta). Los valores iniciales con los que se ejecute el motor durante el desarrollo deber\'an marcarse en el archivo de configuraci\'on como \textit{no investigados} y no se citar\'an como resultado.
+
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.9cm}p{3.2cm}Xp{2.3cm}@{}}
+\caption{Par\'ametros de umbral de las reglas del motor y su fundamento}\label{tab:umbrales}\\
+\toprule
+\textbf{Regla} & \textbf{Par\'ametro} & \textbf{Fundamento documentado} & \textbf{Valor por defecto} \\
+\midrule
+\endfirsthead
+\multicolumn{4}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:umbrales})}} \\
+\toprule
+\textbf{Regla} & \textbf{Par\'ametro} & \textbf{Fundamento documentado} & \textbf{Valor por defecto} \\
+\midrule
+\endhead
+\midrule \multicolumn{4}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+REG-03 & Raz\'on entre filas le\'idas y devueltas estimadas & El atributo de filas le\'idas estimadas existe desde SQL Server 2016 SP1~\cite{R33}; el valor del umbral no est\'a documentado & Por calibrar \\
+REG-03 & Filas estimadas m\'inimas & Sin fuente & Por calibrar \\
+REG-03 / REG-04 & Porcentaje m\'inimo de consumo de la consulta en la ventana & \textit{Query Store} ordena las consultas por el consumo de una m\'etrica elegida~\cite{R34}; el umbral no est\'a documentado & Por calibrar \\
+REG-04 & Ejecuciones estimadas del lookup & Sin fuente & Por calibrar \\
+REG-07 & Raz\'on entre filas estimadas y devueltas promedio & El \textit{q-error} es la m\'etrica de desviaci\'on de estimaciones de cardinalidad~\cite{R35}; su uso a nivel de sentencia y el umbral no est\'an documentados & Por calibrar \\
+REG-08 & Ganancia estimada de CPU del plan reciente & El motor recomienda corregir un plan cuando la ganancia estimada de CPU supera 10 segundos o el plan nuevo presenta m\'as errores~\cite{R36} & 10 s de CPU estimada \\
+REG-08 & N\'umero m\'inimo de ejecuciones por plan & Sin fuente & Por calibrar \\
+REG-10 & Variabilidad de duraci\'on entre planes & \textit{Query Store} ofrece un informe de consultas con alta variaci\'on~\cite{R34}; el umbral no est\'a documentado & Por calibrar \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{\textit{Query Health Score} (\texttt{RF-SCO})}
+\label{sec:rf-sco}
+\textit{Encargado principal: componente de priorizaci\'on.}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos funcionales del m\'odulo \textit{Query Health Score}}\label{tab:rf-SCO}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rf-SCO})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RF-SCO-01} & El sistema deberá calcular, para cada consulta analizada, un Query Health Score numérico en el rango de 0 a 100, donde 100 corresponde a una consulta saludable y los valores bajos indican mayor prioridad de revisión.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); la decisión abierta DA-01 (Sección \ref{sec:decisiones}); metodología de indicadores compuestos~\cite{R32}} & Debe & OBJ-3 & HU-08 & T \\
+\textbf{RF-SCO-02} & El sistema deberá calcular el score con la formulación base definida a continuación de esta tabla (ecuaciones \ref{eq:consumo} a \ref{eq:H}), que combina el consumo relativo de CPU, duración y lecturas lógicas de la consulta respecto al total de la ventana analizada y la severidad de sus hallazgos, con ponderaciones configurables y documentadas, y deberá registrar con cada cálculo los valores usados.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); la revisión del evaluador; \cite{R32}; \cite{R34}} & Debe & OBJ-3 & HU-04, HU-08 & A,T \\
+\textbf{RF-SCO-03} & Dados los mismos datos de entrada y la misma configuración de parámetros (ponderaciones y transformación de la severidad), el sistema deberá producir el mismo score y deberá almacenar y mostrar el desglose de sus componentes.\newline{\small\textit{Justificaci\'on: } el plan de trabajo interno del equipo} & Debe & OBJ-3 & HU-08 & T \\
+\textbf{RF-SCO-04} & El sistema deberá poder ordenar las consultas por score y por su porcentaje de consumo sobre el total de la carga de la ventana analizada.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-3 & HU-04 & T \\
+\textbf{RF-SCO-05} & El sistema deberá recalcular el score tras cada ingesta y conservar su historial para mostrar su evolución.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debería & OBJ-3 & HU-07, HU-08 & T \\
+\textbf{RF-SCO-06} & El sistema deberá mostrar, junto a cada score, su interpretación (posición relativa dentro de la ventana, sin bandas absolutas), la dirección de la escala y el desglose $I(q)$, $S(q)$ y los hallazgos que contribuyen.\newline{\small\textit{Justificaci\'on: } la revisión del evaluador: el score necesita interpretación antes de usarse como indicador} & Debe & OBJ-3 & HU-08 & D \\
+\end{xltabular}
+\end{footnotesize}
+
+\medskip
+\textbf{Formulaci\'on base del \textit{Query Health Score}.} No se encontr\'o en la literatura revisada una f\'ormula est\'andar de ``salud'' o de prioridad de una consulta. La formulaci\'on siguiente es una \textbf{decisi\'on de dise\~no}, construida con las etapas del m\'etodo de indicadores compuestos (selecci\'on de indicadores, normalizaci\'on, ponderaci\'on, agregaci\'on y an\'alisis de robustez~\cite{R32}) y con el criterio de \textit{Query Store} de ordenar las consultas por su consumo~\cite{R34}. No es un resultado validado: su validaci\'on prevista es el contraste con el ranking de un especialista y el an\'alisis de sensibilidad del requisito RF-EVA-05, y su ratificaci\'on corresponde al responsable del m\'odulo y al tutor (DA-01). Para una consulta $q$ en la ventana de an\'alisis $W$:
+
+\begin{enumerate}[label=\arabic*)]
+\item \textbf{Indicadores de consumo.} El consumo total del recurso $r$ (CPU, duraci\'on o lecturas l\'ogicas) es la suma, sobre los planes $p$ y los intervalos $i$ de $W$, de las ejecuciones por el promedio del recurso, como en el ejemplo de estimaci\'on de lecturas totales de~\cite{R30}; la participaci\'on $s_r(q)$ es el cociente entre ese consumo y el de todas las consultas de $W$. La frecuencia queda incluida en $C_r$ y no se pondera por separado para evitar contarla dos veces.
+\begin{equation}\label{eq:consumo}
+C_r(q)=\sum_{p,\,i\,\in\, W}\mathrm{ejecuciones}_{p,i}\times\mathrm{promedio}_{r,p,i},\qquad
+s_r(q)=\frac{C_r(q)}{\sum_{q'\in W}C_r(q')}
+\end{equation}
+\item \textbf{Normalizaci\'on por rangos.} Cada participaci\'on se transforma en su rango percentil dentro de $W$, de modo que el \'indice no dependa de la escala absoluta de cada recurso ni de valores at\'ipicos. Es una de las opciones descritas en~\cite{R32} y debe contrastarse con otras (por ejemplo, m\'inimo--m\'aximo) en el an\'alisis de sensibilidad.
+\begin{equation}\label{eq:rango}
+\rho_r(q)=\frac{\bigl|\{\,q'\in W : s_r(q')\le s_r(q)\,\}\bigr|}{|W|}
+\end{equation}
+\item \textbf{Impacto.} Promedio con ponderaci\'on igualitaria de los tres rangos. La ponderaci\'on igualitaria es una de las opciones del m\'etodo~\cite{R32} y se adopta como l\'inea base neutra, no como un \'optimo; las ponderaciones son configurables.
+\begin{equation}\label{eq:impacto}
+I(q)=\frac{1}{3}\bigl(\rho_{\mathrm{CPU}}(q)+\rho_{\mathrm{DUR}}(q)+\rho_{\mathrm{LECT}}(q)\bigr)
+\end{equation}
+\item \textbf{Severidad.} Variable ordinal: $\mathrm{nivel}_i$ vale 1, 2 o 3 para un hallazgo de severidad Baja, Media o Alta. Su transformaci\'on a un n\'umero con espaciado uniforme es una decisi\'on de dise\~no que se evaluar\'a en el an\'alisis de sensibilidad. La clase de evidencia no se usa como factor num\'erico, porque no existe una fuente que respalde un peso para ella; se muestra junto a cada hallazgo.
+\begin{equation}\label{eq:severidad}
+S(q)=\begin{cases}
+\dfrac{1}{3}\,\max\limits_{i\,\in\,\mathrm{hallazgos}(q)}\mathrm{nivel}_i, & \text{si } q \text{ tiene hallazgos,}\\[4pt]
+0, & \text{en otro caso.}
+\end{cases}
+\end{equation}
+\item \textbf{Prioridad y score.} Agregaci\'on lineal con ponderaci\'on igualitaria; el score se invierte para que 100 corresponda a la menor prioridad de revisi\'on, coherente con su nombre.
+\begin{equation}\label{eq:prioridad}
+P(q)=\frac{I(q)+S(q)}{2}
+\end{equation}
+\begin{equation}\label{eq:H}
+H(q)=100\,\bigl(1-P(q)\bigr)
+\end{equation}
+\end{enumerate}
+
+\textbf{Interpretaci\'on.} Como $I(q)$ se construye por rangos dentro de $W$, el score es relativo a la carga analizada: no es comparable entre ventanas ni entre bases de datos y no define umbrales absolutos de ``salud''. Por ello este SRS \textbf{no establece bandas fijas}; solo podr\'an definirse tras la validaci\'on del requisito RF-EVA-05. El orden por defecto del listado es ascendente por $H(q)$; la opci\'on de ordenar por porcentaje de consumo se mantiene (RF-SCO-04).
+
+\textbf{Advertencia de uso.} Hasta que el requisito RF-EVA-05 reporte resultados, el score se presenta como un \'indice de prioridad de revisi\'on y no como una medida de la calidad de una consulta.
+
+\subsection{Componente de inteligencia artificial y recuperaci\'on aumentada (\texttt{RF-IA})}
+\textit{Encargado principal: componente de IA.}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos funcionales del m\'odulo Componente de inteligencia artificial y recuperaci\'on aumentada}\label{tab:rf-IA}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rf-IA})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RF-IA-01} & El componente de IA deberá generar una explicación únicamente cuando exista al menos un hallazgo del motor determinístico asociado a la consulta, y deberá construir su contexto exclusivamente a partir de hallazgos, métricas ingeridas y fragmentos de la base de conocimiento.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); \cite{R12}; \cite{R19}} & Debe & OBJ-4 & HU-09 & T \\
+\textbf{RF-IA-02} & Cada explicación deberá estructurarse como una lista de afirmaciones; cada afirmación deberá declarar su tipo (\texttt{OBSERVACIÓN}, \texttt{INTERPRETACIÓN} o \texttt{RECOMENDACIÓN}) y referenciar los identificadores de al menos un hallazgo o métrica del contexto suministrado; las afirmaciones de tipo \texttt{INTERPRETACIÓN} y \texttt{RECOMENDACIÓN} deberán referenciar además el identificador de un fragmento de la base de conocimiento.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); \cite{R18}; \cite{R12} (LLM09): un modelo puede citar correctamente una métrica y atribuirle una causa equivocada} & Debe & OBJ-4 & HU-09, HU-10 & T \\
+\textbf{RF-IA-03} & Antes de mostrar una explicación, un validador automático deberá comprobar que (a) todos los identificadores referenciados existen en el contexto, (b) los valores numéricos citados coinciden con la evidencia, y (c) cada afirmación de tipo \texttt{INTERPRETACIÓN} o \texttt{RECOMENDACIÓN} cita un fragmento de la base de conocimiento cuya relación causa-efecto está declarada para la regla del hallazgo referenciado. Las explicaciones que no lo superen deberán descartarse o mostrarse como \texttt{NO\_VERIFICADA}.\newline{\small\textit{Justificaci\'on: } el plan de trabajo interno del equipo; \cite{R17}; \cite{R18}} & Debe & OBJ-4 & HU-10 & T \\
+\textbf{RF-IA-04} & El sistema deberá recuperar, de una base de conocimiento curada de reglas y anti-patrones del catálogo, los fragmentos pertinentes al tipo de hallazgo, incluirlos en el contexto del modelo y citar su fuente en la explicación.\newline{\small\textit{Justificaci\'on: } el plan de trabajo interno del equipo; \cite{R16}} & Debe & OBJ-4 & HU-09 & I,T \\
+\textbf{RF-IA-05} & Toda recomendación generada deberá presentarse como sugerencia sujeta a revisión y ejecución manual por el DBA y no deberá incluir acciones ejecutables por la plataforma.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); el plan de trabajo interno del equipo} & Debe & OBJ-4 & HU-11 & I,T \\
+\textbf{RF-IA-06} & Si el proveedor de IA no responde dentro del tiempo límite configurable o devuelve un error, entonces el sistema deberá mostrar los hallazgos determinísticos sin explicación y comunicar la indisponibilidad.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-4 & HU-12 & T \\
+\textbf{RF-IA-07} & El sistema deberá almacenar cada explicación trazada asociada al resumen (hash) de su contexto y reutilizarla cuando el contexto no haya cambiado.\newline{\small\textit{Justificaci\'on: } el plan de trabajo interno del equipo; RNF-RND-03} & Debería & OBJ-4 & HU-09 & T \\
+\textbf{RF-IA-08} & El sistema deberá generar las explicaciones en español.\newline{\small\textit{Justificaci\'on: } la decisión abierta DA-08 (Sección~\ref{sec:decisiones})} & Debería & OBJ-4 & HU-09 & I \\
+\textbf{RF-IA-09} & Donde el usuario seleccione el perfil Desarrollador o DBA, el sistema deberá adaptar el nivel de detalle técnico de la explicación.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Podría & OBJ-4 & HU-09 & D \\
+\textbf{RF-IA-10} & El sistema deberá asignar a toda explicación mostrada exactamente uno de los estados \texttt{TRAZADA} o \texttt{NO\_VERIFICADA}, y deberá presentar junto a una explicación \texttt{TRAZADA} el aviso persistente: \textquotedblleft Trazada a evidencia del motor; no equivale a un diagnóstico confirmado\textquotedblright. El sistema no deberá usar los términos \textquotedblleft verificada\textquotedblright{} o \textquotedblleft validada\textquotedblright{} para describir una explicación.\newline{\small\textit{Justificaci\'on: } la revisión del evaluador: separar la evidencia trazable del diagnóstico validado; \cite{R12} (LLM09)} & Debe & OBJ-4, OBJ-5 & HU-10, HU-11 & I,D \\
+\textbf{RF-IA-11} & Donde el usuario tenga rol DBA, el sistema podrá permitirle marcar una explicación como revisada por él, dejando la marca en el registro de trazabilidad.\newline{\small\textit{Justificaci\'on: } la revisión del evaluador} & Podría & OBJ-4, OBJ-5 & HU-14 & D \\
+\textbf{RF-IA-12} & Cuando una afirmación de tipo \texttt{INTERPRETACIÓN} se apoye en hallazgos de clase \texttt{ESTIMADA} o \texttt{EJECUCION\_AGREGADA}, la interfaz deberá etiquetarla de forma determinística como \textquotedblleft indicio\textquotedblright, con independencia del texto generado por el modelo.\newline{\small\textit{Justificaci\'on: } la revisión del evaluador; la Sección \ref{sec:limitacion-evidencia}} & Debe & OBJ-4 & HU-09, HU-10 & I,D \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{Tablero de control y visualizaci\'on (\texttt{RF-DASH})}
+\textit{Encargado principal: componente de interfaz.}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos funcionales del m\'odulo Tablero de control y visualizaci\'on}\label{tab:rf-DASH}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rf-DASH})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RF-DASH-01} & El sistema deberá mostrar el listado de consultas críticas ordenado por Query Health Score o por porcentaje de consumo, con filtros por base de datos, ventana de tiempo y severidad de hallazgos.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-5 & HU-04 & D \\
+\textbf{RF-DASH-02} & El sistema deberá mostrar, para cada consulta, su texto SQL, sus métricas, sus planes, sus hallazgos, su score con desglose y su explicación de IA.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-5 & HU-05, HU-08, HU-09 & D \\
+\textbf{RF-DASH-03} & El sistema deberá presentar series temporales de duración, CPU y lecturas lógicas por consulta y por plan.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-5 & HU-07 & D \\
+\textbf{RF-DASH-04} & El sistema deberá mostrar los operadores de un plan de forma jerárquica, resaltando los nodos asociados a hallazgos.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-5 & HU-13 & D \\
+\textbf{RF-DASH-05} & El sistema deberá mostrar, junto a cada afirmación de la explicación, enlaces a los hallazgos y a los nodos del plan que la sustentan.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); \cite{R18}} & Debe & OBJ-4, OBJ-5 & HU-10 & D \\
+\textbf{RF-DASH-06} & El sistema deberá mostrar de forma persistente, junto a toda recomendación, un aviso de que no ha sido aplicada y de que requiere revisión humana.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-4, OBJ-5 & HU-11 & I,D \\
+\textbf{RF-DASH-07} & El sistema deberá ofrecer una vista gráfica interactiva del árbol de operadores del plan con sus costos estimados.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debería & OBJ-5 & HU-13 & D \\
+\textbf{RF-DASH-08} & El sistema deberá permitir comparar dos planes de una misma consulta mostrando las diferencias de operadores y de métricas.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debería & OBJ-5 & HU-16 & D \\
+\textbf{RF-DASH-09} & El sistema deberá mostrar por cada conexión la fecha de la última ingesta, su resultado y los errores ocurridos.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debería & OBJ-1, OBJ-5 & HU-03 & D \\
+\textbf{RF-DASH-10} & El sistema deberá permitir exportar el diagnóstico de una consulta en un reporte técnico en formato HTML o PDF.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Podría & OBJ-5 & HU-18 & D \\
+\textbf{RF-DASH-11} & El sistema deberá permitir registrar la fecha de un cambio aplicado manualmente y comparar las métricas promedio de los periodos anterior y posterior.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Podría & OBJ-5 & HU-19 & D \\
+\textbf{RF-DASH-12} & El sistema deberá permitir a un usuario con rol DBA editar los umbrales de las reglas desde la interfaz.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Podría & OBJ-2, OBJ-5 & HU-17 & D \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{Trazabilidad y auditor\'ia (\texttt{RF-TRZ})}
+\textit{Encargado principal: componentes de IA e ingesta.}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos funcionales del m\'odulo Trazabilidad y auditor\'ia}\label{tab:rf-TRZ}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rf-TRZ})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RF-TRZ-01} & El sistema deberá registrar, por cada explicación generada, los identificadores de los hallazgos usados, la versión del catálogo de reglas, el modelo y su versión, la versión de la plantilla de prompt, el hash del contexto, la marca de tiempo y el resultado de la validación.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-4 & HU-14 & I,T \\
+\textbf{RF-TRZ-02} & El registro de trazabilidad deberá ser de solo adición: la aplicación no deberá ofrecer operaciones de modificación ni de borrado sobre sus entradas.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-4 & HU-14 & I,T \\
+\textbf{RF-TRZ-03} & El sistema deberá permitir consultar el registro de trazabilidad por consulta, por explicación y por rango de fechas.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-4, OBJ-5 & HU-14 & D \\
+\textbf{RF-TRZ-04} & El sistema deberá registrar el tipo y el texto de cada sentencia SQL emitida contra una base de datos monitoreada.\newline{\small\textit{Justificaci\'on: } el plan de trabajo interno del equipo} & Debería & OBJ-1 & HU-15 & T \\
+\textbf{RF-TRZ-05} & El sistema deberá registrar en un log de auditoría: inicios de sesión exitosos y fallidos, registro y edición de conexiones, ingestas manuales, cambios de umbrales y borrados de datos, con usuario y marca de tiempo.\newline{\small\textit{Justificaci\'on: } \cite{R13} (ASVS 5.0, capítulo de registro de eventos); ISO/IEC 25010:2023 (responsabilidad, \textit{accountability}) \cite{R2}} & Debe & OBJ-1, OBJ-5 & HU-14 & T \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{Evaluaci\'on y validaci\'on (\texttt{RF-EVA})}
+\textit{Encargado principal: equipo completo.}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos funcionales del m\'odulo Evaluaci\'on y validaci\'on}\label{tab:rf-EVA}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rf-EVA})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RF-EVA-01} & El proyecto deberá incluir un arnés reproducible que ejecute el motor sobre un conjunto de planes de referencia con hallazgos esperados anotados y reporte la precisión y la exhaustividad por regla.\newline{\small\textit{Justificaci\'on: } \cite{R20}; \cite{R21}; el plan de trabajo interno del equipo} & Debe & OBJ-6 & HU-20 & T,A \\
+\textbf{RF-EVA-02} & El proyecto deberá incluir un arnés de evaluación del componente de IA que reporte, sobre el conjunto de evaluación, el porcentaje de afirmaciones con evidencia válida, el porcentaje de afirmaciones sin sustento y la concordancia de los valores numéricos; además, deberá reportar la distribución de afirmaciones por tipo y la tasa de afirmaciones \texttt{INTERPRETACIÓN} no sustentadas por la base de conocimiento.\newline{\small\textit{Justificaci\'on: } el plan de trabajo interno del equipo; \cite{R17}; \cite{R18}} & Debe & OBJ-4, OBJ-6 & HU-20 & T \\
+\textbf{RF-EVA-03} & El proyecto deberá contrastar los hallazgos y las explicaciones del sistema con el diagnóstico independiente de al menos un especialista en bases de datos sobre un mínimo de N consultas (N por definir, DA-10).\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); la revisión del evaluador} & Debe & OBJ-6 & HU-20 & A \\
+\textbf{RF-EVA-04} & El proyecto deberá publicar, como anexo versionado de la memoria y del repositorio, el informe del laboratorio (protocolo, versiones de SQL Server y de Query Store, datos de entrada y resultados por regla) y no deberá afirmar eficacia, precisión ni exhaustividad del motor o de la IA sin remitir a ese informe.\newline{\small\textit{Justificaci\'on: } la revisión del evaluador; la decisión abierta DA-07 (Sección \ref{sec:decisiones})} & Debe & OBJ-6 & HU-20 & I \\
+\textbf{RF-EVA-05} & El proyecto deberá evaluar el score contra el ranking de prioridad de un especialista sobre un conjunto de consultas, reportando la correlación de rangos (Spearman o Kendall) y la coincidencia de las k consultas principales, y deberá realizar un análisis de sensibilidad de la normalización, de las ponderaciones y de la transformación de la severidad~\cite{R32}.\newline{\small\textit{Justificaci\'on: } la revisión del evaluador; la decisión abierta DA-01 (Sección \ref{sec:decisiones})} & Debería & OBJ-3, OBJ-6 & HU-08, HU-20 & A \\
+\end{xltabular}
+\end{footnotesize}
+
+
+\section{Cat\'alogo de reglas del motor determin\'istico}
+\label{sec:catalogo-reglas}
+
+El motor determin\'istico implementa un cat\'alogo versionado de reglas independientes entre s\'i. Cada regla declara la se\~nal t\'ecnica exacta que la activa, su clase de evidencia (v\'ease la Secci\'on~\ref{sec:limitacion-evidencia}) y una severidad base propuesta, sujeta a calibraci\'on emp\'irica antes de la entrega final del producto (decisi\'on abierta DA-02, Secci\'on~\ref{sec:decisiones}). Los hallazgos de las reglas son \textbf{se\~nales a investigar}, no diagn\'osticos concluyentes: un recorrido completo o una sugerencia de \'indice no son por s\'i mismos un defecto, y su relevancia depende del contexto de la consulta. Por ello, las reglas REG-03 y REG-04 son contextuales y solo se activan cuando se cumplen las condiciones de los requisitos RF-MOT-05 y RF-MOT-06.
+
+\begin{landscape}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.3cm}p{2.6cm}Xp{1.3cm}p{3.1cm}p{2.3cm}p{1.2cm}@{}}
+\caption{Cat\'alogo de reglas del motor determin\'istico}\label{tab:reglas}\\
+\toprule
+\textbf{Regla} & \textbf{Nombre} & \textbf{Se\~nal t\'ecnica que activa la regla} & \textbf{Clase} & \textbf{Etiqueta de evidencia} & \textbf{Severidad base (provisional)} & \textbf{Prior.} \\
+\midrule
+\endfirsthead
+\multicolumn{7}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:reglas})}} \\
+\toprule
+\textbf{Regla} & \textbf{Nombre} & \textbf{Se\~nal t\'ecnica que activa la regla} & \textbf{Clase} & \textbf{Etiqueta de evidencia} & \textbf{Severidad base (provisional)} & \textbf{Prior.} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+REG-01 & Conversi\'on impl\'icita que afecta el plan & Advertencia \texttt{PlanAffectingConvert} del plan, con el tipo de problema y la expresi\'on afectada & A & \texttt{ESTIMADA} & Alta si impide una b\'usqueda directa; media en otro caso & Debe \\
+REG-02 & \'Indice faltante & Grupo \texttt{MissingIndexes} del plan, con el impacto estimado y las columnas por tipo de uso, acompa\~nado de la advertencia de que la sugerencia es una estimaci\'on previa a la ejecuci\'on que puede solaparse con \'indices existentes y de que todo \'indice nuevo agrega sobrecarga de escritura & A & \texttt{ESTIMADA} & Seg\'un el impacto estimado declarado en el plan & Debe \\
+REG-03 & Lectura completa costosa (contextual) & Operadores de recorrido completo de tabla o de \'indice que cumplen una condici\'on de contexto: predicado con alta raz\'on entre filas le\'idas y devueltas estimadas, o volumen estimado alto en una consulta con consumo relevante en la ventana & A & \texttt{ESTIMADA} & Media o alta seg\'un el volumen estimado de filas & Debe \\
+REG-04 & B\'usqueda por clave excesiva (contextual) & Operador de b\'usqueda por clave con un n\'umero estimado de ejecuciones por encima de un umbral configurable, en una consulta con consumo relevante en la ventana & A & \texttt{ESTIMADA} & Media o alta seg\'un el n\'umero estimado de ejecuciones & Debe \\
+REG-05 & Ausencia de estad\'isticas & Advertencia \texttt{ColumnsWithNoStatistics}, con las columnas afectadas & A & \texttt{ESTIMADA} & Media & Deber\'ia \\
+REG-06 & Uni\'on sin predicado & Advertencia de uni\'on sin predicado expl\'icito de cruce & A & \texttt{ESTIMADA} & Alta & Deber\'ia \\
+REG-07 & Discrepancia de cardinalidad a nivel de sentencia & Comparaci\'on entre las filas estimadas de la sentencia y las filas devueltas promedio de las estad\'isticas de ejecuci\'on & B & \texttt{EJECUCION\_AGREGADA} & Media & Deber\'ia \\
+REG-08 & Regresi\'on de rendimiento entre planes & Comparaci\'on de las estad\'isticas agregadas entre m\'ultiples planes de una misma consulta a lo largo del tiempo & D & \texttt{EJECUCION\_AGREGADA} & Alta & Deber\'ia \\
+REG-09 & Desbordamiento a almacenamiento temporal y advertencias de memoria & Advertencias de desbordamiento presentes en un plan real; de no existir plan real, un uso elevado del espacio de almacenamiento temporal en las estad\'isticas agregadas se reporta \'unicamente como indicio & C & \texttt{PLAN\_REAL} (o indicio) & Media; baja si es solo un indicio & Podr\'ia \\
+REG-10 & Sensibilidad a par\'ametros (indicio) & Variabilidad significativa de duraci\'on entre m\'ultiples planes compilados de la misma consulta & D & \texttt{EJECUCION\_AGREGADA} & Baja (indicio, no confirmaci\'on) & Podr\'ia \\
+REG-11 & Plan no analizable & Estructura XML inv\'alida, truncada o no reconocida por el analizador & --- & --- & Informativa & Debe \\
+\end{xltabular}
+\end{footnotesize}
+\end{landscape}
+
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\linewidth]{mer.pdf}
+\caption{Diagrama entidad-relación lógico (modelo conceptual de datos)}
+\label{fig:datos}
+\end{figure}
+
+
+\section{Requisitos de datos (nivel l\'ogico)}
+
+El Cuadro~\ref{tab:entidades} describe, a nivel conceptual, las entidades de informaci\'on que el sistema debe conservar. El modelo f\'isico de datos (motor de persistencia, tipos de columna, \'indices) es una decisi\'on de dise\~no detallado posterior a este documento.
+
+\begin{xltabular}{\linewidth}{@{}p{3.2cm}Xp{2.5cm}@{}}
+\caption{Entidades l\'ogicas de datos}\label{tab:entidades}\\
+\toprule
+\textbf{Entidad} & \textbf{Contenido esencial} & \textbf{Requisitos relacionados} \\
+\midrule
+\endfirsthead
+\multicolumn{3}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:entidades})}} \\
+\toprule
+\textbf{Entidad} & \textbf{Contenido esencial} & \textbf{Requisitos relacionados} \\
+\midrule
+\endhead
+\midrule \multicolumn{3}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+Conexi\'on objetivo & Servidor, base de datos, plataforma, credenciales cifradas, estado & RF-CFG-01 a RF-CFG-07 \\
+Consulta y su texto & Identificador de \textit{Query Store}, texto SQL, contexto de origen & RF-ING-01, RF-ING-07 \\
+Plan de ejecuci\'on & Identificador, contenido XML, versi\'on del motor, estado de an\'alisis & RF-ING-01, RF-ING-09 \\
+Estad\'istica de ejecuci\'on & Plan, intervalo de tiempo, n\'umero de ejecuciones y promedios de recursos consumidos & RF-ING-02 a RF-ING-05 \\
+Hallazgo & Regla y su versi\'on, severidad, nodos del plan involucrados, evidencia, clase de evidencia, naturaleza de se\~nal y datos de contexto & RF-MOT-03 \\
+Regla & Cat\'alogo versionado y umbrales configurables & RF-MOT-14, RF-MOT-15 \\
+Puntaje de consulta (\textit{Query Health Score}) & Valor num\'erico, componentes del c\'alculo, pesos aplicados, fecha & RF-SCO-01 a RF-SCO-06 \\
+Explicaci\'on y afirmaci\'on & Texto generado, afirmaciones individuales con su tipo, referencias a evidencia, estado (trazada o no verificada) y resultado de la validaci\'on & RF-IA-02, RF-IA-03, RF-IA-07, RF-IA-10 \\
+Registro de trazabilidad & Entradas de solo adici\'on con la evidencia usada en cada explicaci\'on & RF-TRZ-01 a RF-TRZ-03 \\
+Usuario y auditor\'ia & Usuarios, roles, contrase\~nas como resumen criptogr\'afico, sesiones y log de auditor\'ia de las acciones realizadas & RNF-SEG-11 a RNF-SEG-13, RF-TRZ-05 \\
+\end{xltabular}
+
+\section{Requisitos no funcionales}
+\label{sec:rnf}
+
+Los requisitos no funcionales se clasifican de acuerdo con las caracter\'isticas de calidad de producto de la norma ISO/IEC~25010:2023~\cite{R2}. La caracter\'istica \textit{Seguridad de uso} (\textit{Safety}, protecci\'on frente a da\~nos f\'isicos a personas o al entorno) de dicha norma no aplica a este sistema, por no interactuar con entornos f\'isicos; el riesgo an\'alogo -- una recomendaci\'on que pudiera perjudicar la base de datos monitoreada -- se trata expl\'icitamente en el requisito RNF-FUN-04.
+
+\subsection{Adecuaci\'on funcional (\texttt{RNF-FUN})}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos no funcionales -- Adecuaci\'on funcional}\label{tab:rnf-FUN}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rnf-FUN})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RNF-FUN-01} & Sobre el conjunto de referencia del arnés de evaluación, cada regla de prioridad Must deberá alcanzar una precisión $\geq$ 90 \% y una exhaustividad $\geq$ 80 \% $^{\dagger}$.\newline{\small\textit{Justificaci\'on: } \cite{R2}; la decisión abierta DA-06 (Sección~\ref{sec:decisiones})} & Debe & OBJ-2, OBJ-6 & HU-05, HU-20 & A,T \\
+\textbf{RNF-FUN-02} & El sistema no deberá mostrar como \texttt{TRAZADA} ninguna explicación que no haya superado el validador (0 excepciones).\newline{\small\textit{Justificaci\'on: } el plan de trabajo interno del equipo; \cite{R18}} & Debe & OBJ-4 & HU-10 & I,T \\
+\textbf{RNF-FUN-03} & Sobre el conjunto de evaluación, al menos el 90 \% de las explicaciones deberá superar el validador en el primer intento y el 100 \% de los valores numéricos citados deberá coincidir con la evidencia $^{\dagger}$; además, la tasa de falsos pasantes deberá reportarse con su intervalo de confianza; la meta se fijará con el tutor tras medir la línea base (DA-06).\newline{\small\textit{Justificaci\'on: } \cite{R17}; la decisión abierta DA-06 (Sección~\ref{sec:decisiones})} & Debería & OBJ-4, OBJ-6 & HU-09, HU-20 & T \\
+\textbf{RNF-FUN-04} & Las recomendaciones deberán formularse como opciones a evaluar, incluir la advertencia del impacto asociado (por ejemplo, el costo de escritura de un índice nuevo) y no deberán presentar sentencias como listas para producción.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-4 & HU-11 & I,T \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{Eficiencia de desempe\~no (\texttt{RNF-RND})}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos no funcionales -- Eficiencia de desempe\~no}\label{tab:rnf-RND}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rnf-RND})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RNF-RND-01} & Durante un ciclo de ingesta, la sesión de la plataforma no deberá consumir más del 5 \% de la CPU total de la instancia de prueba ni provocar esperas de bloqueo sobre objetos de usuario (0 ocurrencias) $^{\dagger}$.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); la decisión abierta DA-06 (Sección~\ref{sec:decisiones})} & Debe & OBJ-1 & HU-03 & T \\
+\textbf{RNF-RND-02} & Con 5 000 consultas ingeridas, el dashboard deberá responder en $\leq$ 2 s (percentil 95) al listado de consultas críticas y en $\leq$ 3 s al detalle de una consulta sin explicación de IA $^{\dagger}$.\newline{\small\textit{Justificaci\'on: } \cite{R27}; la decisión abierta DA-06 (Sección~\ref{sec:decisiones})} & Debe & OBJ-5 & HU-04 & T \\
+\textbf{RNF-RND-03} & La generación de una explicación deberá completarse en $\leq$ 30 s (percentil 95) con indicador de progreso, y una explicación en caché deberá mostrarse en $\leq$ 2 s $^{\dagger}$.\newline{\small\textit{Justificaci\'on: } el plan de trabajo interno del equipo; la decisión abierta DA-06 (Sección~\ref{sec:decisiones})} & Debería & OBJ-4 & HU-09 & T \\
+\textbf{RNF-RND-04} & El motor deberá analizar un plan de hasta 1 MB en $\leq$ 500 ms (percentil 95) $^{\dagger}$.\newline{\small\textit{Justificaci\'on: } la decisión abierta DA-06 (Sección~\ref{sec:decisiones})} & Debería & OBJ-2 & HU-05 & T \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{Compatibilidad (\texttt{RNF-COM})}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos no funcionales -- Compatibilidad}\label{tab:rnf-COM}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rnf-COM})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RNF-COM-01} & El sistema deberá funcionar y tener pruebas de aceptación ejecutadas contra las plataformas marcadas como Probado en la matriz de soporte (Cuadro~\ref{tab:matriz-soporte}); para las demás deberá declararse el nivel de soporte en la documentación.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); \cite{R4}; la revisión del evaluador: la compatibilidad prometida debe corresponder con la matriz real de pruebas} & Debe & OBJ-1 & HU-01, HU-03 & T,I \\
+\textbf{RNF-COM-02} & El analizador de planes deberá ignorar sin fallar los elementos y atributos del Showplan XML que no reconozca y deberá registrar la versión del motor (\texttt{engine\_version}) con la que se compiló cada plan.\newline{\small\textit{Justificaci\'on: } \cite{R4}} & Debe & OBJ-2 & HU-05 & T \\
+\textbf{RNF-COM-03} & El sistema deberá funcionar contra Azure SQL Managed Instance.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Podría & OBJ-1 & HU-01 & T \\
+\textbf{RNF-COM-04} & El sistema deberá omitir, con aviso explícito al usuario, las funciones que dependan de capacidades no disponibles en la versión detectada del motor y no deberá fallar por ello.\newline{\small\textit{Justificaci\'on: } la matriz de soporte (Cuadro~\ref{tab:matriz-soporte}); \cite{R5}; \cite{R7}} & Debe & OBJ-1, OBJ-2 & HU-03 & T \\
+\end{xltabular}
+\end{footnotesize}
+
+\medskip
+\textbf{Matriz de soporte por plataforma.} El Cuadro~\ref{tab:matriz-soporte} declara tres niveles de soporte: \textbf{Probado} (con pruebas de aceptaci\'on autom\'aticas ejecutadas en laboratorio), \textbf{Compatible sin pruebas} (verificado documentalmente, pendiente de ejecuci\'on y pruebas de aceptaci\'on en \texttt{S3-06}) y \textbf{No soportado}, junto con las funciones disponibles y los permisos m\'inimos en cada plataforma.
+
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{2.5cm}p{2.3cm}p{1.3cm}p{2.2cm}p{2.0cm}X@{}}
+\caption{Matriz de soporte por plataforma y versi\'on}\label{tab:matriz-soporte}\\
+\toprule
+\textbf{Plataforma} & \textbf{Nivel} & \textbf{Query Store} & \textbf{TempDB y bytes de log (RF-ING-03)} & \textbf{Plan real opcional (RF-ING-12)} & \textbf{Permiso m\'inimo} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:matriz-soporte})}} \\
+\toprule
+\textbf{Plataforma} & \textbf{Nivel} & \textbf{Query Store} & \textbf{TempDB y bytes de log (RF-ING-03)} & \textbf{Plan real opcional (RF-ING-12)} & \textbf{Permiso m\'inimo} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+SQL Server 2016 (13.x)\textsuperscript{a} & Compatible sin pruebas & S\'i & No & No & \texttt{VIEW DATABASE STATE} \\
+SQL Server 2017 (14.x) & Compatible sin pruebas & S\'i & S\'i & No & \texttt{VIEW DATABASE STATE} \\
+SQL Server 2019 (15.x) & Compatible sin pruebas & S\'i & S\'i & S\'i\textsuperscript{b} & \texttt{VIEW DATABASE STATE} \\
+SQL Server 2022 (16.x) & \textbf{Probado} & S\'i & S\'i & S\'i\textsuperscript{b} & \texttt{VIEW DATABASE PERFORMANCE STATE} o \texttt{VIEW DATABASE STATE} \\
+SQL Server 2025 o superior (17.x+) & Compatible sin pruebas & S\'i & S\'i & S\'i\textsuperscript{b} & \texttt{VIEW DATABASE PERFORMANCE STATE} o \texttt{VIEW DATABASE STATE} \\
+Azure SQL Database & Compatible sin pruebas & S\'i & S\'i & S\'i\textsuperscript{c} & \texttt{VIEW DATABASE PERFORMANCE STATE} o \texttt{VIEW DATABASE STATE} \\
+Azure SQL Managed Instance\textsuperscript{d} & No soportado & n/a & n/a & n/a & n/a \\
+SQL Server anterior a 2016 & No soportado & n/a & n/a & n/a & n/a \\
+\end{xltabular}
+\end{footnotesize}
+
+\textit{El indicador de filas le\'idas estimadas (REG-03, condici\'on a) solo existe desde SQL Server 2016 SP1~\cite{R33}; en versiones anteriores esa condici\'on se omite con aviso (RNF-COM-04).}
+
+\textit{Notas de verificaci\'on oficial~\cite{R4,R5,R7,R8}: (a) el soporte extendido est\'andar de SQL Server 2016 finaliz\'o el 14 de julio de 2026 (solo ESU hasta julio de 2029; decisi\'on DA-12 cerrada); (b) en SQL Server on-premise, \texttt{sys.dm\_exec\_query\_plan\_stats} (\texttt{RF-ING-12}, opcional) exige habilitar \texttt{LAST\_QUERY\_PLAN\_STATS = ON} y un permiso adicional de servidor (\texttt{VIEW SERVER STATE} en 2019; \texttt{VIEW SERVER PERFORMANCE STATE} en 2022+), mientras que el permiso m\'inimo del cuadro cubre las vistas base de lectura (\texttt{RNF-SEG-02}); (c) en Azure SQL Database, \texttt{sys.dm\_exec\_query\_plan\_stats} funciona con \texttt{LIGHTWEIGHT\_QUERY\_PROFILING = ON} (activo por defecto) y \texttt{LAST\_QUERY\_PLAN\_STATS = ON} mediante permiso a nivel de base de datos (\texttt{VIEW DATABASE STATE} / \texttt{VIEW DATABASE PERFORMANCE STATE}); (d) Azure SQL Managed Instance (\texttt{RNF-COM-03}, prioridad \textbf{Podr\'ia}) queda como \textbf{No soportado} en el MVP al no contar con entorno de verificaci\'on en ejecuci\'on y debido a que \texttt{avg\_tempdb\_space\_used} devuelve \texttt{0} en despliegues est\'andar (no-Hyperscale)~\cite{R5}; SQL Server 2019, 2025+ y Azure SQL Database permanecen en \textbf{Compatible sin pruebas} conforme a \texttt{RNF-COM-01} hasta ejecutar sus pruebas de aceptaci\'on.}
+
+\subsection{Capacidad de interacci\'on (usabilidad) (\texttt{RNF-INT})}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos no funcionales -- Capacidad de interacci\'on (usabilidad)}\label{tab:rnf-INT}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rnf-INT})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RNF-INT-01} & En una prueba de usabilidad con al menos 5 desarrolladores, al menos el 80 \% deberá identificar la consulta de mayor prioridad y su causa principal en $\leq$ 3 minutos $^{\dagger}$.\newline{\small\textit{Justificaci\'on: } \cite{R27}; la decisión abierta DA-06 (Sección~\ref{sec:decisiones})} & Debería & OBJ-5 & HU-04, HU-09 & T \\
+\textbf{RNF-INT-02} & La interfaz deberá alcanzar una puntuación SUS $\geq$ 68 en la prueba de usabilidad $^{\dagger}$.\newline{\small\textit{Justificaci\'on: } \cite{R28}; la decisión abierta DA-06 (Sección~\ref{sec:decisiones})} & Debería & OBJ-5 & HU-04 & T \\
+\textbf{RNF-INT-03} & La interfaz deberá cumplir el nivel AA de WCAG 2.2 en contraste, navegación por teclado y etiquetado de formularios.\newline{\small\textit{Justificaci\'on: } \cite{R29}} & Podría & OBJ-5 & HU-04 & I,T \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{Fiabilidad (\texttt{RNF-FIA})}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos no funcionales -- Fiabilidad}\label{tab:rnf-FIA}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rnf-FIA})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RNF-FIA-01} & Ante la pérdida de la conexión con la base de datos monitoreada, la ingesta deberá reintentar con espera exponencial y, tras reconectar, reanudar desde el último intervalo consolidado sin pérdida ni duplicación de datos.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Debe & OBJ-1 & HU-03 & T \\
+\textbf{RNF-FIA-02} & Las llamadas al proveedor de IA deberán tener un tiempo límite configurable (por defecto, 60 s) y un máximo de 2 reintentos.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); \cite{R12}} & Debería & OBJ-4 & HU-12 & T \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{Seguridad (\texttt{RNF-SEG})}
+
+La autenticaci\'on, la autorizaci\'on y el tratamiento seguro de los datos son una precondici\'on de todo el sistema: los datos accesibles a trav\'es de la plataforma incluyen texto SQL y planes de ejecuci\'on que pueden contener datos personales (RES-08), y los requisitos Debe de otros m\'odulos (por ejemplo, RF-CFG-01 y HU-01) presuponen un usuario autenticado con rol.
+
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos no funcionales -- Seguridad}\label{tab:rnf-SEG}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rnf-SEG})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RNF-SEG-01} & El sistema deberá emitir contra la base de datos monitoreada únicamente sentencias SELECT sobre una lista blanca de vistas de catálogo y de gestión dinámica, y no deberá emitir sentencias DDL, DML ni de configuración.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1); el plan de trabajo interno del equipo} & Debe & OBJ-1 & HU-15 & I,T \\
+\textbf{RNF-SEG-02} & La documentación deberá especificar una cuenta de conexión con únicamente el permiso \texttt{VIEW DATABASE STATE} (\texttt{VIEW DATABASE PERFORMANCE STATE} en SQL Server 2022 o superior) y proveer el script para que el DBA la cree; la plataforma no deberá crear cuentas ni otorgar permisos.\newline{\small\textit{Justificaci\'on: } \cite{R5}} & Debe & OBJ-1 & HU-15 & I \\
+\textbf{RNF-SEG-03} & Toda comunicación con la base de datos monitoreada y con el proveedor de IA deberá cifrarse con TLS 1.2 o superior, con la validación de certificado activada por defecto.\newline{\small\textit{Justificaci\'on: } \cite{R13}; \cite{R15}} & Debe & OBJ-1, OBJ-4 & HU-01, HU-21 & T \\
+\textbf{RNF-SEG-04} & Las credenciales de bases de datos y las claves de API deberán almacenarse cifradas en reposo o en un gestor de secretos, y no deberán aparecer en texto plano en el repositorio, en la configuración versionada ni en los registros.\newline{\small\textit{Justificaci\'on: } \cite{R13}} & Debe & OBJ-1 & HU-01 & I,T \\
+\textbf{RNF-SEG-05} & Antes de enviar cualquier contexto al proveedor de IA, el sistema deberá sustituir por marcadores todos los literales de cadena y numéricos presentes en el texto SQL, en los comentarios, en los valores de parámetros y predicados del plan y en los campos de evidencia de los hallazgos; no existirá configuración que desactive esta sustitución. En la prueba con literales sembrados deberá haber 0 ocurrencias en las solicitudes registradas. El enmascarado deberá apoyarse en un analizador léxico de T-SQL y no en expresiones regulares.\newline{\small\textit{Justificaci\'on: } \cite{R12} (LLM02); \cite{R14}; RES-06} & Debe & OBJ-4 & HU-21 & T \\
+\textbf{RNF-SEG-06} & El sistema deberá delimitar y rotular como datos no confiables el texto SQL, los comentarios, los nombres de objeto y los valores del plan incluidos en el prompt; en una suite de al menos 10$^{\dagger}$ casos de inyección de instrucciones, ninguno deberá alterar el formato de salida ni evadir el validador.\newline{\small\textit{Justificaci\'on: } \cite{R12} (LLM01)} & Debe & OBJ-4 & HU-21 & T \\
+\textbf{RNF-SEG-07} & El sistema deberá validar la salida del modelo contra un esquema y sanearla antes de mostrarla, de modo que no pueda ejecutarse HTML ni JavaScript proveniente de ella.\newline{\small\textit{Justificaci\'on: } \cite{R12} (LLM05); \cite{R13}} & Debe & OBJ-4, OBJ-5 & HU-10 & T \\
+\textbf{RNF-SEG-08} & El sistema deberá limitar los tokens por solicitud y las solicitudes por minuto al proveedor de IA mediante parámetros configurables.\newline{\small\textit{Justificaci\'on: } \cite{R12} (LLM10)} & Debería & OBJ-4 & HU-12 & T \\
+\textbf{RNF-SEG-09} & Los registros del sistema no deberán contener credenciales, claves de API ni literales sin enmascarar, y deberán truncar el texto SQL a una longitud configurable.\newline{\small\textit{Justificaci\'on: } \cite{R13}} & Debería & OBJ-1, OBJ-4 & HU-21 & I,T \\
+\textbf{RNF-SEG-10} & El sistema deberá permitir configurar el periodo de retención del texto SQL y de los planes ingeridos, eliminarlos automáticamente al vencer ese periodo y borrarlos a solicitud de un usuario con rol DBA.\newline{\small\textit{Justificaci\'on: } principios de finalidad y circulación restringida de la Ley 1581 de 2012 \cite{R14}} & Debe & OBJ-1 & HU-21 & T \\
+\textbf{RNF-SEG-11} & El sistema deberá autenticar a todo usuario antes de permitir el acceso a conexiones, consultas, planes, hallazgos, explicaciones o al registro de trazabilidad; ante una solicitud sin sesión válida, el sistema deberá denegarla.\newline{\small\textit{Justificaci\'on: } \cite{R13} (ASVS 5.0, capítulo de autenticación); ISO/IEC 25010:2023 (autenticidad) \cite{R2}; los datos accesibles incluyen texto SQL y planes que pueden contener datos personales (RES-08, \cite{R14})} & Debe & OBJ-1, OBJ-5 & HU-01 & T \\
+\textbf{RNF-SEG-12} & El sistema deberá aplicar control de acceso por roles con denegación por defecto: solo el rol DBA podrá registrar, editar o eliminar conexiones, editar umbrales, iniciar ingestas manuales y borrar datos ingeridos; el rol Desarrollador podrá consultar únicamente los diagnósticos de las conexiones que se le asignen.\newline{\small\textit{Justificaci\'on: } \cite{R13} (ASVS 5.0, capítulo de autorización); ISO/IEC 25010:2023 (confidencialidad) \cite{R2}} & Debe & OBJ-1, OBJ-5 & HU-01 & T \\
+\textbf{RNF-SEG-13} & El sistema deberá almacenar las contraseñas de usuario únicamente como resumen criptográfico con un algoritmo de derivación adaptativo, expirar la sesión tras un periodo de inactividad configurable (valor por defecto por definir según el análisis de riesgos de la instalación; OWASP cita entre 2 y 5 minutos para aplicaciones de alto valor y entre 15 y 30 minutos para bajo riesgo~\cite{R37}), invalidarla al cerrar sesión y limitar los intentos fallidos de autenticación. Donde la organización disponga de un proveedor de identidad compatible con OpenID Connect, el sistema podrá delegarle la autenticación.\newline{\small\textit{Justificaci\'on: } \cite{R13} (ASVS 5.0, capítulos de autenticación y gestión de sesiones)} & Debe & OBJ-1 & HU-01 & I,T \\
+\textbf{RNF-SEG-14} & El sistema deberá cifrar en reposo el texto SQL, los planes (XML) y las explicaciones almacenados en el repositorio local.\newline{\small\textit{Justificaci\'on: } el Showplan XML puede contener valores de parámetros compilados y predicados con literales \cite{R3,R6}; \cite{R13} (ASVS 5.0, capítulo de protección de datos); \cite{R14}} & Debe & OBJ-1 & HU-21 & I,T \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{Mantenibilidad (\texttt{RNF-MAN})}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos no funcionales -- Mantenibilidad}\label{tab:rnf-MAN}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rnf-MAN})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RNF-MAN-01} & El sistema deberá implementar cada regla del motor como una unidad independiente de las demás, de modo que agregar una regla nueva no requiera modificar otras reglas ni el flujo de análisis.\newline{\small\textit{Justificaci\'on: } \cite{R2}} & Debe & OBJ-2 & HU-05, HU-20 & I,D \\
+\textbf{RNF-MAN-02} & Cada regla de prioridad Must deberá contar con al menos un plan de prueba positivo y uno negativo en la suite automática, y el módulo del motor deberá alcanzar una cobertura de líneas $\geq$ 80 \% $^{\dagger}$.\newline{\small\textit{Justificaci\'on: } \cite{R2}; la decisión abierta DA-06 (Sección~\ref{sec:decisiones})} & Debe & OBJ-2, OBJ-6 & HU-20 & T \\
+\textbf{RNF-MAN-03} & El repositorio deberá contener el README de instalación y uso, el catálogo de reglas y el registro de decisiones de arquitectura, y deberán actualizarse en cada avance.\newline{\small\textit{Justificaci\'on: } el plan de trabajo interno del equipo; el plan de trabajo interno del equipo} & Debe & OBJ-6 & HU-20 & I \\
+\textbf{RNF-MAN-04} & El repositorio deberá ejecutar automáticamente la suite de pruebas en cada solicitud de integración (*pull request*).\newline{\small\textit{Justificaci\'on: } \cite{R2}} & Debería & OBJ-6 & HU-20 & I,D \\
+\textbf{RNF-MAN-05} & El sistema deberá emitir registros estructurados con nivel de severidad e identificador de correlación por ingesta y por análisis.\newline{\small\textit{Justificaci\'on: } \cite{R2}} & Debería & OBJ-1 & HU-03 & I \\
+\end{xltabular}
+\end{footnotesize}
+
+\subsection{Flexibilidad (portabilidad) (\texttt{RNF-FLE})}
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{1.7cm}Xp{1.1cm}p{1.3cm}p{1.6cm}p{0.9cm}@{}}
+\caption{Requisitos no funcionales -- Flexibilidad (portabilidad)}\label{tab:rnf-FLE}\\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endfirsthead
+\multicolumn{6}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:rnf-FLE})}} \\
+\toprule
+\textbf{ID} & \textbf{Requisito} & \textbf{Prior.} & \textbf{Obj.} & \textbf{Historias} & \textbf{Verif.} \\
+\midrule
+\endhead
+\midrule \multicolumn{6}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\textbf{RNF-FLE-01} & Una persona ajena al equipo deberá poder instalar y ejecutar la plataforma en un entorno limpio siguiendo únicamente el README en $\leq$ 60 minutos $^{\dagger}$.\newline{\small\textit{Justificaci\'on: } \cite{R2}} & Debería & OBJ-6 & HU-20 & D \\
+\textbf{RNF-FLE-02} & El sistema deberá acceder a la fuente de telemetría a través de una interfaz que permita añadir otros motores de bases de datos sin modificar el motor de reglas.\newline{\small\textit{Justificaci\'on: } la propuesta del proyecto (Avance 1)} & Podría & OBJ-1 & HU-03 & I \\
+\end{xltabular}
+\end{footnotesize}
+
+\chapter{Priorizaci\'on y alcance del producto m\'inimo viable}
+\label{ch:priorizacion}
+
+\section{Resumen de la priorizaci\'on}
+
+Todos los requisitos de este documento se priorizaron con el esquema MoSCoW~\cite{R24}: \textbf{Debe} (imprescindible para que el MVP cumpla su prop\'osito), \textbf{Deber\'ia} (importante y esperado, pero el MVP conserva utilidad sin \'el) y \textbf{Podr\'ia} (deseable si el tiempo y el alcance lo permiten).
+
+
+
+\begin{table}[h]
+\centering
+\caption{Distribuci\'on de requisitos por prioridad}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Tipo de requisito} & \textbf{Debe} & \textbf{Deber\'ia} & \textbf{Podr\'ia} & \textbf{Total} \\
+\midrule
+Funcionales & 50 & 17 & 9 & 76 \\
+No funcionales & 24 & 11 & 3 & 38 \\
+\midrule
+\textbf{Total} & \textbf{74} & \textbf{28} & \textbf{12} & \textbf{114} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+Los requisitos de prioridad \textbf{Debe} representan el \textbf{64,9\,\%} del total. Como referencia de sanidad, el marco de gesti\'on \'agil DSDM recomienda que los requisitos de prioridad m\'axima no superen aproximadamente el 60\,\% del \textit{esfuerzo} de un proyecto, para conservar un margen de contingencia~\cite{R24}; dado que esta proporci\'on se calcul\'o por n\'umero de requisitos y no por esfuerzo estimado de desarrollo, debe interpretarse como un indicador preliminar y se recalcular\'a formalmente una vez completada la estimaci\'on de esfuerzo por m\'odulo.
+
+\textbf{Alerta de alcance.} La proporci\'on de requisitos Debe supera la referencia de aproximadamente el 60\,\%. Por tratarse de un indicador por n\'umero de requisitos y no por esfuerzo, obliga a recalcularlo con la estimaci\'on de esfuerzo por m\'odulo y a aplicar, si es necesario, el criterio de ajuste de la Secci\'on~\ref{sec:ajuste-alcance}. Los recortes de dicha secci\'on no incluyen la seguridad, la trazabilidad ni los arneses de evaluaci\'on, que son precisamente los aspectos que refuerzan los requisitos Debe m\'as recientes.
+
+
+
+\begin{table}[h]
+\centering
+\caption{Requisitos funcionales \textbf{Debe} por m\'odulo}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{M\'odulo} & \textbf{Debe} & \textbf{Deber\'ia} & \textbf{Podr\'ia} & \textbf{Total} \\
+\midrule
+
+Conexiones y configuraci\'on & 4 & 3 & 0 & 7 \\
+Ingesta y persistencia & 8 & 2 & 2 & 12 \\
+Motor determin\'istico & 11 & 4 & 2 & 17 \\
+Query Health Score & 5 & 1 & 0 & 6 \\
+Componente de IA y RAG & 8 & 2 & 2 & 12 \\
+Tablero de control & 6 & 3 & 3 & 12 \\
+Trazabilidad y auditor\'ia & 4 & 1 & 0 & 5 \\
+Evaluaci\'on y validaci\'on & 4 & 1 & 0 & 5 \\
+
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\section{Composici\'on de la primera versi\'on funcional demostrable}
+
+Para la primera demostraci\'on de \textit{software} funcionando de extremo a extremo (conexi\'on a la base de datos, ingesta desde \textit{Query Store}, an\'alisis del plan de ejecuci\'on y presentaci\'on en el tablero de control), se propone iniciar con el subconjunto de requisitos \textbf{Debe} correspondiente a los m\'odulos de Conexiones, Ingesta, Motor determin\'istico y las funciones b\'asicas del Tablero de control y del \textit{Query Health Score}, junto con la autenticaci\'on y el control de acceso por roles (RNF-SEG-11 a RNF-SEG-13), que son precondici\'on de todo el sistema. El resto de los requisitos \textbf{Debe} -- en particular los del componente de inteligencia artificial y de trazabilidad -- se completan en las iteraciones inmediatamente posteriores, antes de las fases de prueba y de evaluaci\'on emp\'irica final.
+
+\section{Criterio de ajuste de alcance}
+\label{sec:ajuste-alcance}
+
+Si, durante la planificaci\'on detallada, la estimaci\'on de esfuerzo del equipo revela que el alcance definido en este documento excede la capacidad disponible en el calendario del proyecto, el ajuste se realizar\'a en el siguiente orden de prioridad, preservando siempre el n\'ucleo diferencial del producto:
+
+\begin{enumerate}
+\item \textbf{Primero se excluyen} los requisitos de prioridad \textbf{Podr\'ia}.
+\item \textbf{Despu\'es se difieren} los requisitos de prioridad \textbf{Deber\'ia} que no sean cr\'iticos para la demostraci\'on del valor central del producto (por ejemplo, la comparaci\'on visual de planes, la regresi\'on de rendimiento entre planes, y el ajuste fino de la interfaz de usuario).
+\item \textbf{Solo como \'ultimo recurso se simplifica el alcance}, sin eliminarlos por completo, de ciertos requisitos de prioridad \textbf{Debe} de menor criticidad relativa (por ejemplo, reduciendo la base de conocimiento consultada por el componente de inteligencia artificial a las reglas de mayor prioridad, o validando la compatibilidad en una \'unica plataforma de base de datos objetivo en lugar de ambas).
+\item \textbf{Nunca se recortan} los requisitos que constituyen el diferencial y las garant\'ias fundamentales del proyecto: la restricci\'on de solo lectura y sus controles de seguridad asociados (incluidas la autenticaci\'on, el control de acceso y el tratamiento seguro de datos), la trazabilidad expl\'icita de cada hallazgo, el principio de que la inteligencia artificial \'unicamente explica evidencia que el motor ya produjo, y los arneses de evaluaci\'on emp\'irica que sustentan las afirmaciones de precisi\'on del producto.
+\end{enumerate}
+
+\chapter{Verificaci\'on y validaci\'on}
+\label{ch:verificacion}
+
+\section{Estrategia general}
+
+\begin{xltabular}{\linewidth}{@{}p{2.6cm}Xp{2.6cm}@{}}
+\toprule
+\textbf{Nivel} & \textbf{Qu\'e verifica} & \textbf{Momento} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Nivel} & \textbf{Qu\'e verifica} & \textbf{Momento} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+Pruebas unitarias & Reglas individuales del motor, c\'alculo del \textit{Query Health Score}, validador de explicaciones, enmascarado de literales sensibles & Continuo, desde el inicio de la implementaci\'on \\
+Pruebas de integraci\'on & Flujo completo entre ingesta, persistencia, motor de an\'alisis y c\'alculo del puntaje & Al integrar cada m\'odulo \\
+Pruebas de sistema (extremo a extremo) & Flujo completo con datos reales provenientes de \textit{Query Store} & Antes de cada demostraci\'on de avance \\
+Pruebas de aceptaci\'on & Cada criterio de aceptaci\'on de las historias de usuario (Secci\'on~\ref{sec:historias}), ejecutado como caso de prueba & En las iteraciones finales del proyecto \\
+Pruebas de seguridad & Casos de inyecci\'on de instrucciones desde el texto SQL, literales sembrados, accesos sin sesi\'on y con rol insuficiente, revisi\'on de las sentencias efectivamente emitidas contra la base de datos objetivo & Antes de la entrega final \\
+Pruebas de rendimiento & Sobrecarga que la ingesta impone sobre la base de datos monitoreada y latencia de respuesta de la interfaz & Antes de la entrega final \\
+Prueba de usabilidad & Tarea gu\'iada con usuarios reales y cuestionario de usabilidad est\'andar & Antes de la entrega final \\
+\end{xltabular}
+
+\section{Protocolo de validaci\'on emp\'irica del motor determin\'istico}
+\label{sec:protocolo-motor}
+
+La validaci\'on del motor determin\'istico (Objetivo OBJ-6) sigue el siguiente protocolo:
+
+\begin{enumerate}
+\item \textbf{Conjunto de escenarios sembrados:} un conjunto de planes de ejecuci\'on generados deliberadamente para contener cada uno de los antipatrones del cat\'alogo de reglas (Secci\'on~\ref{sec:catalogo-reglas}), de modo que el resultado esperado se conoce por construcci\'on. Este conjunto permite medir la \textbf{exhaustividad} del motor (la proporci\'on de casos positivos reales que el motor efectivamente detecta).
+\item \textbf{Conjunto de cargas de referencia:} consultas de dos bancos de pruebas est\'andar de la industria de bases de datos -- un banco de pruebas anal\'iticas de tipo \textit{TPC-H}~\cite{R21} y un banco de pruebas de consultas de uni\'on compleja de tipo \textit{Join Order Benchmark}~\cite{R20} -- ejecutadas sobre una instancia de SQL Server con \textit{Query Store} activo, para observar el comportamiento del motor sobre planes de ejecuci\'on realistas y no dise\~nados artificialmente.
+\item \textbf{Anotaci\'on experta:} un especialista en bases de datos anota los hallazgos esperados sobre una muestra del conjunto de cargas de referencia, lo que permite medir la \textbf{precisi\'on} del motor (la proporci\'on de detecciones del motor que son correctas seg\'un el criterio experto).
+\item \textbf{M\'etricas:} para cada regla del cat\'alogo se calcula la precisi\'on (verdaderos positivos sobre la suma de verdaderos y falsos positivos) y la exhaustividad (verdaderos positivos sobre la suma de verdaderos positivos y falsos negativos), seg\'un el requisito RNF-FUN-01.
+\item \textbf{Calibraci\'on de umbrales:} los umbrales declarados por calibrar se determinan sobre un subconjunto de los planes sembrados y de las cargas de referencia y se eval\'uan sobre otro subconjunto distinto, para no medir la precisi\'on con los mismos datos usados para fijarlos; se reporta, para cada umbral, el valor elegido, el criterio de elecci\'on y su efecto sobre la precisi\'on y la exhaustividad. se automatiza mediante un arn\'es de evaluaci\'on (requisito RF-EVA-01) que puede ejecutarse nuevamente para verificar los resultados reportados, y sus resultados se publican en el informe del laboratorio (requisito RF-EVA-04).
+\end{enumerate}
+
+\section{Protocolo de evaluaci\'on del componente de inteligencia artificial}
+\label{sec:verificacion-ia}
+
+La evaluaci\'on del componente de inteligencia artificial (objetivos OBJ-4 y OBJ-6) sigue el siguiente protocolo, dise\~nado espec\'ificamente para medir, de forma cuantitativa y reproducible, el grado en que las explicaciones generadas est\'an efectivamente sustentadas en evidencia y no son afirmaciones sin respaldo (com\'unmente llamadas \textquotedblleft alucinaciones\textquotedblright{} en la literatura de modelos de lenguaje)~\cite{R18}:
+
+\begin{enumerate}
+\item \textbf{Conjunto de evaluaci\'on:} un conjunto de al menos treinta consultas con hallazgos previamente confirmados, que incluye deliberadamente casos adversariales (consultas con comentarios que contienen instrucciones enga\~nosas, y consultas con literales sensibles sembrados) para poner a prueba los controles de seguridad del requisito RNF-SEG-06.
+\item \textbf{M\'etricas autom\'aticas} (requisito RF-EVA-02): el porcentaje de afirmaciones de las explicaciones que cuentan con evidencia v\'alida y verificable, el porcentaje de afirmaciones sin ning\'un sustento en la evidencia disponible, el grado de concordancia entre los valores num\'ericos citados en las explicaciones y los valores reales de la evidencia, la distribuci\'on de afirmaciones por tipo y la tasa de afirmaciones de interpretaci\'on no sustentadas por la base de conocimiento. Esta metodolog\'ia se inspira en las m\'etricas de fidelidad usadas para evaluar sistemas de generaci\'on aumentada por recuperaci\'on~\cite{R17}.
+\item \textbf{Auditor\'ia manual:} una muestra aleatoria de al menos treinta explicaciones se somete a revisi\'on manual por dos revisores independientes. Cada revisor clasifica cada afirmaci\'on como verdadera, parcialmente verdadera o incorrecta (incluyendo los errores de atribuci\'on causal), con independencia del resultado del validador. Se reporta la concordancia entre revisores (coeficiente kappa de Cohen~\cite{R31}) y la tasa de falsos pasantes, es decir, de explicaciones que superaron el validador autom\'atico y que los revisores juzgaron incorrectas. Esta auditor\'ia es necesaria porque comprobar que una referencia existe y que una cifra coincide no demuestra que la explicaci\'on sea verdadera.
+\item \textbf{Condici\'on de control:} como comparaci\'on, el mismo modelo de inteligencia artificial se ejecuta \'unicamente con el texto de la consulta SQL, sin los hallazgos del motor ni el contexto adicional. La diferencia en la tasa de afirmaciones sin sustento entre esta condici\'on de control y la condici\'on completa constituye la evidencia emp\'irica del aporte real del enfoque h\'ibrido (motor determin\'istico m\'as inteligencia artificial) frente al uso de un modelo de lenguaje aplicado directamente y sin contexto verificado. El sistema D-Bot~\cite{R19} se cita como antecedente de esta l\'inea de investigaci\'on y no como evidencia transferible al enfoque de Query Doctor AI.
+\item \textbf{Lenguaje de las conclusiones:} los resultados de esta evaluaci\'on se reportan siempre como tasas medidas sobre un conjunto de evaluaci\'on expl\'icito y documentado, nunca como una afirmaci\'on absoluta de ausencia de errores. El t\'ermino \textquotedblleft diagn\'ostico validado\textquotedblright{} se reserva para el contraste con un especialista humano y nunca describe el estado autom\'atico de una explicaci\'on.
+\end{enumerate}
+
+\section{Protocolo de selecci\'on y validaci\'on del \textit{Query Health Score}}
+\label{sec:protocolo-score}
+
+La formulaci\'on base del score (Secci\'on~\ref{sec:rf-sco}) es una decisi\'on de dise\~no no validada. El procedimiento detallado con el que se decidir\'a la formulaci\'on que se usar\'a se documenta en un documento aparte (\textbf{Protocolo de selecci\'on y validaci\'on del \textit{Query Health Score}}, Anexo~D), porque su extensi\'on, sus resultados y su calendario evolucionan con el laboratorio. Este SRS conserva los requisitos (RF-SCO-01 a RF-SCO-06 y RF-EVA-05) y fija los principios siguientes:
+
+\begin{enumerate}
+\item Se comparan candidatas, incluidas l\'ineas base simples que ordenan por un solo recurso (CPU, duraci\'on o lecturas totales), y se registra cada una como una versi\'on de f\'ormula.
+\item Se usan dos verdades de referencia: la mejora de CPU medida tras aplicar una correcci\'on conocida en una copia de laboratorio y, si hay especialista disponible, su ranking de prioridad.
+\item El criterio de decisi\'on, que incluye la m\'etrica primaria, los intervalos de confianza y la regla de adopci\'on, se registra antes de medir. Una candidata compuesta solo se adopta si supera a la l\'inea base de CPU con respaldo estad\'istico; de lo contrario se adopta la l\'inea base y este SRS se modifica en una nueva versi\'on.
+\item Se realiza un an\'alisis de sensibilidad de la normalizaci\'on, de las ponderaciones y de la transformaci\'on de la severidad.
+\item Los resultados se reportan como tasas medidas sobre el conjunto de evaluaci\'on, sin afirmar validez fuera del laboratorio, y se publican en el informe del laboratorio (RF-EVA-04).
+\end{enumerate}
+
+\section{Registro y cierre de la verificaci\'on}
+
+Un requisito se considera formalmente \textbf{verificado} cuando su m\'etodo de verificaci\'on asignado (inspecci\'on, an\'alisis, demostraci\'on o prueba) se ha ejecutado con resultado favorable, y la evidencia de esa verificaci\'on -- un caso de prueba, un registro de una demostraci\'on, un acta de inspecci\'on o un c\'alculo de an\'alisis -- queda archivada haciendo referencia expl\'icita al identificador del requisito que sustenta.
+
+\chapter{Trazabilidad}
+\label{ch:trazabilidad}
+
+Este cap\'itulo demuestra que cada objetivo espec\'ifico del proyecto (Secci\'on~\ref{sec:objetivos}) y cada historia de usuario (Secci\'on~\ref{sec:historias}) tiene al menos un requisito formal que lo satisface, y que ning\'un requisito qued\'o sin un origen expl\'icito en las necesidades de los interesados.
+
+\section{Objetivos hacia requisitos}
+
+\begin{xltabular}{\linewidth}{@{}p{1.4cm}p{3.2cm}XX@{}}
+\toprule
+\textbf{Objetivo} & \textbf{Historias de usuario} & \textbf{Requisitos funcionales} & \textbf{Requisitos no funcionales} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Objetivo} & \textbf{Historias de usuario} & \textbf{Requisitos funcionales} & \textbf{Requisitos no funcionales} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+\textbf{OBJ-1} & HU-01, HU-02, HU-03, HU-14, HU-15, HU-21 & {\footnotesize RF-CFG-01, RF-CFG-02, RF-CFG-03, RF-CFG-04, RF-CFG-05, RF-CFG-06, RF-CFG-07, RF-DASH-09, RF-ING-01, RF-ING-02, RF-ING-03, RF-ING-04, RF-ING-05, RF-ING-06, RF-ING-07, RF-ING-08, RF-ING-09, RF-ING-10, RF-ING-11, RF-ING-12, RF-TRZ-04, RF-TRZ-05} & {\footnotesize RNF-COM-01, RNF-COM-03, RNF-COM-04, RNF-FIA-01, RNF-FLE-02, RNF-MAN-05, RNF-RND-01, RNF-SEG-01, RNF-SEG-02, RNF-SEG-03, RNF-SEG-04, RNF-SEG-09, RNF-SEG-10, RNF-SEG-11, RNF-SEG-12, RNF-SEG-13, RNF-SEG-14} \\
+\textbf{OBJ-2} & HU-05, HU-06, HU-16, HU-17 & {\footnotesize RF-DASH-12, RF-ING-09, RF-ING-12, RF-MOT-01, RF-MOT-02, RF-MOT-03, RF-MOT-04, RF-MOT-05, RF-MOT-06, RF-MOT-07, RF-MOT-08, RF-MOT-09, RF-MOT-10, RF-MOT-11, RF-MOT-12, RF-MOT-13, RF-MOT-14, RF-MOT-15, RF-MOT-16, RF-MOT-17} & {\footnotesize RNF-COM-02, RNF-COM-04, RNF-FUN-01, RNF-MAN-01, RNF-MAN-02, RNF-RND-04} \\
+\textbf{OBJ-3} & HU-04, HU-07, HU-08, HU-20 & {\footnotesize RF-EVA-05, RF-SCO-01, RF-SCO-02, RF-SCO-03, RF-SCO-04, RF-SCO-05, RF-SCO-06} & {\footnotesize } \\
+\textbf{OBJ-4} & HU-09, HU-10, HU-11, HU-12, HU-14, HU-21 & {\footnotesize RF-DASH-05, RF-DASH-06, RF-EVA-02, RF-IA-01, RF-IA-02, RF-IA-03, RF-IA-04, RF-IA-05, RF-IA-06, RF-IA-07, RF-IA-08, RF-IA-09, RF-IA-10, RF-IA-11, RF-IA-12, RF-MOT-03, RF-MOT-17, RF-TRZ-01, RF-TRZ-02, RF-TRZ-03} & {\footnotesize RNF-FIA-02, RNF-FUN-02, RNF-FUN-03, RNF-FUN-04, RNF-RND-03, RNF-SEG-03, RNF-SEG-05, RNF-SEG-06, RNF-SEG-07, RNF-SEG-08, RNF-SEG-09} \\
+\textbf{OBJ-5} & HU-04, HU-07, HU-10, HU-11, HU-13, HU-14, HU-16, HU-17, HU-18, HU-19 & {\footnotesize RF-DASH-01, RF-DASH-02, RF-DASH-03, RF-DASH-04, RF-DASH-05, RF-DASH-06, RF-DASH-07, RF-DASH-08, RF-DASH-09, RF-DASH-10, RF-DASH-11, RF-DASH-12, RF-IA-10, RF-IA-11, RF-TRZ-03, RF-TRZ-05} & {\footnotesize RNF-INT-01, RNF-INT-02, RNF-INT-03, RNF-RND-02, RNF-SEG-07, RNF-SEG-11, RNF-SEG-12} \\
+\textbf{OBJ-6} & HU-20 & {\footnotesize RF-EVA-01, RF-EVA-02, RF-EVA-03, RF-EVA-04, RF-EVA-05} & {\footnotesize RNF-FLE-01, RNF-FUN-01, RNF-FUN-03, RNF-MAN-02, RNF-MAN-03, RNF-MAN-04} \\
+
+\end{xltabular}
+
+\section{Historias de usuario hacia requisitos y casos de uso}
+
+\begin{xltabular}{\linewidth}{@{}p{1.6cm}p{1.6cm}Xp{2cm}@{}}
+\toprule
+\textbf{Historia} & \textbf{Prioridad} & \textbf{Requisitos que la satisfacen} & \textbf{Casos de uso} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Historia} & \textbf{Prioridad} & \textbf{Requisitos que la satisfacen} & \textbf{Casos de uso} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+\textbf{HU-01} & Debe & {\footnotesize RF-CFG-01, RF-CFG-02, RF-CFG-03, RF-CFG-06, RF-CFG-07, RNF-COM-01, RNF-COM-03, RNF-SEG-03, RNF-SEG-04, RNF-SEG-11, RNF-SEG-12, RNF-SEG-13} & CU-01 \\
+\textbf{HU-02} & Debe & {\footnotesize RF-CFG-04, RF-ING-08} & CU-01, CU-02 \\
+\textbf{HU-03} & Debe & {\footnotesize RF-DASH-09, RF-ING-01, RF-ING-02, RF-ING-03, RF-ING-04, RF-ING-05, RF-ING-06, RF-ING-07, RF-ING-09, RF-ING-10, RF-ING-11, RNF-COM-01, RNF-COM-04, RNF-FIA-01, RNF-FLE-02, RNF-MAN-05, RNF-RND-01} & CU-02 \\
+\textbf{HU-04} & Debe & {\footnotesize RF-DASH-01, RF-SCO-02, RF-SCO-04, RNF-INT-01, RNF-INT-02, RNF-INT-03, RNF-RND-02} & CU-04 \\
+\textbf{HU-05} & Debe & {\footnotesize RF-DASH-02, RF-ING-12, RF-MOT-01, RF-MOT-02, RF-MOT-03, RF-MOT-04, RF-MOT-05, RF-MOT-06, RF-MOT-08, RF-MOT-09, RF-MOT-10, RF-MOT-11, RF-MOT-12, RF-MOT-14, RF-MOT-15, RF-MOT-16, RF-MOT-17, RNF-COM-02, RNF-FUN-01, RNF-MAN-01, RNF-RND-04} & CU-03 \\
+\textbf{HU-06} & Debe & {\footnotesize RF-MOT-07} & CU-03 \\
+\textbf{HU-07} & Debe & {\footnotesize RF-DASH-03, RF-ING-07, RF-SCO-05} & CU-04 \\
+\textbf{HU-08} & Debe & {\footnotesize RF-DASH-02, RF-EVA-05, RF-SCO-01, RF-SCO-02, RF-SCO-03, RF-SCO-05, RF-SCO-06} & CU-04 \\
+\textbf{HU-09} & Debe & {\footnotesize RF-DASH-02, RF-IA-01, RF-IA-02, RF-IA-04, RF-IA-07, RF-IA-08, RF-IA-09, RF-IA-12, RNF-FUN-03, RNF-INT-01, RNF-RND-03} & CU-05 \\
+\textbf{HU-10} & Debe & {\footnotesize RF-DASH-05, RF-IA-02, RF-IA-03, RF-IA-10, RF-IA-12, RF-MOT-03, RNF-FUN-02, RNF-SEG-07} & CU-05 \\
+\textbf{HU-11} & Debe & {\footnotesize RF-DASH-06, RF-IA-05, RF-IA-10, RNF-FUN-04} & CU-05 \\
+\textbf{HU-12} & Debe & {\footnotesize RF-IA-06, RNF-FIA-02, RNF-SEG-08} & CU-05 \\
+\textbf{HU-13} & Debe & {\footnotesize RF-DASH-04, RF-DASH-07} & CU-04 \\
+\textbf{HU-14} & Debe & {\footnotesize RF-IA-11, RF-TRZ-01, RF-TRZ-02, RF-TRZ-03, RF-TRZ-05} & CU-06 \\
+\textbf{HU-15} & Debe & {\footnotesize RF-CFG-05, RF-TRZ-04, RNF-SEG-01, RNF-SEG-02} & CU-01 \\
+\textbf{HU-16} & Debería & {\footnotesize RF-DASH-08, RF-MOT-13} & CU-03, CU-07 \\
+\textbf{HU-17} & Podría & {\footnotesize RF-DASH-12, RF-MOT-14} & --- \\
+\textbf{HU-18} & Podría & {\footnotesize RF-DASH-10} & --- \\
+\textbf{HU-19} & Podría & {\footnotesize RF-DASH-11} & --- \\
+\textbf{HU-20} & Debe & {\footnotesize RF-EVA-01, RF-EVA-02, RF-EVA-03, RF-EVA-04, RF-EVA-05, RNF-FLE-01, RNF-FUN-01, RNF-FUN-03, RNF-MAN-01, RNF-MAN-02, RNF-MAN-03, RNF-MAN-04} & --- \\
+\textbf{HU-21} & Debe & {\footnotesize RNF-SEG-03, RNF-SEG-05, RNF-SEG-06, RNF-SEG-09, RNF-SEG-10, RNF-SEG-14} & CU-05 \\
+
+\end{xltabular}
+
+\section{Interpretaci\'on de la matriz}
+
+La ausencia de una fila vac\'ia en ambas matrices confirma dos propiedades de calidad exigidas por la norma ISO/IEC/IEEE~29148:2018 para una especificaci\'on de requisitos completa~\cite{R1}: primero, que todo objetivo del proyecto est\'a efectivamente cubierto por al menos un requisito verificable; y segundo, que todo requisito tiene un origen expl\'icito y justificable en una necesidad real de un interesado, y no fue a\~nadido de forma arbitraria. Esta trazabilidad bidireccional se mantendr\'a actualizada en cada revisi\'on posterior de este documento.
+
+\chapter{Decisiones abiertas y riesgos}
+\label{ch:riesgos}
+
+La transparencia sobre lo que a\'un no est\'a decidido es, en s\'i misma, una pr\'actica de buena ingenier\'ia de requisitos: evita que una ambig\"uedad se resuelva de manera impl\'icita y distinta por cada integrante del equipo. Esta secci\'on documenta expl\'icitamente esas decisiones pendientes y los riesgos identificados sobre el propio conjunto de requisitos.
+
+\section{Decisiones abiertas}
+\label{sec:decisiones}
+
+\begin{xltabular}{\linewidth}{@{}p{1.3cm}Xp{2.6cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Decisi\'on pendiente} & \textbf{Requisitos afectados} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Decisi\'on pendiente} & \textbf{Requisitos afectados} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+DA-01 & Ratificar con el tutor y con el responsable del m\'odulo la formulaci\'on base del \textit{Query Health Score} de la Secci\'on~\ref{sec:rf-sco}, que es una decisi\'on de dise\~no construida con el m\'etodo de indicadores compuestos~\cite{R32} y no un resultado validado. Quedan por decidir la normalizaci\'on (rangos u otra), las ponderaciones, la transformaci\'on de la severidad ordinal y la convenci\'on de orientaci\'on (100 corresponde a la menor prioridad de revisi\'on). Su validaci\'on es el requisito RF-EVA-05. & RF-SCO-01 a RF-SCO-06, RF-EVA-05 \\
+DA-02 & Calibrar, con datos emp\'iricos reales del laboratorio, los umbrales marcados como por calibrar en el Cuadro~\ref{tab:umbrales} y las severidades base de cada regla del cat\'alogo del motor, para los que este SRS no fija un valor sin respaldo. & REG-01 a REG-11, RF-MOT-05, RF-MOT-06, RF-MOT-10, RF-MOT-12, RF-MOT-13, RF-MOT-14 \\
+DA-03 & Definir la periodicidad por defecto de la ingesta autom\'atica, considerando que el intervalo de agregaci\'on por defecto de \textit{Query Store} es de sesenta minutos. & RF-ING-06 \\
+DA-04 & Seleccionar el proveedor y el modelo espec\'ifico de inteligencia artificial, considerando costo, pol\'itica de privacidad de datos, l\'imites de tasa de uso y latencia. & Todos los requisitos del m\'odulo de IA (\texttt{RF-IA-*}), RNF-SEG-05, RNF-RND-03 \\
+DA-05 & Seleccionar el conjunto tecnol\'ogico concreto (lenguaje de programaci\'on, motor de persistencia local) para la implementaci\'on. & RI-04, RNF-FLE-01 \\
+DA-06 & Ratificar formalmente, con el tutor del proyecto, cada meta num\'erica marcada como provisional en este documento, incluidas la tolerancia de falsos pasantes, los par\'ametros del score y la expiraci\'on de sesi\'on, y definir el plan concreto de calibraci\'on emp\'irica de cada una. & Todos los requisitos marcados con el s\'imbolo \dagsym{} \\
+DA-07 & Completar la verificaci\'on emp\'irica de las hip\'otesis t\'ecnicas del Ap\'endice~\ref{ap:spike} sobre una instancia real de SQL Server, hasta ahora sustentadas \'unicamente en documentaci\'on oficial del fabricante. Su prioridad es alta: el requisito RF-EVA-04 impide afirmar eficacia sin el informe del laboratorio. & Secci\'on~\ref{sec:limitacion-evidencia}, REG-07, REG-09, REG-10, RF-EVA-04 \\
+DA-08 & Confirmar el idioma \'unico o m\'ultiple de la interfaz de usuario y de las explicaciones generadas (se propone espa\~nol como \'unico idioma para el MVP). & RF-IA-08 \\
+DA-09 & Cerrada en cuanto a alcance: la autenticaci\'on de usuarios es obligatoria en el MVP. Queda como decisi\'on de dise\~no detallado si se implementan usuarios locales (RNF-SEG-13) o delegaci\'on a un proveedor OIDC. & RNF-SEG-11 a RNF-SEG-13, RF-TRZ-05 \\
+DA-10 & Definir el tama\~no exacto de los conjuntos de evaluaci\'on emp\'irica y confirmar la disponibilidad efectiva de un especialista en bases de datos como revisor externo. & RF-EVA-01 a RF-EVA-03 \\
+DA-11 & Definir la estrategia concreta de carga del banco de pruebas de consultas de uni\'on compleja sobre una instancia de SQL Server. & Secci\'on de protocolo de validaci\'on emp\'irica del motor (Cap\'itulo~\ref{ch:verificacion}) \\
+DA-12 & \textbf{Cerrada:} el m\'inimo soportado se fija en SQL Server 2016 (13.x) como \textit{Compatible sin pruebas} (con omisi\'on expl\'icita de las columnas de TempDB y de log de 2017+ seg\'un RNF-COM-04), junto con SQL Server 2017, 2019, 2025 o superior y Azure SQL Database; \'unicamente SQL Server 2022 figura como \textbf{Probado} conforme a RNF-COM-01 mientras se ejecutan las pruebas de aceptaci\'on de las dem\'as versiones. Azure SQL Managed Instance queda como \textbf{No soportado} en el MVP. Nota de ciclo de vida: el soporte extendido est\'andar de SQL Server 2016 finaliz\'o el 14 de julio de 2026 (solo ESU). & RF-CFG-03, RF-CFG-07, RF-ING-03, RNF-COM-01, RNF-COM-03, RNF-COM-04, Cuadro~\ref{tab:matriz-soporte} \\
+DA-13 & Confirmar si se admite en el MVP la exposici\'on al proveedor de IA de los nombres de objetos (tablas y columnas), o si se pseudonimizan. & RNF-SEG-05, RIE-11 \\
+DA-14 & Decidir si se crea un rol Auditor de solo lectura sobre el registro de trazabilidad: HU-14 y CU-06 mencionan al docente evaluador, pero el SRS solo define los roles DBA y Desarrollador. & RNF-SEG-12, RF-TRZ-03, HU-14 \\
+\end{xltabular}
+
+\section{Riesgos identificados sobre los requisitos}
+
+\begin{xltabular}{\linewidth}{@{}p{1.3cm}p{4.3cm}X@{}}
+\toprule
+\textbf{ID} & \textbf{Riesgo} & \textbf{Mitigaci\'on prevista en este documento} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Riesgo} & \textbf{Mitigaci\'on prevista en este documento} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+RIE-01 & La evidencia de ejecuci\'on disponible por defecto en \textit{Query Store} resulta insuficiente para algunas de las reglas planificadas del motor. & Clasificaci\'on expl\'icita por clase de evidencia (Secci\'on~\ref{sec:limitacion-evidencia}), reglas dise\~nadas para operar con evidencia agregada, hallazgos siempre etiquetados con su clase de evidencia. \\
+RIE-02 & Sobrealcance del proyecto respecto al calendario disponible. & Escala de priorizaci\'on MoSCoW y criterio expl\'icito de ajuste de alcance (Cap\'itulo~\ref{ch:priorizacion}). \\
+RIE-03 & Dependencia de la disponibilidad, el costo o la cuota de uso del proveedor externo de inteligencia artificial. & Degradaci\'on controlada a hallazgos determin\'isticos sin explicaci\'on (RF-IA-06), reintentos con l\'imite de tiempo (RNF-FIA-02), l\'imites de consumo configurables (RNF-SEG-08). \\
+RIE-04 & Inyecci\'on de instrucciones maliciosas incrustadas en el texto SQL de la base de datos monitoreada, dirigidas a manipular al componente de inteligencia artificial. & Delimitaci\'on expl\'icita del texto no confiable en el contexto enviado al modelo (RNF-SEG-06), validaci\'on autom\'atica de toda salida generada (RF-IA-03), saneamiento de la salida antes de su presentaci\'on (RNF-SEG-07). \\
+RIE-05 & Fuga de datos personales o sensibles hacia el proveedor externo de inteligencia artificial a trav\'es de literales del texto SQL. & Enmascarado obligatorio y sin excepci\'on configurable de literales antes del env\'io (RNF-SEG-05), cifrado en reposo (RNF-SEG-14), pol\'itica de retenci\'on configurable (RNF-SEG-10), cumplimiento expl\'icito de la normativa de protecci\'on de datos personales (RES-08). \\
+RIE-06 & Sesgo de automatizaci\'on: que un usuario acepte una recomendaci\'on generada sin verificarla adecuadamente. & Trazabilidad obligatoria de cada afirmaci\'on hacia su evidencia (RF-DASH-05), aviso persistente de revisi\'on humana requerida (RF-DASH-06, RF-IA-05), prohibici\'on expl\'icita de presentar recomendaciones como acciones listas para ejecutar (RNF-FUN-04). \\
+RIE-07 & Insuficiencia de datos de validaci\'on o de disponibilidad de especialistas humanos para el contraste experto. & Definici\'on expl\'icita como decisi\'on abierta (DA-10, DA-11) y priorizaci\'on del contraste experto (RF-EVA-03) como requisito de prioridad \textbf{Debe}, por lo que su riesgo se gestiona mediante la verificaci\'on temprana de la disponibilidad del especialista. \\
+RIE-08 & Que alguna meta num\'erica provisional resulte mal calibrada respecto a la realidad del sistema implementado. & Marca expl\'icita \dagsym{} en cada meta provisional y plan de calibraci\'on emp\'irica obligatorio antes del cierre del proyecto (DA-06). \\
+RIE-09 & Que una tasa alta de falsos positivos del motor erosione la confianza del usuario en la plataforma. & Umbrales configurables por regla (RF-MOT-14), reglas contextuales para recorridos completos y b\'usquedas por clave (RF-MOT-05, RF-MOT-06), severidades diferenciadas, medici\'on obligatoria y expl\'icita de la precisi\'on por regla (RNF-FUN-01). \\
+RIE-10 & Curva de aprendizaje del equipo respecto al formato interno de los planes de ejecuci\'on de SQL Server. & An\'alisis t\'ecnico documental previo (Ap\'endice~\ref{ap:spike}), cat\'alogo de reglas documentado y versionado, revisi\'on de par obligatoria sobre los cambios al motor. \\
+RIE-11 & Riesgo residual de exposici\'on de informaci\'on del esquema: los nombres de objetos (tablas y columnas) se env\'ian al proveedor de IA porque son necesarios para la explicaci\'on y pueden revelar informaci\'on del esquema. & Declaraci\'on expl\'icita del riesgo y decisi\'on abierta DA-13 (aceptar la exposici\'on o pseudonimizar los nombres); delimitaci\'on de los nombres de objeto como datos no confiables (RNF-SEG-06). \\
+RIE-12 & Que una explicaci\'on supere todas las verificaciones autom\'aticas y aun as\'i sea falsa (falso pasante), por ejemplo al citar correctamente una m\'etrica y atribuirle una causa equivocada. & Restricci\'on de las afirmaciones interpretativas a relaciones causa-efecto curadas (RF-IA-02, RF-IA-03), estado \texttt{TRAZADA} con aviso de que no equivale a un diagn\'ostico confirmado (RF-IA-10), etiquetado como indicio de las interpretaciones apoyadas en evidencia estimada o agregada (RF-IA-12), y medici\'on de la tasa de falsos pasantes mediante auditor\'ia manual (RNF-FUN-03, Secci\'on~\ref{sec:verificacion-ia}). \\
+\end{xltabular}
+
+\appendix
+
+\chapter{Sustento t\'ecnico del an\'alisis de \textit{Query Store}}
+\label{ap:spike}
+
+Este ap\'endice documenta el an\'alisis t\'ecnico que sustenta la decisi\'on de dise\~no descrita en la Secci\'on~\ref{sec:limitacion-evidencia}: qu\'e evidencia de diagn\'ostico puede obtenerse realmente de \textit{Query Store}, con qu\'e permisos y con qu\'e limitaciones, y c\'omo esa evidencia condiciona el cat\'alogo de reglas del motor determin\'istico (Secci\'on~\ref{sec:catalogo-reglas}).
+
+\section{Motivaci\'on y pregunta de investigaci\'on}
+
+El motor determin\'istico deber\'ia, en principio, poder comparar las filas estimadas y las filas realmente devueltas por cada operador de un plan de ejecuci\'on, y detectar desbordamientos hacia el almacenamiento temporal (\textit{TempDB}), a partir de la informaci\'on que \textit{Query Store} almacena. Antes de comprometer estas capacidades como requisitos, era necesario responder con evidencia t\'ecnica documental una pregunta concreta: \textbf{\textquotedblleft \textquestiondown qu\'e evidencia de diagn\'ostico est\'a realmente disponible en \textit{Query Store}, con qu\'e permisos, y con qu\'e limitaciones?\textquotedblright}
+
+\section{Hip\'otesis evaluadas}
+
+\begin{xltabular}{\linewidth}{@{}p{1.1cm}X@{}}
+\toprule
+\textbf{ID} & \textbf{Hip\'otesis} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{ID} & \textbf{Hip\'otesis} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+H1 & Los planes almacenados en \textit{Query Store} son planes compilados (estimados): no contienen informaci\'on real de ejecuci\'on (filas reales por operador, advertencias de desbordamiento de memoria, ni concesi\'on de memoria efectivamente usada). \\
+H2 & Los planes almacenados s\'i contienen la evidencia generada en tiempo de compilaci\'on: advertencias de conversi\'on impl\'icita que afecta el plan, sugerencias de \'indices faltantes, ausencia de estad\'isticas, uniones sin predicado, y las propiedades de los operadores de lectura y de b\'usqueda por clave. \\
+H3 & Las estad\'isticas de ejecuci\'on de \textit{Query Store} aportan m\'etricas agregadas por plan e intervalo de tiempo (no por operador individual): incluyen filas devueltas promedio, memoria, grado de paralelismo y, en versiones recientes del motor, uso de almacenamiento temporal; pero no incluyen contadores de desbordamiento. \\
+H4 & La discrepancia de cardinalidad (entre filas estimadas y filas reales) solo puede evaluarse, con la evidencia disponible por defecto, a nivel de sentencia completa, no a nivel de cada operador individual del plan. \\
+H5 & El plan de ejecuci\'on real, con el detalle completo por operador, solo est\'a disponible mediante un mecanismo opcional que el administrador de la base de datos debe habilitar expl\'icitamente, por lo que no puede formar parte del flujo de an\'alisis por defecto de una plataforma que respeta la restricci\'on de solo lectura. \\
+\end{xltabular}
+
+\section{Hallazgos documentales}
+
+\begin{description}[leftmargin=1.6cm,style=nextline]
+
+\item[Hallazgo F1 -- El plan de \textit{Query Store} es un plan estimado.] La documentaci\'on oficial del fabricante del motor de base de datos indica que la vista de cat\'alogo que almacena los planes en \textit{Query Store} presenta el plan estimado de la consulta, junto con las estad\'isticas de tiempo de compilaci\'on, y que dicho plan almacenado equivale al que producir\'ia la instrucci\'on de diagn\'ostico \texttt{SET SHOWPLAN\_XML ON}~\cite{R3}. La vista expone el plan en formato de texto largo, con el contenido en \textit{Showplan XML}~\cite{R4}.
+
+\item[Hallazgo F2 -- Un plan estimado no contiene informaci\'on de ejecuci\'on.] La documentaci\'on precisa que el plan estimado no ejecuta realmente la consulta y, por lo tanto, no contiene m\'etricas de uso de recursos ni advertencias que solo se generan durante la ejecuci\'on; el plan real, por el contrario, s\'i las incluye, adem\'as de tiempos de procesador y de duraci\'on efectivamente observados~\cite{R6,R7}. Las advertencias de desbordamiento de los operadores de mezcla (\textit{hash}) y de ordenamiento hacia el almacenamiento temporal son advertencias de ejecuci\'on incorporadas al formato \textit{Showplan} desde versiones intermedias del motor~\cite{R10}; por su propia naturaleza de advertencias de ejecuci\'on, no deber\'ian aparecer en un plan estimado.
+
+\item[Hallazgo F3 -- Las estad\'isticas de ejecuci\'on son agregadas por plan e intervalo.] La vista de estad\'isticas de ejecuci\'on de \textit{Query Store} registra, para cada combinaci\'on de plan, tipo de ejecuci\'on e intervalo de tiempo, estad\'isticas promedio, m\'inimas, m\'aximas y de desviaci\'on est\'andar de duraci\'on, tiempo de procesador, lecturas y escrituras l\'ogicas, lecturas f\'isicas, grado de paralelismo, memoria m\'axima utilizada, filas devueltas y, en versiones recientes del motor y en Azure SQL Database, bytes de registro de transacciones y p\'aginas de almacenamiento temporal utilizadas~\cite{R5}. Esta vista no ofrece, en ning\'un caso, contadores de desbordamiento ni de filas devueltas por operador individual. La propia documentaci\'on advierte que, para el intervalo de tiempo activo, pueden existir varias filas para un mismo plan, por lo que es necesario agregarlas correctamente antes de utilizarlas~\cite{R5}.
+
+\item[Hallazgo F4 -- Permisos necesarios.] Consultar estas vistas exige el permiso de visualizaci\'on de estado de la base de datos; en las versiones m\'as recientes del motor, un permiso equivalente y m\'as espec\'ifico de visualizaci\'on de estado de rendimiento de la base de datos~\cite{R5}. No se requiere ning\'un permiso de escritura, lo que sustenta directamente el principio de m\'inimo privilegio exigido por la restricci\'on de solo lectura de este proyecto (RES-01).
+
+\item[Hallazgo F5 -- Disponibilidad y valores por defecto de \textit{Query Store}.] \textit{Query Store} es una funci\'on disponible desde una versi\'on ya madura del motor de base de datos~\cite{R4}, habilitada por defecto en Azure SQL Database y, en versiones recientes del motor, tambi\'en en bases de datos reci\'en creadas~\cite{R9}. Los valores de configuraci\'on por defecto documentados incluyen un intervalo de agregaci\'on de sesenta minutos y un per\'iodo de retenci\'on de treinta d\'ias~\cite{R8}. Estos valores tienen una consecuencia directa de dise\~no: la granularidad temporal de los datos disponibles por defecto es de una hora, y las consultas ejecutadas con muy poca frecuencia podr\'ian no quedar capturadas seg\'un el modo de captura configurado.
+
+\item[Hallazgo F6 -- El plan real existe, pero es una funci\'on opcional.] El motor de base de datos ofrece una funci\'on que permite consultar el equivalente al \'ultimo plan real de una consulta que a\'un permanece en la memoria cach\'e del servidor, con filas reales por operador, advertencias de desbordamiento y memoria efectivamente utilizada~\cite{R7}. Esta funci\'on exige que el administrador de la base de datos la habilite expl\'icitamente mediante una opci\'on de configuraci\'on a nivel de base de datos, exige adem\'as un permiso adicional a nivel de servidor, y depende de que el plan en cuesti\'on siga presente en la memoria cach\'e (por lo que es un dato vol\'atil, no persistente)~\cite{R7}. Habilitar esta funci\'on es, por dise\~no, una decisi\'on exclusiva del administrador de la base de datos: la plataforma nunca la activa por s\'i misma.
+
+\item[Hallazgo F7 -- La evidencia de compilaci\'on s\'i est\'a en el plan almacenado.] Las advertencias de conversi\'on impl\'icita que afecta el plan (incluyendo la expresi\'on exacta involucrada) y las sugerencias de \'indices faltantes forman parte del contenido propio del plan estimado y pueden extraerse program\'aticamente de su representaci\'on en \textit{Showplan XML}~\cite{R11}. Las propiedades de los operadores de b\'usqueda por clave, de recorrido completo, y las filas estimadas por cada operador, son igualmente propiedades intr\'insecas del plan compilado. La detecci\'on de estas se\~nales es, por tanto, plenamente viable a partir de un plan estimado, sin necesidad de un plan real.
+
+\item[Hallazgo F8 -- No todo plan es recuperable como XML v\'alido.] El tipo de datos XML del motor de base de datos tiene un l\'imite en el n\'umero de niveles de anidamiento que puede representar, lo que en planes extremadamente profundos puede impedir su recuperaci\'on completa~\cite{R7}. Como consecuencia, la plataforma debe tolerar de forma expl\'icita los planes nulos, truncados o inv\'alidos, y registrarlos como no analizables en lugar de fallar (requisito RF-ING-09, regla REG-11).
+
+\end{description}
+
+\section{Consecuencias para el dise\~no del cat\'alogo de reglas}
+
+A partir de estos hallazgos se definieron cuatro clases de evidencia, ya introducidas en la Secci\'on~\ref{sec:limitacion-evidencia} y utilizadas en el cat\'alogo de reglas (Secci\'on~\ref{sec:catalogo-reglas}): la clase \textbf{A} (evidencia del plan estimado, siempre disponible con el permiso m\'inimo de solo lectura), la clase \textbf{B} (estad\'isticas de ejecuci\'on agregadas por plan, tambi\'en disponibles por defecto), la clase \textbf{D} (combinaci\'on de m\'ultiples planes hist\'oricos de una misma consulta con sus estad\'isticas agregadas) y la clase \textbf{C} (plan real, de disponibilidad opcional y dependiente de una decisi\'on expl\'icita del administrador de la base de datos). Las reglas que dependen \'unicamente de evidencia de clase A se establecieron como requisitos de prioridad \textbf{Debe}, por estar garantizadas con el nivel de acceso m\'inimo que exige este proyecto; las reglas que dependen de evidencia de clase C se establecieron como requisitos de prioridad \textbf{Podr\'ia}, reservadas para un entorno de laboratorio en el que dicha funci\'on opcional se habilite deliberadamente para fines de prueba.
+
+\section{Estado de la verificaci\'on emp\'irica}
+
+Los hallazgos F1 a F8 est\'an sustentados en documentaci\'on t\'ecnica oficial del fabricante del motor de base de datos, consultada y contrastada de forma exhaustiva. Sin embargo, y en cumplimiento del principio de honestidad t\'ecnica que gobierna todo este proyecto, es necesario declarar expl\'icitamente que estos hallazgos documentales a\'un \textbf{no han sido confirmados mediante la ejecuci\'on directa contra una instancia real} de SQL Server por parte del equipo. Existe un protocolo de verificaci\'on emp\'irica dise\~nado y listo para ejecutarse -- que compara, mediante escenarios de prueba controlados (conversi\'on impl\'icita de tipos, b\'usqueda por clave forzada, \'indice deliberadamente ausente, sesgo de datos que provoca un error de estimaci\'on de cardinalidad, y una consulta de ordenamiento con memoria deliberadamente restringida para forzar un desbordamiento), lo que efectivamente qued\'o almacenado en \textit{Query Store} frente a lo que muestra el plan real capturado en el mismo momento -- pero su ejecuci\'on y el registro de sus resultados quedan como una decisi\'on abierta de este proyecto (DA-07, Secci\'on~\ref{sec:decisiones}). Hasta que dicho protocolo se ejecute y su informe se publique como anexo versionado (requisito RF-EVA-04), las afirmaciones de este ap\'endice deben leerse como el resultado de un an\'alisis documental riguroso, no como el resultado de un experimento ya realizado, y no se afirma eficacia, precisi\'on ni exhaustividad del motor o de la inteligencia artificial.
+
+\chapter{Ejemplo del contrato de datos de un hallazgo}
+\label{ap:contrato}
+
+Con el fin de ilustrar de forma concreta qu\'e significa, en la pr\'actica, que un hallazgo sea \textquotedblleft trazable a su evidencia\textquotedblright{} (requisito RF-MOT-03), este ap\'endice presenta un ejemplo \textbf{ilustrativo y no vinculante} de la estructura de datos de un hallazgo. El contrato de datos definitivo, con su esquema formal y su versionado, es una decisi\'on de dise\~no detallado posterior a este documento (requisito RF-MOT-17).
+
+\begin{lstlisting}[language=json,caption={Ejemplo ilustrativo de un hallazgo generado por la regla REG-01},label={lst:hallazgo}]
+{
+  "finding_id": "F-000123",
+  "rule": {
+    "id": "REG-01",
+    "name": "Conversion implicita que afecta el plan",
+    "version": "1.0.0"
+  },
+  "kind": "SENAL",
+  "severity": "ALTA",
+  "evidence_class": "ESTIMADA",
+  "query_id": 4521,
+  "plan_id": 9917,
+  "nodes": [
+    { "node_id": 5, "physical_op": "Clustered Index Scan" }
+  ],
+  "evidence": {
+    "convert_issue": "Seek Plan",
+    "expression": "CONVERT_IMPLICIT(nvarchar(20),[Documento],0)=[@d]"
+  },
+  "context": {
+    "executions": 1840,
+    "query_consumption_pct": 3.2
+  },
+  "thresholds_used": {},
+  "engine_version": "16.0.x",
+  "analyzed_at": "2026-10-05T14:22:31Z"
+}
+\end{lstlisting}
+
+N\'otese que el campo \texttt{evidence\_class} declara expl\'icitamente que este hallazgo proviene de un plan estimado, que el campo \texttt{kind} declara su naturaleza de se\~nal a investigar, que el campo \texttt{context} contiene los datos usados para evaluarlo, y que el campo \texttt{evidence} contiene los valores textuales exactos extra\'idos del plan, lo que permite a un usuario o a un auditor verificar manualmente, contra el plan de ejecuci\'on original, que el hallazgo es correcto.
+
+\chapter{Registro de valores num\'ericos}
+\label{ap:valores}
+
+Este ap\'endice clasifica cada valor num\'erico del documento seg\'un su respaldo, para distinguir lo que proviene de una fuente de lo que es una meta de ingenier\'ia, un par\'ametro configurable o una decisi\'on de dise\~no por validar.
+
+\begin{footnotesize}
+\begin{xltabular}{\linewidth}{@{}p{3.6cm}p{2.5cm}p{2.7cm}X@{}}
+\caption{Registro de valores num\'ericos y su respaldo}\label{tab:valores}\\
+\toprule
+\textbf{Valor} & \textbf{D\'onde se usa} & \textbf{Tipo} & \textbf{Fuente o estado} \\
+\midrule
+\endfirsthead
+\multicolumn{4}{l}{\textit{(Continuaci\'on del Cuadro \ref{tab:valores})}} \\
+\toprule
+\textbf{Valor} & \textbf{D\'onde se usa} & \textbf{Tipo} & \textbf{Fuente o estado} \\
+\midrule
+\endhead
+\midrule \multicolumn{4}{r}{\textit{Contin\'ua en la p\'agina siguiente}} \\
+\endfoot
+\bottomrule
+\endlastfoot
+TLS 1.2 o superior & RNF-SEG-03 & Norma o gu\'ia & \cite{R13,R15} \\
+Agregaci\'on de 60 min y retenci\'on de 30 d\'ias de \textit{Query Store} & Ap\'endice~\ref{ap:spike}, DA-03 & Documentaci\'on & \cite{R8} \\
+Ganancia estimada de CPU de 10 s & REG-08 & Documentaci\'on & \cite{R36} \\
+Inactividad de sesi\'on & RNF-SEG-13 & Rango de referencia; valor por definir & \cite{R37}; DA-06 \\
+SUS $\geq$ 68 & RNF-INT-02 & Literatura & \cite{R28} \\
+Muestra de 5 desarrolladores, 80\,\% y 3 minutos & RNF-INT-01 & Meta de ingenier\'ia \dagsym{} & La muestra de 5 usuarios se apoya en la literatura de usabilidad~\cite{R27}; el resto no tiene fuente; DA-06 \\
+Precisi\'on $\geq$ 90\,\% y exhaustividad $\geq$ 80\,\% & RNF-FUN-01 & Meta de ingenier\'ia \dagsym{} & Sin fuente; DA-06 \\
+90\,\% en el primer intento y 100\,\% de valores num\'ericos & RNF-FUN-03 & Meta de ingenier\'ia \dagsym{} & Sin fuente; DA-06 \\
+Tasa de falsos pasantes & RNF-FUN-03 & Por definir & Se fija tras medir la l\'inea base; DA-06 \\
+5\,\% de CPU y 0 esperas de bloqueo & RNF-RND-01 & Meta de ingenier\'ia \dagsym{} & Sin fuente; DA-06 \\
+$\leq$ 2 s y $\leq$ 3 s con 5\,000 consultas & RNF-RND-02 & Meta de ingenier\'ia \dagsym{} & Sin fuente; el volumen es un escenario de prueba definido por el equipo \\
+$\leq$ 30 s y $\leq$ 2 s & RNF-RND-03 & Meta de ingenier\'ia \dagsym{} & Sin fuente; DA-06 \\
+$\leq$ 500 ms para 1 MB & RNF-RND-04 & Meta de ingenier\'ia \dagsym{} & Sin fuente; DA-06 \\
+Cobertura de l\'ineas $\geq$ 80\,\% & RNF-MAN-02 & Meta de ingenier\'ia \dagsym{} & Sin fuente; DA-06 \\
+Instalaci\'on en $\leq$ 60 min & RNF-FLE-01 & Meta de ingenier\'ia \dagsym{} & Sin fuente; DA-06 \\
+Tiempos l\'imite de 15 s (conexi\'on) y 60 s con 2 reintentos (IA) & RF-CFG-02, RNF-FIA-02 & Par\'ametro de ingenier\'ia configurable & Sin fuente; valores iniciales ajustables \\
+10 casos de inyecci\'on, 30 consultas, 30 explicaciones y dos revisores & RNF-SEG-06, Secci\'on~\ref{sec:verificacion-ia} & Tama\~no m\'inimo de muestra \dagsym{} & Sin fuente; DA-10 \\
+Umbrales de las reglas, excepto el de REG-08 & Cuadro~\ref{tab:umbrales} & Por calibrar & Procedimiento de la Secci\'on~\ref{sec:protocolo-motor}; DA-02 \\
+Ponderaciones igualitarias y espaciado uniforme de la severidad & RF-SCO-02 & Decisi\'on de dise\~no por validar & M\'etodo~\cite{R32}; validaci\'on con RF-EVA-05; DA-01 \\
+\end{xltabular}
+\end{footnotesize}
+
+\chapter{Referencias}
+\label{ap:referencias}
+
+Esta lista contiene la totalidad de las referencias citadas a lo largo de este documento mediante el formato numérico [\#].
+
+\begin{thebibliography}{99}
+
+\bibitem{R1} International Organization for Standardization, International Electrotechnical Commission, \& Institute of Electrical and Electronics Engineers. (2018). \textit{ISO/IEC/IEEE 29148:2018 -- Systems and software engineering -- Life cycle processes -- Requirements engineering}.
+
+\bibitem{R2} International Organization for Standardization. (2023). \textit{ISO/IEC 25010:2023 -- Systems and software engineering -- Systems and software Quality Requirements and Evaluation (SQuaRE) -- Product quality model}.
+
+\bibitem{R3} Microsoft. \textit{How Query Store collects data}. Microsoft Learn. \url{https://learn.microsoft.com/en-us/sql/relational-databases/performance/how-query-store-collects-data}
+
+\bibitem{R4} Microsoft. \textit{sys.query\_store\_plan (Transact-SQL)}. Microsoft Learn. \url{https://learn.microsoft.com/sql/relational-databases/system-catalog-views/sys-query-store-plan-transact-sql}
+
+\bibitem{R5} Microsoft. \textit{sys.query\_store\_runtime\_stats (Transact-SQL)}. Microsoft Learn. \url{https://learn.microsoft.com/sql/relational-databases/system-catalog-views/sys-query-store-runtime-stats-transact-sql}
+
+\bibitem{R6} Microsoft. \textit{Display the estimated execution plan; Display an actual execution plan; Display and save execution plans}. Microsoft Learn. \url{https://learn.microsoft.com/sql/relational-databases/performance/display-the-estimated-execution-plan}
+
+\bibitem{R7} Microsoft. \textit{sys.dm\_exec\_query\_plan\_stats (Transact-SQL)}. Microsoft Learn. \url{https://learn.microsoft.com/sql/relational-databases/system-dynamic-management-views/sys-dm-exec-query-plan-stats-transact-sql}
+
+\bibitem{R8} Microsoft. \textit{Manage the Query Store}. Microsoft Learn. \url{https://learn.microsoft.com/sql/relational-databases/performance/manage-the-query-store}
+
+\bibitem{R9} Microsoft. (2022, 18 de agosto). \textit{Query Store is enabled by default in SQL Server 2022}. SQL Server Blog. \url{https://www.microsoft.com/en-us/sql-server/blog/2022/08/18/query-store-is-enabled-by-default-in-sql-server-2022/}
+
+\bibitem{R10} Microsoft SQL Server Team. \textit{SQL Server 2016 -- Added information on TempDB spill events -- Showplan}. \url{https://blogs.msdn.microsoft.com/sql_server_team/sql-server-2016-added-information-on-tempdb-spill-events-showplan}
+
+\bibitem{R11} Redgate Simple Talk. \textit{Checking the plan cache warnings for a SQL Server database}. \url{https://www.red-gate.com/simple-talk/databases/sql-server/t-sql-programming-sql-server/checking-the-plan-cache-warnings-for-a-sql-server-database/}
+
+\bibitem{R12} OWASP Foundation. (2025). \textit{OWASP Top 10 for LLM Applications 2025}. \url{https://genai.owasp.org/llm-top-10/}
+
+\bibitem{R13} OWASP Foundation. (2025). \textit{OWASP Application Security Verification Standard (ASVS) 5.0.0}. \url{https://github.com/OWASP/ASVS}
+
+\bibitem{R14} Congreso de la Rep\'ublica de Colombia. (2012). \textit{Ley Estatutaria 1581 de 2012, por la cual se dictan disposiciones generales para la protecci\'on de datos personales}.
+
+\bibitem{R15} Rescorla, E. (2018). \textit{RFC 8446: The Transport Layer Security (TLS) Protocol Version 1.3}. Internet Engineering Task Force. \url{https://www.rfc-editor.org/rfc/rfc8446}; Dierks, T., \& Rescorla, E. (2008). \textit{RFC 5246: The Transport Layer Security (TLS) Protocol Version 1.2}. Internet Engineering Task Force.
+
+\bibitem{R16} Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., K\"uttler, H., Lewis, M., Yih, W., Rockt\"aschel, T., Riedel, S., \& Kiela, D. (2020). Retrieval-augmented generation for knowledge-intensive NLP tasks. \textit{Advances in Neural Information Processing Systems}, 33.
+
+\bibitem{R17} Es, S., James, J., Espinosa-Anke, L., \& Schockaert, S. (2023). RAGAS: Automated evaluation of retrieval augmented generation. \textit{arXiv preprint arXiv:2309.15217}.
+
+\bibitem{R18} Ji, Z., Lee, N., Frieske, R., Yu, T., Su, D., Xu, Y., Ishii, E., Bang, Y., Madotto, A., \& Fung, P. (2023). Survey of hallucination in natural language generation. \textit{ACM Computing Surveys}, 55(12), 1--38.
+
+\bibitem{R19} Zhou, X., Li, G., Sun, Z., Liu, Z., Chen, W., Wu, J., Liu, J., Feng, R., \& Zeng, G. (2023). D-Bot: Database diagnosis system using large language models. \textit{arXiv preprint arXiv:2312.01454}.
+
+\bibitem{R20} Leis, V., Gubichev, A., Mirchev, A., Boncz, P., Kemper, A., \& Neumann, T. (2015). How good are query optimizers, really? \textit{Proceedings of the VLDB Endowment}, 9(3), 204--215.
+
+\bibitem{R21} Transaction Processing Performance Council. \textit{TPC Benchmark H (Decision Support) Standard Specification}. \url{https://www.tpc.org/tpch/}
+
+\bibitem{R22} Cohn, M. (2004). \textit{User stories applied: For agile software development}. Addison-Wesley; Wake, B. (2003). INVEST in good stories, and SMART tasks. \textit{XP123}.
+
+\bibitem{R23} Mavin, A., Wilkinson, P., Harwood, A., \& Novak, M. (2009). Easy Approach to Requirements Syntax (EARS). \textit{Proceedings of the 17th IEEE International Requirements Engineering Conference}.
+
+\bibitem{R24} Clegg, D., \& Barker, R. (1994). \textit{Case Method Fast-Track: A RAD approach}. Addison-Wesley; Agile Business Consortium. \textit{DSDM Agile Project Framework} (MoSCoW prioritisation).
+
+\bibitem{R25} Cockburn, A. (2001). \textit{Writing effective use cases}. Addison-Wesley.
+
+\bibitem{R26} North, D. (2006). Introducing BDD. \textit{Better Software}.
+
+\bibitem{R27} Nielsen, J. (1993). \textit{Usability engineering}. Morgan Kaufmann; Nielsen, J., \& Landauer, T. K. (1993). A mathematical model of the finding of usability problems. \textit{Proceedings of INTERCHI '93}.
+
+\bibitem{R28} Brooke, J. (1996). SUS: A \textquotedblleft quick and dirty\textquotedblright{} usability scale. En \textit{Usability evaluation in industry}. Taylor \& Francis; Sauro, J., \& Lewis, J. R. (2016). \textit{Quantifying the user experience} (2.\textsuperscript{a} ed.). Morgan Kaufmann.
+
+\bibitem{R29} World Wide Web Consortium. (2023). \textit{Web Content Accessibility Guidelines (WCAG) 2.2}. \url{https://www.w3.org/TR/WCAG22/}
+
+\bibitem{R30} Microsoft. \textit{Tune nonclustered indexes with missing index suggestions}. Microsoft Learn. \url{https://learn.microsoft.com/en-us/sql/relational-databases/indexes/tune-nonclustered-missing-index-suggestions}
+
+\bibitem{R31} Cohen, J. (1960). A coefficient of agreement for nominal scales. \textit{Educational and Psychological Measurement}, 20(1), 37--46.
+
+\bibitem{R32} Nardo, M., Saisana, M., Saltelli, A., Tarantola, S., Hoffmann, A., \& Giovannini, E. (2008). \textit{Handbook on constructing composite indicators: Methodology and user guide}. OECD Publishing. \url{https://www.oecd.org/en/publications/handbook-on-constructing-composite-indicators_533411815016.html}
+
+\bibitem{R33} Microsoft. \textit{KB3190762 -- Update to improve diagnostics for query execution plans that involve residual predicate pushdown in SQL Server 2016}. Microsoft Support. \url{https://support.microsoft.com/help/3190762}
+
+\bibitem{R34} Microsoft. \textit{Best practices for monitoring workloads with Query Store}. Microsoft Learn. \url{https://learn.microsoft.com/en-us/sql/relational-databases/performance/best-practice-with-the-query-store}
+
+\bibitem{R35} Moerkotte, G., Neumann, T., \& Steidl, G. (2009). Preventing bad plans by bounding the impact of cardinality estimation errors. \textit{Proceedings of the VLDB Endowment}, 2(1), 982--993.
+
+\bibitem{R36} Microsoft. \textit{Automatic tuning}. Microsoft Learn. \url{https://learn.microsoft.com/en-us/sql/relational-databases/automatic-tuning/automatic-tuning}
+
+\bibitem{R37} OWASP Foundation. \textit{Session Management Cheat Sheet}. \url{https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html}
+
+\end{thebibliography}
+
+
+\end{document}
