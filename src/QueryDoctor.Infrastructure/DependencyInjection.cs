@@ -14,6 +14,7 @@ using QueryDoctor.Application.Engine.Parsing;
 using QueryDoctor.Application.Engine.Rules;
 using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Application.KnowledgeBase;
+using QueryDoctor.Application.Masking;
 using QueryDoctor.Application.Scoring;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Domain.Analysis;
@@ -135,6 +136,16 @@ public static class DependencyInjection
         services.AddScoped<IngestConnection>();
         services.AddScoped<IngestConnectionJob>();
 
+        return services;
+    }
+
+    /// <summary>
+    /// Enmascarador de literales (S2-04, RNF-SEG-05): SOLO para el Worker, que es quien arma el contexto hacia la
+    /// IA (invariante 2). No recibe configuración a propósito: no existe clave que lo desactive (CA-HU21.4).
+    /// </summary>
+    public static IServiceCollection AddLiteralMasking(this IServiceCollection services)
+    {
+        services.AddSingleton<IMasker, LiteralMasker>();
         return services;
     }
 

@@ -47,7 +47,7 @@ sin E/S**. NetArchTest (S1-03) debe vigilar:
 | PlanParser | RF-MOT-01, RNF-COM-02 | `IPlanParser` | S1-12 (Joel) |
 | RuleEngine + REG-xx | RF-MOT-02..17 | `IRule`, `IRuleCatalog` | S1-13/14, S2-01 (Joel) |
 | HealthScoreCalculator | RF-SCO-01..06 | función pura | S2-02 (Joel) |
-| LiteralMasker (ScriptDom, TSql160Parser) | RNF-SEG-05/09 | `IMasker` | S2-04 (Álvaro) |
+| LiteralMasker (ScriptDom 180.154.0, `TSql170Parser`) | RNF-SEG-05/09 | `IMasker` | S2-04 (Álvaro) |
 | ExplanationContextBuilder + caché (SHA-256 de JSON canónico) | RF-IA-01/04/07 | — | S2-05 (Álvaro) |
 | ExplanationValidator | RF-IA-02/03/10/12 | función pura | S2-03 (Joel) |
 | TraceLog / AuditLog (solo adición, encadenados) | RF-TRZ-01..05 | — | S2-06 (Álvaro) |
@@ -104,7 +104,7 @@ Endpoints API: `/connections`, `/ingestions`, `/queries`, `/plans/{id}`, `/findi
 | DA-05 | Resuelta | .NET 10, Python, React+TS, PostgreSQL, Hangfire, Identity |
 | DA-09 | Resuelta | ADR-09 |
 | DA-12 | Resuelta | 2016 "Compatible sin pruebas"; aceptación en 2019, 2022 y Azure SQL DB |
-| DA-13 | Resuelta como riesgo residual | Nombres de objetos viajan sin seudonimizar; seudonimización planificada después |
+| DA-13 | **Abierta en el SRS** (tabla 8.1) | El equipo la tomó como riesgo residual el 28-oct (§8.2), pero falta ratificarla. Mientras tanto los nombres de objetos viajan sin seudonimizar (S2-04 los conserva) |
 | DA-01, 06, 10 | **Abiertas** | Ratificar con el tutor (S1-20) |
 | DA-02 | **Abierta** | Calibrar umbrales con el laboratorio (S3-01) |
 | DA-07 | **Propuesta de cierre lista (S1-07)** | Protocolo empírico F1–F8 ejecutado en SQL Server 2022 (`lab/results/S1-07-verificacion.md`); pendiente ratificación en S1-20 e informe final RF-EVA-04 (S3-05) |
@@ -181,6 +181,35 @@ entran en el Query Store objetivo; `statement_log` en memoria sin límite (B9, a
 crece con cada ingesta); prueba de corte de red de RNF-FIA-01 al Sprint 2.
 
 > **Nota sobre nomenclatura F#:** En `ARQUITECTURA_v0.1.md` §9 las siglas **F1–F4** denotan *fronteras de confianza*, mientras que en el SRS (Apéndice A) y en `lab/results/S1-07-verificacion.md` las siglas **F1–F8** denotan los *hallazgos documentales y empíricos de Query Store*.
+
+## Decisiones de implementación de S2-04 (LiteralMasker)
+Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA. Código en `QueryDoctor.Application.Masking`
+y el puerto hacia la IA en `QueryDoctor.Application.Ai`.
+
+| ID | Decisión |
+|---|---|
+| D1 | Fallo cerrado por componente y RA-03: si el SQL no tokeniza, la solicitud viaja con `sql_text = ""` y con los hallazgos enmascarados. Si no queda ningún hallazgo enviable, no se envía nada (RF-IA-01) |
+| D2 | Marcadores tipados `@qd_str_N`, `@qd_num_N`, `@qd_bin_N`, `@qd_date_N` y `@qd_guid_N`, numerados por orden de aparición. El prefijo `qd_` evita chocar con los `@p1` reales de Query Store |
+| D3 | Dentro de una solicitud, el mismo tipo con el mismo texto exacto recibe el mismo marcador, en el SQL, el plan y la evidencia. Revela igualdad, nunca el valor |
+| D4 | El texto entre comillas dobles (`AsciiStringOrQuotedIdentifier`) se enmascara siempre, porque con `QUOTED_IDENTIFIER OFF` es una cadena |
+| D5 | Cada clave de evidencia está clasificada en `EvidenceMasker`: fragmento SQL, conservada o descartada (`cause` de REG-11). Una clave sin clasificar deja fuera ese hallazgo, y una prueba guardiana corre el catálogo real |
+| D6 | Plan estricto: cualquier fallo deja el plan entero no enviable. Hay denegación por defecto de atributos (corrección de H1): portadores que pasan por el lexer, lista blanca de atributos conservados, y cualquier otro atributo da `PlanUnknownAttribute` |
+| D7 | `TSql170Parser` en lugar del `TSql160Parser` de §5.1: para tokenizar solo agrega palabras clave y cubre Azure SQL |
+| D8 | Límite de 1 M caracteres para el SQL, como constante y no configurable. El plan usa los límites de `PlanParserOptions` |
+| D9 | `MaskingArchitectureTests` (archivo nuevo): `Masking` es puro, sin logging, `Configuration` ni `Options`, y ScriptDom solo se usa dentro de `Masking` |
+
+**Mecánica que conviene conocer:**
+- `IMasker.Mask(MaskingInput)` es una sola llamada pura. Recorre en orden fijo: primero el SQL, luego el plan en orden de documento, y por último los hallazgos por `finding_id` con sus claves en orden ordinal.
+- Los comentarios se eliminan completos. Nunca se propaga ni se registra el mensaje de ScriptDom ni el de XmlException, porque repiten el texto de entrada.
+- `MaskedExplanationRequest` solo se construye desde un `MaskedContext`, y su `ToWireJson()` refleja `ExplainRequest` de S1-18. En el cuerpo, `description` lleva por ahora el nombre de la regla. El plan enmascarado no viaja todavía, porque S1-18 no tiene ese campo.
+- El Worker registra el enmascarador con `AddLiteralMasking()`, que no recibe configuración (CA-HU21.4).
+
+**Deuda de S2-04:** la seudonimización de nombres depende de DA-13. Las estimaciones (`TOP (n)`, que da `EstimateRows = n`) pueden
+reproducir un literal (H2). Los identificadores entre corchetes pueden llevar instrucciones (H3, lo cubre S2-07). La regla
+de arquitectura no le impide a la Api usar `Application.Ai` ni `Masking` (H4). La barrera por tipos es `internal`, así que
+cualquier tipo de Application puede saltarla (H5). Falta una prueba de contrato contra el esquema Pydantic (H6). Falta
+repetir la suite con el cliente HTTP real (S2-05). La lista blanca del plan viene de los planes de SQL Server 2022:
+un plan de 2019 o Azure con atributos nuevos queda no enviable hasta catalogarlos.
 
 ## Riesgos que afectan al código (§14.1)
 - **RA-03:** si ScriptDom no puede tokenizar el SQL, se envía solo el contexto de hallazgos,
