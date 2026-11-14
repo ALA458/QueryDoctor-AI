@@ -143,14 +143,29 @@ services:
       api:
         condition: service_healthy
 
-  # Servicio de IA: placeholder hasta S1-18. Única salida a Internet (egress-ai).
+  # Servicio de IA: FastAPI con adaptador de LLM integrado (S1-18, ADR-02, ADR-10). Única salida a Internet (egress-ai).
   ai:
     build:
       context: ./ai-service
     restart: unless-stopped
+    environment:
+      APP_ENV: ${APP_ENV:-dev}
+      LLM_PROFILE: ${LLM_PROFILE:-openrouter_free}
+      ALLOW_DATA_SHARING_PROVIDER: ${ALLOW_DATA_SHARING_PROVIDER:-true}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
     networks:
       - backend
       - egress-ai
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
 volumes:
   pgdata:
   mssqldata:
