@@ -10,8 +10,10 @@ using Microsoft.Extensions.Options;
 using Npgsql;
 using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Connections;
+using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Infrastructure.Connections;
+using QueryDoctor.Infrastructure.Ingestion;
 using QueryDoctor.Infrastructure.Persistence;
 using QueryDoctor.Infrastructure.Security;
 using QueryDoctor.Infrastructure.Telemetry;
@@ -46,6 +48,7 @@ public static class DependencyInjection
             services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
             services.AddScoped<IConnectionRepository, EfConnectionRepository>();
             services.AddScoped<IConnectionQueries, EfConnectionQueries>();
+            services.AddScoped<IIngestionQueries, EfIngestionQueries>();
         }
 
         return services;
@@ -59,6 +62,48 @@ public static class DependencyInjection
     {
         services.AddScoped<IProbeJobScheduler, HangfireProbeJobScheduler>();
         services.AddScoped<RegisterConnection>();
+        return services;
+    }
+
+    /// <summary>
+    /// Ingesta manual para la Api (S1-11): valida y encola ingest_connection. No registra el Gateway ni el lector de
+    /// Query Store: la Api nunca se conecta a bases objetivo (invariante 2).
+    /// </summary>
+    public static IServiceCollection AddIngestionRequests(this IServiceCollection services)
+    {
+        services.AddScoped<IIngestionJobScheduler, HangfireIngestionJobScheduler>();
+        services.AddScoped<RequestIngestion>();
+        return services;
+    }
+
+    /// <summary>
+    /// Ingesta incremental: SOLO para el Worker, junto con <see cref="AddTargetTelemetry"/> (S1-11, §6.2). Necesita
+    /// PostgreSQL: sin cadena de conexión no se registra (igual que la persistencia).
+    /// </summary>
+    public static IServiceCollection AddIngestion(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var connectionString = GetPostgresConnectionString(configuration);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return services;
+        }
+
+        services.Configure<IngestionOptions>(configuration.GetSection(IngestionOptions.SectionName));
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<IngestionOptions>>().Value;
+            options.Validate();
+            return options;
+        });
+
+        services.AddSingleton<IIngestionLock>(_ => new PostgresIngestionLock(connectionString));
+        services.AddScoped<IQueryStoreReader, QueryStoreReader>();
+        services.AddScoped<IIngestionStore, EfIngestionStore>();
+        services.AddScoped<IngestConnection>();
+        services.AddScoped<IngestConnectionJob>();
+
         return services;
     }
 

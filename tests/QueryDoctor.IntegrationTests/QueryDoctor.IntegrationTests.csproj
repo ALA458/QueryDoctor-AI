@@ -21,6 +21,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- S1-11: los mismos dobles de lectura de Query Store que las pruebas unitarias, sin copiarlos. -->
+  <ItemGroup>
+    <Compile Include="..\QueryDoctor.UnitTests\Ingestion\IngestionTestDoubles.cs" Link="Doubles\IngestionTestDoubles.cs" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\..\src\QueryDoctor.Infrastructure\QueryDoctor.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\QueryDoctor.Api\QueryDoctor.Api.csproj" />
