@@ -4,6 +4,11 @@
     <ProjectReference Include="..\QueryDoctor.Domain\QueryDoctor.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- S2-04 / RNF-SEG-05: analizador léxico oficial de T-SQL (MIT, sin dependencias). Solo lo usa QueryDoctor.Application.Masking. -->
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="180.154.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
