@@ -167,7 +167,7 @@ public sealed class TraceabilityEndpointsTests(PostgresFixture postgres) : IDisp
             seq = db.TraceEntries.Single(t => t.ExplanationId == explanation).Seq;
         }
 
-        await TamperAsync($"UPDATE audit.trace_entry SET validation_status = 'NO_VERIFICADA' WHERE seq = {seq}");
+        await TamperAsync("UPDATE audit.trace_entry SET validation_status = 'NO_VERIFICADA' WHERE seq = @seq", seq);
         try
         {
             var result = await client.GetFromJsonAsync<JsonElement>("/trace/verify");
@@ -178,7 +178,7 @@ public sealed class TraceabilityEndpointsTests(PostgresFixture postgres) : IDisp
         }
         finally
         {
-            await TamperAsync($"UPDATE audit.trace_entry SET validation_status = 'TRAZADA' WHERE seq = {seq}");
+            await TamperAsync("UPDATE audit.trace_entry SET validation_status = 'TRAZADA' WHERE seq = @seq", seq);
         }
 
         Assert.True((await client.GetFromJsonAsync<JsonElement>("/trace/verify")).GetProperty("intact").GetBoolean());
@@ -212,7 +212,8 @@ public sealed class TraceabilityEndpointsTests(PostgresFixture postgres) : IDisp
         Assert.Equal(HttpStatusCode.Forbidden, audit.StatusCode);
     }
 
-    private async Task TamperAsync(string sql)
+    // SQL constante con la seq como parámetro (cs/sql-injection).
+    private async Task TamperAsync(string sql, long seq)
     {
         await using var connection = new NpgsqlConnection(postgres.ConnectionString);
         await connection.OpenAsync();
@@ -222,6 +223,7 @@ public sealed class TraceabilityEndpointsTests(PostgresFixture postgres) : IDisp
         }
 
         await using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.AddWithValue("seq", seq);
         await command.ExecuteNonQueryAsync();
     }
 }

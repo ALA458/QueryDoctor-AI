@@ -26,7 +26,9 @@ public sealed class TraceabilityPersistenceTests(PostgresFixture postgres)
         return await new EfTraceabilityQueries(db).VerifyAuditAsync(CancellationToken.None);
     }
 
-    private async Task ExecuteAsync(string sql, bool bypassTrigger = false)
+    // El SQL es siempre constante y los valores van como parámetros: así la alteración a mano no depende de cómo
+    // se escriban los datos (comillas, nulos, fechas) y CodeQL no ve SQL armado con datos (cs/sql-injection).
+    private async Task ExecuteAsync(string sql, bool bypassTrigger = false, params NpgsqlParameter[] parameters)
     {
         await using var connection = new NpgsqlConnection(postgres.ConnectionString);
         await connection.OpenAsync();
@@ -37,8 +39,11 @@ public sealed class TraceabilityPersistenceTests(PostgresFixture postgres)
         }
 
         await using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.AddRange(parameters);
         await command.ExecuteNonQueryAsync();
     }
+
+    private static NpgsqlParameter P(string name, object? value) => new(name, value ?? DBNull.Value);
 
     [Fact]
     public async Task LosEventosSeEncadenanConSeqConsecutivaYLaCadenaVerifica()
@@ -58,25 +63,25 @@ public sealed class TraceabilityPersistenceTests(PostgresFixture postgres)
     }
 
     [Theory]
-    [InlineData("UPDATE audit.audit_event SET user_name = 'otro' WHERE seq = {0}")]
-    [InlineData("DELETE FROM audit.audit_event WHERE seq = {0}")]
+    [InlineData("UPDATE audit.audit_event SET user_name = 'otro' WHERE seq = @seq")]
+    [InlineData("DELETE FROM audit.audit_event WHERE seq = @seq")]
     [InlineData("TRUNCATE audit.audit_event")]
-    public async Task LaBaseRechazaModificarOBorrarEntradas(string sqlTemplate)
+    public async Task LaBaseRechazaModificarOBorrarEntradas(string sql)
     {
         // RF-TRZ-02 en la base, no solo en la aplicación.
         var seq = await AppendAsync(AuditEventType.LoginSucceeded, "dba");
 
-        var ex = await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync(string.Format(System.Globalization.CultureInfo.InvariantCulture, sqlTemplate, seq)));
+        var ex = await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync(sql, false, P("seq", seq)));
 
         Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, ex.SqlState);
         Assert.True((await VerifyAuditAsync()).IsIntact);
     }
 
     [Theory]
-    [InlineData("UPDATE audit.trace_entry SET model = 'otro' WHERE seq = {0}")]
-    [InlineData("DELETE FROM audit.trace_entry WHERE seq = {0}")]
+    [InlineData("UPDATE audit.trace_entry SET model = 'otro' WHERE seq = @seq")]
+    [InlineData("DELETE FROM audit.trace_entry WHERE seq = @seq")]
     [InlineData("TRUNCATE audit.trace_entry")]
-    public async Task LaBaseRechazaModificarOBorrarLaTraza(string sqlTemplate)
+    public async Task LaBaseRechazaModificarOBorrarLaTraza(string sql)
     {
         long seq;
         await using (var db = postgres.CreateContext())
@@ -96,7 +101,7 @@ public sealed class TraceabilityPersistenceTests(PostgresFixture postgres)
             seq = entry.Seq;
         }
 
-        var ex = await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync(string.Format(System.Globalization.CultureInfo.InvariantCulture, sqlTemplate, seq)));
+        var ex = await Assert.ThrowsAsync<PostgresException>(() => ExecuteAsync(sql, false, P("seq", seq)));
 
         Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, ex.SqlState);
         await using var read = postgres.CreateContext();
@@ -110,7 +115,7 @@ public sealed class TraceabilityPersistenceTests(PostgresFixture postgres)
         var seq = await AppendAsync(AuditEventType.ConnectionRegistered, "dba");
         await AppendAsync(AuditEventType.ManualIngestionRequested, "dba");
 
-        await ExecuteAsync($"UPDATE audit.audit_event SET outcome = 'rejected' WHERE seq = {seq}", bypassTrigger: true);
+        await ExecuteAsync("UPDATE audit.audit_event SET outcome = 'rejected' WHERE seq = @seq", true, P("seq", seq));
         try
         {
             var result = await VerifyAuditAsync();
@@ -121,7 +126,7 @@ public sealed class TraceabilityPersistenceTests(PostgresFixture postgres)
         }
         finally
         {
-            await ExecuteAsync($"UPDATE audit.audit_event SET outcome = 'ok' WHERE seq = {seq}", bypassTrigger: true);
+            await ExecuteAsync("UPDATE audit.audit_event SET outcome = 'ok' WHERE seq = @seq", true, P("seq", seq));
         }
 
         Assert.True((await VerifyAuditAsync()).IsIntact);
@@ -135,7 +140,7 @@ public sealed class TraceabilityPersistenceTests(PostgresFixture postgres)
         await using (var db = postgres.CreateContext())
         {
             var row = db.AuditEvents.Single(e => e.Seq == removed);
-            await ExecuteAsync($"DELETE FROM audit.audit_event WHERE seq = {removed}", bypassTrigger: true);
+            await ExecuteAsync("DELETE FROM audit.audit_event WHERE seq = @seq", true, P("seq", removed));
             try
             {
                 var result = await VerifyAuditAsync();
@@ -145,10 +150,21 @@ public sealed class TraceabilityPersistenceTests(PostgresFixture postgres)
             }
             finally
             {
+                // Se restaura la fila exacta, con todas sus columnas, para que la cadena vuelva a verificar.
                 await ExecuteAsync(
                     "INSERT INTO audit.audit_event (seq, recorded_at, event_type, user_id, user_name, subject_type, subject_id, outcome, prev_hash, entry_hash) " +
-                    $"VALUES ({row.Seq}, '{row.RecordedAt.UtcDateTime:yyyy-MM-dd HH:mm:ss.ffffff}+00', '{row.EventType}', '{row.UserId}', '{row.UserName}', NULL, NULL, '{row.Outcome}', '{row.PrevHash}', '{row.EntryHash}')",
-                    bypassTrigger: true);
+                    "VALUES (@seq, @recorded_at, @event_type, @user_id, @user_name, @subject_type, @subject_id, @outcome, @prev_hash, @entry_hash)",
+                    true,
+                    P("seq", row.Seq),
+                    P("recorded_at", row.RecordedAt.ToUniversalTime()),
+                    P("event_type", row.EventType.ToString()),
+                    P("user_id", row.UserId),
+                    P("user_name", row.UserName),
+                    P("subject_type", row.SubjectType),
+                    P("subject_id", row.SubjectId),
+                    P("outcome", row.Outcome),
+                    P("prev_hash", row.PrevHash),
+                    P("entry_hash", row.EntryHash));
             }
         }
 
