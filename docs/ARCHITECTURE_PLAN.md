@@ -211,6 +211,47 @@ cualquier tipo de Application puede saltarla (H5). Falta una prueba de contrato 
 repetir la suite con el cliente HTTP real (S2-05). La lista blanca del plan viene de los planes de SQL Server 2022:
 un plan de 2019 o Azure con atributos nuevos queda no enviable hasta catalogarlos.
 
+## Decisiones de implementación de S2-05 (contexto, caché y trabajo explain)
+Aprobadas por el responsable (Álvaro) en el PUNTO 1, más tres ajustes para seguir la arquitectura. No cierran ninguna DA.
+
+| ID | Decisión |
+|---|---|
+| E1 | El servicio de IA ya hace 60 s y 2 reintentos hacia el LLM (RNF-FIA-02). .NET hace **un solo intento** con tiempo total `AiService:TimeoutSeconds` = 200, y `explain` lleva `AutomaticRetry(Attempts = 0)`, para no multiplicar las llamadas al LLM |
+| E2 | La caché (RF-IA-07, Debería) **no se recortó**. La cola `explain` tiene su propio servidor Hangfire, que sondea cada 1 s, para CA-HU09.3. Solo se reutilizan explicaciones TRAZADA |
+| E3 | Hash SHA-256 del contexto canónico YA enmascarado, más catálogo, versión de cada regla, `prompt_version` y `llm_profile` (los dos leídos de `GET /info`). Sin `correlation_id`. Si `/info` no responde, no se usa la caché |
+| E4 | `ai.explanation`, más `ai.claim` (texto cifrado) y `ai.claim_reference` (hallazgo y nodos), como en §7. El cuerpo cifrado lleva estado, aviso, resumen y fallos del validador |
+| E5 | 422 del servicio o respuesta que no parsea → IA_NO_DISPONIBLE / `InvalidOutput`. Si la respuesta parsea pero no supera el validador → NO_VERIFICADA |
+| E6 | Las métricas del contexto salen del último `HealthScore`: ejecuciones, promedios por ejecución de duración, CPU y lecturas, consumo ponderado y score, redondeados a 4 decimales |
+| E7 | `GET …/latest` siempre devuelve los hallazgos del último análisis, junto con el aviso (CA-HU12.1). Cada afirmación trae sus hallazgos y nodos del plan (RF-DASH-05) |
+| E8 | `HttpClient` único con `SocketsHttpHandler`, sin paquetes nuevos. La dirección es `AiService:BaseUrl` (`http://ai:8000/` en el compose) |
+| E9 | Deuda de S2-04 cerrada: `description` del catálogo, prueba de contrato con `ExplainRequest` (H6), regla de arquitectura de la Api (H4) y suite de centinelas sobre el cuerpo HTTP real |
+| E10 | Si hay una explicación pendiente o en curso reciente, `POST` responde 409. Pasados 10 min se da por abandonada (`Abandoned`) |
+
+**Mecánica que conviene conocer:**
+- La Api (`Application.Explanations`) solo guarda la solicitud y encola `explain(explanationId)`. El Worker (`Application.Ai`) descifra, enmascara, arma el contexto, consulta la caché, llama a la IA, valida y guarda. NetArchTest le impide a la Api depender de `Application.Ai`, `Masking` e `Infrastructure.Ai/Explanations`.
+- Estados: `PENDIENTE`, `EN_CURSO`, `COMPLETADA` (TRAZADA o NO_VERIFICADA), `IA_NO_DISPONIBLE` (con causa `Timeout`, `ServiceUnreachable`, `ProviderError`, `InvalidOutput`, `Unexpected` o `Abandoned`) y `NO_GENERADA` (`NoFindings` o `NoSendableFindings`). Sin hallazgos, el `POST` responde `SIN_HALLAZGOS` y no encola nada.
+- Lo único que se registra son ids, estado, causa, conteos y `MaskingMetrics`. Los textos del modelo se recortan al largo de su columna (`ExplanationColumnLimits`, preauditoría P1).
+
+**Deuda de S2-05:**
+- La entrada de traza encadenada de RF-TRZ-01 es de S2-06: los datos ya están en `ai.explanation`.
+- CA-HU09.3 (≤ 2 s) no se midió de punta a punta.
+- RNF-RND-03 (≤ 30 s p95) no se cumple con 60 s × 3. Va a DA-06.
+- Dos `POST` simultáneos podrían encolar dos trabajos.
+- Si alguien configura `TimeoutSeconds` por encima de 10 min, se cruza con la ventana de abandono.
+- El canal Worker → `ai` es HTTP dentro de la red `backend` (el tramo hacia el LLM va con TLS).
+
+## Diferencias con ARQUITECTURA_v0.1 que hay que llevar al documento
+El código sigue estas decisiones. El documento de arquitectura aún no las refleja y debe corregirse. Ninguna contradice al SRS.
+
+| § | El documento dice | El código hace | Por qué | Quién decide |
+|---|---|---|---|---|
+| §5.3 | *Retriever* RAG con pgvector dentro del servicio de IA | .NET elige los fragmentos curados por regla y los envía en `kb_fragments` | Es determinista, cumple RF-IA-04 y usa los mismos ids que el validador .NET (RF-IA-03 c). El contrato de S1-18 ya lo recibía así | Equipo (Maykol, S1-17/S1-18) |
+| §5.1 | `TSql160Parser` | `TSql170Parser` (S2-04, D7) | Para tokenizar solo agrega palabras clave | Álvaro: corregir el documento |
+| §8.1 | Un filtro de registros que trunca el SQL | Ningún registro contiene SQL, así que el filtro no existe | — | Transversal: pendiente |
+| §8.2 | DA-13 resuelta | Abierta en el SRS (tabla 8.1) | El SRS manda | Tutor (S1-20) |
+| §11 | ADR-05, 06 y 11 "Propuesta" | Aceptadas según el plan de sprints | — | Equipo: corregir el documento |
+| RNF-RND-03 | ≤ 30 s p95 | 60 s × 3 por defecto (RNF-FIA-02) | Las dos metas del SRS chocan entre sí | Tutor (DA-06) |
+
 ## Riesgos que afectan al código (§14.1)
 - **RA-03:** si ScriptDom no puede tokenizar el SQL, se envía solo el contexto de hallazgos,
   **sin** texto SQL. Nunca regex como respaldo.

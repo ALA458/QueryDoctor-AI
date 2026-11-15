@@ -177,4 +177,6 @@ internal sealed class CapturingAiExplanationClient : IAiExplanationClient
         _bodies.Add(request.ToWireJson());
         return Task.FromResult("{}");
     }
+
+    public Task<AiServiceProfile?> GetProfileAsync(CancellationToken cancellationToken) => Task.FromResult<AiServiceProfile?>(null);
 }

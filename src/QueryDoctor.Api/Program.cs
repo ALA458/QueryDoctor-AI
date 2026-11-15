@@ -3,6 +3,7 @@ using Hangfire;
 using Microsoft.EntityFrameworkCore;
 using QueryDoctor.Api.Auth;
 using QueryDoctor.Api.Connections;
+using QueryDoctor.Api.Explanations;
 using QueryDoctor.Infrastructure;
 using QueryDoctor.Infrastructure.Persistence;
 
@@ -19,6 +20,9 @@ builder.Services.AddConnectionRegistration();
 
 // S1-11: ingesta manual. La Api valida y encola ingest_connection; la ingesta corre en el Worker (invariante 2).
 builder.Services.AddIngestionRequests();
+
+// S2-05: la Api solo guarda la solicitud de explicación y encola explain; nunca llama a la IA (invariante 2).
+builder.Services.AddExplanationRequests();
 
 // Enumerados como texto en las respuestas (contrato de S1-15), nunca como número.
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -62,6 +66,7 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapAuthEndpoints();
 app.MapConnectionEndpoints();
+app.MapExplanationEndpoints();
 
 app.Run();
 

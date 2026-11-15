@@ -114,6 +114,10 @@ services:
       Postgres__PasswordFile: /run/secrets/postgres_password
       # S1-09: misma clave maestra que la api, para descifrar las credenciales al sondear.
       Security__SecretProtector__MasterKeyPath: /run/secrets/master_encryption_key
+      # S2-05: el Worker es el único que llama al servicio de IA, por la red backend (invariante 2). Tiempo total
+      # de 200 s: el servicio ya hace 60 s y 2 reintentos hacia el LLM (RNF-FIA-02), así que aquí no se reintenta.
+      AiService__BaseUrl: http://ai:8000/
+      AiService__TimeoutSeconds: ${AI_SERVICE_TIMEOUT_SECONDS:-200}
       # La excepción de TLS del laboratorio NO va aquí: solo en docker-compose.lab.yml (invariante 3).
     secrets:
       - postgres_password
