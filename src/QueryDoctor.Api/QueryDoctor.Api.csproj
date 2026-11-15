@@ -19,4 +19,9 @@
     <ProjectReference Include="..\QueryDoctor.Infrastructure\QueryDoctor.Infrastructure.csproj" />
   </ItemGroup>
 
+  <!-- S2-12: el contexto de acceso de la solicitud es interno y se prueba en aislado (denegación por defecto, D7). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="QueryDoctor.UnitTests" />
+  </ItemGroup>
+
 </Project>

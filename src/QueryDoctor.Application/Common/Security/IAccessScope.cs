@@ -30,7 +30,9 @@ public interface IAccessScope
 
 /// <summary>
 /// Acceso completo de los procesos de la plataforma. Se registra de forma explícita en el host del Worker y se pasa
-/// a mano en las migraciones y en las pruebas; nunca se deduce de que "no hay usuario".
+/// a mano en la fábrica de diseño de EF y en las pruebas; nunca se deduce de que "no hay usuario". Las migraciones al
+/// arrancar la Api (<c>MigrateOnStartup</c>) y la siembra del DBA corren con <see cref="AccessKind.None"/>: no leen
+/// tablas filtradas.
 /// </summary>
 public sealed class SystemAccessScope : IAccessScope
 {

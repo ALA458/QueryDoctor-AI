@@ -2,16 +2,15 @@ using System.Security.Claims;
 using QueryDoctor.Api.Auditing;
 using QueryDoctor.Api.Auth;
 using QueryDoctor.Application.Connections;
-using QueryDoctor.Application.Traceability;
-using QueryDoctor.Domain.Audit;
 using QueryDoctor.Domain.Ops;
 
 namespace QueryDoctor.Api.Connections;
 
 /// <summary>
 /// Asignación de conexiones a Desarrolladores (S2-12, RNF-SEG-12). Solo DBA y CSRF por mismo origen
-/// (UseSameOriginForms cubre PUT y DELETE). Cada cambio real queda en la auditoría (RF-TRZ-05), con la conexión como
-/// objeto y el Desarrollador como usuario relacionado; repetir una asignación existente no deja un segundo evento.
+/// (UseSameOriginForms cubre PUT y DELETE). Cada cambio real queda en la auditoría (RF-TRZ-05) en la misma transacción
+/// que el cambio, con la conexión como objeto y el Desarrollador como usuario relacionado; repetir una asignación
+/// existente no deja un segundo evento.
 /// </summary>
 internal static class AssignmentEndpoints
 {
@@ -39,14 +38,9 @@ internal static class AssignmentEndpoints
         Guid userId,
         ManageConnectionAssignments useCase,
         ClaimsPrincipal principal,
-        IAuditLog audit,
         CancellationToken cancellationToken)
     {
-        var result = await useCase.AssignAsync(connectionId, userId, cancellationToken);
-        if (result is AssignConnectionResult.Assigned { Created: true })
-        {
-            await AuditAsync(audit, AuditEventType.ConnectionAssigned, principal, connectionId, userId, cancellationToken);
-        }
+        var result = await useCase.AssignAsync(connectionId, userId, Actor(principal), cancellationToken);
 
         return result switch
         {
@@ -68,17 +62,10 @@ internal static class AssignmentEndpoints
         Guid userId,
         ManageConnectionAssignments useCase,
         ClaimsPrincipal principal,
-        IAuditLog audit,
-        CancellationToken cancellationToken)
-    {
-        if (!await useCase.UnassignAsync(connectionId, userId, cancellationToken))
-        {
-            return Results.Problem(statusCode: StatusCodes.Status404NotFound, detail: "La asignación no existe.");
-        }
-
-        await AuditAsync(audit, AuditEventType.ConnectionUnassigned, principal, connectionId, userId, cancellationToken);
-        return Results.NoContent();
-    }
+        CancellationToken cancellationToken) =>
+        await useCase.UnassignAsync(connectionId, userId, Actor(principal), cancellationToken)
+            ? Results.NoContent()
+            : Results.Problem(statusCode: StatusCodes.Status404NotFound, detail: "La asignación no existe.");
 
     private static async Task<IResult> ListUsersAsync(string? role, ManageConnectionAssignments useCase, CancellationToken cancellationToken)
     {
@@ -92,24 +79,9 @@ internal static class AssignmentEndpoints
         return Results.Ok(await useCase.ListDevelopersAsync(cancellationToken));
     }
 
-    // S2-06 (T7): la auditoría es estricta y va después del cambio, como en el registro de conexiones.
-    private static Task AuditAsync(
-        IAuditLog audit,
-        AuditEventType type,
-        ClaimsPrincipal principal,
-        Guid connectionId,
-        Guid developerId,
-        CancellationToken cancellationToken) =>
-        audit.AppendAsync(
-            new AuditEventDraft(
-                type,
-                AuditTrail.UserId(principal),
-                AuditTrail.UserName(principal),
-                AuditEventDraft.OutcomeOk,
-                AuditEventDraft.SubjectConnection,
-                connectionId,
-                developerId),
-            cancellationToken);
+    // S2-06 (T7): la auditoría es estricta. Aquí va en la misma transacción que el cambio (la escribe el store).
+    private static AssignmentActor Actor(ClaimsPrincipal principal) =>
+        new(AuditTrail.UserId(principal), AuditTrail.UserName(principal));
 
     private static IResult ConnectionNotFound() =>
         Results.Problem(statusCode: StatusCodes.Status404NotFound, detail: "La conexión no existe.");

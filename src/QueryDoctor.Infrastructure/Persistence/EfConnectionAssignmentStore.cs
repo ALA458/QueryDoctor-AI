@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using QueryDoctor.Application.Connections;
+using QueryDoctor.Application.Traceability;
 using QueryDoctor.Domain.Ops;
+using QueryDoctor.Infrastructure.Traceability;
 
 namespace QueryDoctor.Infrastructure.Persistence;
 
@@ -39,19 +41,53 @@ public sealed class EfConnectionAssignmentStore : IConnectionAssignmentStore
             .Select(x => new AssignmentView(x.Id, x.UserName ?? string.Empty, x.AssignedAt))
             .ToListAsync(cancellationToken);
 
-    public async Task<bool> AssignAsync(Guid connectionId, Guid userId, DateTimeOffset assignedAt, CancellationToken cancellationToken)
+    public async Task<bool> AssignAsync(
+        Guid connectionId,
+        Guid userId,
+        DateTimeOffset assignedAt,
+        AuditEventDraft audit,
+        CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(audit);
+
+        // RF-TRZ-05: el cambio y su evento van en una transacción. Si la auditoría fallara después de confirmar la fila,
+        // el reintento (idempotente) ya no crearía nada y el evento se perdería para siempre.
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+
         // Idempotente también ante dos PUT a la vez: la clave (user_id, connection_id) decide, sin leer antes.
         var inserted = await _db.Database.ExecuteSqlAsync(
             $"INSERT INTO ops.user_connection (user_id, connection_id, assigned_at) VALUES ({userId}, {connectionId}, {assignedAt}) ON CONFLICT DO NOTHING",
-            cancellationToken);
-        return inserted == 1;
+            cancellationToken) == 1;
+        if (inserted)
+        {
+            await AppendAuditAsync(audit, assignedAt, cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return inserted;
     }
 
-    public async Task<bool> UnassignAsync(Guid connectionId, Guid userId, CancellationToken cancellationToken) =>
-        await _db.UserConnections
+    public async Task<bool> UnassignAsync(
+        Guid connectionId,
+        Guid userId,
+        DateTimeOffset now,
+        AuditEventDraft audit,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(audit);
+
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        var removed = await _db.UserConnections
             .Where(uc => uc.ConnectionId == connectionId && uc.UserId == userId)
             .ExecuteDeleteAsync(cancellationToken) == 1;
+        if (removed)
+        {
+            await AppendAuditAsync(audit, now, cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return removed;
+    }
 
     public async Task<IReadOnlyList<DeveloperView>> ListDevelopersAsync(CancellationToken cancellationToken) =>
         await _db.Users.AsNoTracking()
@@ -59,6 +95,22 @@ public sealed class EfConnectionAssignmentStore : IConnectionAssignmentStore
             .OrderBy(u => u.UserName)
             .Select(u => new DeveloperView(u.Id, u.UserName ?? string.Empty))
             .ToListAsync(cancellationToken);
+
+    private async Task AppendAuditAsync(AuditEventDraft audit, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var entry = EfAuditLog.ToEvent(audit);
+        try
+        {
+            await ChainWriter.AppendAuditAsync(_db, entry, now, cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            // Si falla, la transacción se revierte; que el evento no quede pendiente en el contexto para otro guardado.
+            _db.Entry(entry).State = EntityState.Detached;
+            throw;
+        }
+    }
 
     private IQueryable<Guid> DeveloperIds() =>
         _db.UserRoles

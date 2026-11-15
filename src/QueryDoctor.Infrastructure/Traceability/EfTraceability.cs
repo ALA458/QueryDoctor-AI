@@ -22,22 +22,28 @@ public sealed class EfAuditLog : IAuditLog
         ArgumentNullException.ThrowIfNull(draft);
 
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
-        await ChainWriter.AppendAuditAsync(
-            _db,
-            new AuditEvent
-            {
-                EventType = draft.EventType,
-                UserId = draft.UserId,
-                UserName = draft.UserName is { Length: > 256 } name ? name[..256] : draft.UserName,
-                SubjectType = draft.SubjectType,
-                SubjectId = draft.SubjectId,
-                RelatedUserId = draft.RelatedUserId,
-                Outcome = draft.Outcome,
-            },
-            _clock.GetUtcNow(),
-            cancellationToken);
+        await ChainWriter.AppendAuditAsync(_db, ToEvent(draft), _clock.GetUtcNow(), cancellationToken);
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Evento listo para <see cref="ChainWriter.AppendAuditAsync"/>. También lo usa quien audita dentro de su propia
+    /// transacción (S2-12: las asignaciones), para que el cambio y su evento se confirmen o se pierdan juntos.
+    /// </summary>
+    internal static AuditEvent ToEvent(AuditEventDraft draft)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        return new AuditEvent
+        {
+            EventType = draft.EventType,
+            UserId = draft.UserId,
+            UserName = draft.UserName is { Length: > 256 } name ? name[..256] : draft.UserName,
+            SubjectType = draft.SubjectType,
+            SubjectId = draft.SubjectId,
+            RelatedUserId = draft.RelatedUserId,
+            Outcome = draft.Outcome,
+        };
     }
 }
 
