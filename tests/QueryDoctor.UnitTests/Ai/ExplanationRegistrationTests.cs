@@ -29,6 +29,7 @@ public sealed class ExplanationRegistrationTests
     private static ServiceProvider Worker(IConfiguration configuration) => new ServiceCollection()
         .AddLogging()
         .AddInfrastructure(configuration)
+        .AddSystemAccessScope()
         .AddLiteralMasking()
         .AddExplanations(configuration)
         .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
@@ -64,6 +65,7 @@ public sealed class ExplanationRegistrationTests
         using var provider = new ServiceCollection()
             .AddLogging()
             .AddInfrastructure(Configuration(new() { ["AiService:BaseUrl"] = "ftp://ai/" }))
+            .AddSystemAccessScope()
             .AddLiteralMasking()
             .AddExplanations(Configuration(new() { ["AiService:BaseUrl"] = "ftp://ai/" }))
             .BuildServiceProvider();

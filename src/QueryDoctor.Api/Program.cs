@@ -16,6 +16,9 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddQueryDoctorHangfire(builder.Configuration);
 builder.Services.AddQueryDoctorAuth(builder.Configuration);
 
+// S2-12 (RNF-SEG-12): el filtro por conexión de EF lee el acceso del usuario de cada solicitud. Sin usuario, cero filas.
+builder.Services.AddRequestAccessScope();
+
 // S1-09: alta de conexiones. La Api guarda y encola; NO registra el Gateway (invariante 2).
 builder.Services.AddConnectionRegistration();
 
@@ -46,6 +49,7 @@ using (var seedScope = app.Services.CreateScope())
 app.UseSameOriginForms();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRequestAccessScope();
 
 // Panel Hangfire (S1-10, ADR-04, RNF-SEG-12): solo DBA con contraseña activa
 var postgresConn = DependencyInjection.GetPostgresConnectionString(app.Configuration);

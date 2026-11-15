@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Options;
+using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Connections;
 using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Domain.Core;
@@ -92,7 +93,7 @@ public sealed class IngestionPersistenceTests(PostgresFixture postgres) : IDispo
             options.AddInterceptors(interceptors);
         }
 
-        await using var db = new AppDbContext(options.Options);
+        await using var db = new AppDbContext(options.Options, SystemAccessScope.Instance);
         return await UseCase(db, reader).ExecuteAsync(connectionId, IngestionTrigger.Manual);
     }
 

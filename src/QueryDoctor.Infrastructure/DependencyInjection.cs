@@ -94,8 +94,22 @@ public static class DependencyInjection
             // S2-06: traza y auditoría de solo adición, encadenadas (RF-TRZ-01..05). Las usan la Api y el Worker.
             services.AddScoped<IAuditLog, EfAuditLog>();
             services.AddScoped<ITraceabilityQueries, EfTraceabilityQueries>();
+
+            // S2-12: AppDbContext exige un IAccessScope y aquí NO se registra ninguno por defecto. Cada host declara el
+            // suyo (la Api, el del usuario; el Worker, AddSystemAccessScope); si lo olvida, el contexto no se crea.
+            services.AddScoped<IAssignedConnectionsReader, EfAssignedConnectionsReader>();
         }
 
+        return services;
+    }
+
+    /// <summary>
+    /// Acceso completo de los procesos de la plataforma (S2-12, RNF-SEG-12). Solo lo llama el host del Worker; la Api
+    /// nunca: allí el acceso sale del usuario de la solicitud y, sin usuario, es cero filas.
+    /// </summary>
+    public static IServiceCollection AddSystemAccessScope(this IServiceCollection services)
+    {
+        services.AddSingleton<IAccessScope>(SystemAccessScope.Instance);
         return services;
     }
 

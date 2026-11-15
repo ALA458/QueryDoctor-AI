@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Connections;
 using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Application.Telemetry;
@@ -46,7 +47,7 @@ internal static class LabPostgres
     }
 
     public static AppDbContext Context(string connectionString) =>
-        new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connectionString).Options);
+        new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(connectionString).Options, SystemAccessScope.Instance);
 }
 
 /// <summary>

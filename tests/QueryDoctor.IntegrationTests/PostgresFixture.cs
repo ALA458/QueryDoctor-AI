@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Infrastructure.Persistence;
 using Testcontainers.PostgreSql;
 
@@ -17,7 +18,7 @@ public sealed class PostgresFixture : IAsyncLifetime
     public string ConnectionString => _container.GetConnectionString();
 
     public AppDbContext CreateContext() =>
-        new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(ConnectionString).Options);
+        new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(ConnectionString).Options, SystemAccessScope.Instance);
 
     public async Task InitializeAsync()
     {

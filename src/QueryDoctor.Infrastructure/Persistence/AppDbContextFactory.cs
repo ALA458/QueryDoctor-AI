@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using QueryDoctor.Application.Common.Security;
 
 namespace QueryDoctor.Infrastructure.Persistence;
 
@@ -25,6 +26,7 @@ public sealed class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbConte
             .UseNpgsql(connectionString)
             .Options;
 
-        return new AppDbContext((DbContextOptions<AppDbContext>)options);
+        // Las herramientas de EF son un proceso de la plataforma: acceso Sistema declarado (S2-12).
+        return new AppDbContext((DbContextOptions<AppDbContext>)options, SystemAccessScope.Instance);
     }
 }

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Domain.Ai;
 using QueryDoctor.Domain.Analysis;
 using QueryDoctor.Domain.Audit;
@@ -15,10 +16,26 @@ namespace QueryDoctor.Infrastructure.Persistence;
 /// </summary>
 public sealed class AppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, Guid>
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options)
+    /// <summary>Nombre del filtro global por conexión (S2-12, RNF-SEG-12).</summary>
+    public const string ConnectionAccessFilter = "ConnectionAccess";
+
+    private readonly IAccessScope _accessScope;
+
+    /// <summary>
+    /// El contexto de acceso es obligatorio: un host que no lo registre no puede crear el contexto (S2-12). La Api usa el
+    /// del usuario de la solicitud; el Worker, las migraciones y las pruebas declaran <see cref="SystemAccessScope"/>.
+    /// </summary>
+    public AppDbContext(DbContextOptions<AppDbContext> options, IAccessScope accessScope)
         : base(options)
     {
+        _accessScope = accessScope ?? throw new ArgumentNullException(nameof(accessScope));
     }
+
+    // Los filtros leen estas propiedades en cada consulta: EF las parametriza por instancia del contexto.
+    private bool AccessUnrestricted => _accessScope.Kind is AccessKind.Dba or AccessKind.System;
+
+    private Guid[] AllowedConnectionIds =>
+        _accessScope.Kind == AccessKind.Developer ? [.. _accessScope.AssignedConnectionIds] : [];
 
     public DbSet<Connection> Connections => Set<Connection>();
 
@@ -80,6 +97,8 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser, Applicatio
         builder.Entity<IdentityUserToken<Guid>>().ToTable("user_tokens", "ops");
         builder.Entity<IdentityRoleClaim<Guid>>().ToTable("role_claims", "ops");
 
+        ApplyConnectionAccessFilters(builder);
+
         foreach (var entityType in builder.Model.GetEntityTypes())
         {
             foreach (var property in entityType.GetProperties())
@@ -87,5 +106,43 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser, Applicatio
                 property.SetColumnName(SnakeCase.Convert(property.Name));
             }
         }
+    }
+
+    /// <summary>
+    /// Filtro por conexión asignada en toda entidad con datos de una conexión (S2-12, RNF-SEG-12). Sin
+    /// <c>IgnoreQueryFilters</c> en ningún lado: el contexto Sistema ya ve todo. Quedan fuera, a propósito,
+    /// <c>ops.user_connection</c> (es la fuente del propio scope) y <c>audit.*</c> (ChainWriter lee la última seq de toda
+    /// la cadena, también desde la Api; solo el DBA la consulta). Lo vigila <c>ConnectionAccessFilterCoverageTests</c>.
+    /// </summary>
+    private void ApplyConnectionAccessFilters(ModelBuilder builder)
+    {
+        builder.Entity<Connection>().HasQueryFilter(
+            ConnectionAccessFilter, c => AccessUnrestricted || AllowedConnectionIds.Contains(c.Id));
+        builder.Entity<CapabilityProfile>().HasQueryFilter(
+            ConnectionAccessFilter, e => AccessUnrestricted || AllowedConnectionIds.Contains(e.ConnectionId));
+        builder.Entity<QueryText>().HasQueryFilter(
+            ConnectionAccessFilter, e => AccessUnrestricted || AllowedConnectionIds.Contains(e.ConnectionId));
+        builder.Entity<Query>().HasQueryFilter(
+            ConnectionAccessFilter, e => AccessUnrestricted || AllowedConnectionIds.Contains(e.ConnectionId));
+        builder.Entity<Plan>().HasQueryFilter(
+            ConnectionAccessFilter, e => AccessUnrestricted || AllowedConnectionIds.Contains(e.ConnectionId));
+        builder.Entity<RuntimeStat>().HasQueryFilter(
+            ConnectionAccessFilter, e => AccessUnrestricted || AllowedConnectionIds.Contains(e.ConnectionId));
+        builder.Entity<IngestionRun>().HasQueryFilter(
+            ConnectionAccessFilter, e => AccessUnrestricted || AllowedConnectionIds.Contains(e.ConnectionId));
+        builder.Entity<AnalysisRun>().HasQueryFilter(
+            ConnectionAccessFilter, e => AccessUnrestricted || AllowedConnectionIds.Contains(e.ConnectionId));
+        builder.Entity<Finding>().HasQueryFilter(
+            ConnectionAccessFilter, e => AccessUnrestricted || AllowedConnectionIds.Contains(e.ConnectionId));
+        builder.Entity<HealthScore>().HasQueryFilter(
+            ConnectionAccessFilter, e => AccessUnrestricted || AllowedConnectionIds.Contains(e.ConnectionId));
+        builder.Entity<Explanation>().HasQueryFilter(
+            ConnectionAccessFilter, e => AccessUnrestricted || AllowedConnectionIds.Contains(e.ConnectionId));
+
+        // Las hijas sin connection_id heredan el filtro de su padre (la subconsulta aplica el filtro de Explanation).
+        builder.Entity<ExplanationClaim>().HasQueryFilter(
+            ConnectionAccessFilter, c => AccessUnrestricted || Explanations.Any(e => e.Id == c.ExplanationId));
+        builder.Entity<ExplanationClaimReference>().HasQueryFilter(
+            ConnectionAccessFilter, r => AccessUnrestricted || ExplanationClaims.Any(c => c.Id == r.ClaimId));
     }
 }

@@ -8,6 +8,10 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddQueryDoctorHangfire(builder.Configuration);
 
+// S2-12 (RNF-SEG-12): el Worker es un proceso de la plataforma e ingiere, sondea y explica todas las conexiones.
+// Se declara aquí de forma explícita; AddInfrastructure no registra ningún acceso por defecto.
+builder.Services.AddSystemAccessScope();
+
 // Solo el Worker llega a bases objetivo (invariante 2): Gateway, CapabilityProbe y probe_connection (S1-09).
 builder.Services.AddTargetTelemetry(builder.Configuration);
 
