@@ -343,7 +343,7 @@ Sembrado en la migración con el conjunto de umbrales por defecto del Cuadro 4.5
 | Esquema | Tablas previstas (§7) | Tarea que las crea |
 |---|---|---|
 | analysis | health_score | S2-02 (`rule_catalog`, `threshold_set`, `analysis_run` y `finding` ya existen desde S1-13) |
-| ai | explanation, claim, claim_reference, kb_fragment, kb_causal_relation | S1-17, S2-05 |
+| ai | ~~explanation, claim, claim_reference~~ creadas en S2-05 (migraciones `ExplicacionesIa` y `AfirmacionesExplicacion`); kb_fragment y kb_causal_relation existen desde S1-17 | S1-17, S2-05 |
 | audit | trace_entry, audit_event, statement_log (solo adición, `prev_hash`) | S2-06; statement_log: S1-08 usa hoy un escritor en memoria |
 
 ---
