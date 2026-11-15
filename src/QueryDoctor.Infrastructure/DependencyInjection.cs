@@ -17,6 +17,7 @@ using QueryDoctor.Application.KnowledgeBase;
 using QueryDoctor.Application.Masking;
 using QueryDoctor.Application.Scoring;
 using QueryDoctor.Application.Telemetry;
+using QueryDoctor.Application.Validation;
 using QueryDoctor.Domain.Analysis;
 using QueryDoctor.Infrastructure.Connections;
 using QueryDoctor.Infrastructure.Ingestion;
@@ -59,6 +60,10 @@ public static class DependencyInjection
         services.TryAddSingleton(_ => BindHealthScoreParameters(configuration));
         services.TryAddSingleton<IHealthScoreCalculator, HealthScoreCalculator>();
 
+        // Validador determinista puro de explicaciones de IA (S2-03, RF-IA-03, RF-IA-10, RF-IA-12, RNF-FUN-02)
+        services.TryAddSingleton(_ => BindExplanationValidationOptions(configuration));
+        services.TryAddSingleton<IExplanationValidator, ExplanationValidator>();
+
         // Telemetría e ingesta de SQL Server (S1-08, RNF-SEG-01, RF-TRZ-04)
         services.TryAddSingleton<IStatementLogWriter, InMemoryStatementLogWriter>();
         // S1-09: el Gateway hacia las bases objetivo ya NO se registra aquí, porque la Api también llama a
@@ -75,6 +80,7 @@ public static class DependencyInjection
             services.AddScoped<IConnectionQueries, EfConnectionQueries>();
             services.AddScoped<IIngestionQueries, EfIngestionQueries>();
             services.AddScoped<IKnowledgeBaseRepository, EfKnowledgeBaseRepository>();
+            services.AddScoped<IExplanationValidationContextBuilder, ExplanationValidationContextBuilder>();
             services.AddScoped<IScoreRecalculationStore, EfScoreRecalculationStore>();
             services.AddScoped<RecalculateConnectionScores>();
             services.AddScoped<RecalculateScoresJob>();
@@ -300,6 +306,60 @@ public static class DependencyInjection
         parameters.Validate();
         return parameters;
     }
+
+    private static ExplanationValidationOptions BindExplanationValidationOptions(IConfiguration configuration)
+    {
+        var section = configuration.GetSection(ExplanationValidationOptions.SectionName);
+        if (!section.Exists())
+        {
+            return ExplanationValidationOptions.Default;
+        }
+
+        var options = new ExplanationValidationOptions
+        {
+            RelativeTolerance = ReadDouble(
+                section,
+                nameof(ExplanationValidationOptions.RelativeTolerance),
+                ExplanationValidationOptions.DefaultRelativeTolerance),
+            AbsoluteEpsilon = ReadDouble(
+                section,
+                nameof(ExplanationValidationOptions.AbsoluteEpsilon),
+                ExplanationValidationOptions.DefaultAbsoluteEpsilon),
+            AllowHalfLastDecimalStepRounding = ReadBool(
+                section,
+                nameof(ExplanationValidationOptions.AllowHalfLastDecimalStepRounding),
+                true),
+            AllowPercentageScaleEquivalence = ReadBool(
+                section,
+                nameof(ExplanationValidationOptions.AllowPercentageScaleEquivalence),
+                true),
+            ValidateSummaryNumbers = ReadBool(
+                section,
+                nameof(ExplanationValidationOptions.ValidateSummaryNumbers),
+                true),
+            RequireAllCitedRulesForCausalRelation = ReadBool(
+                section,
+                nameof(ExplanationValidationOptions.RequireAllCitedRulesForCausalRelation),
+                true),
+            MaxJsonDepth = ReadInt(
+                section,
+                nameof(ExplanationValidationOptions.MaxJsonDepth),
+                ExplanationValidationOptions.DefaultMaxJsonDepth),
+        };
+
+        options.Validate();
+        return options;
+    }
+
+    private static bool ReadBool(IConfigurationSection section, string key, bool fallback) =>
+        bool.TryParse(section[key], out var parsed)
+            ? parsed
+            : fallback;
+
+    private static int ReadInt(IConfigurationSection section, string key, int fallback) =>
+        int.TryParse(section[key], NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : fallback;
 
     private static double ReadDouble(IConfigurationSection section, string key, double fallback) =>
         double.TryParse(section[key], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
