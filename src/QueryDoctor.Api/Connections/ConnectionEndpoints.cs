@@ -1,6 +1,10 @@
+using System.Security.Claims;
+using QueryDoctor.Api.Auditing;
 using QueryDoctor.Api.Auth;
 using QueryDoctor.Application.Connections;
 using QueryDoctor.Application.Ingestion;
+using QueryDoctor.Application.Traceability;
+using QueryDoctor.Domain.Audit;
 using QueryDoctor.Domain.Core;
 
 namespace QueryDoctor.Api.Connections;
@@ -47,6 +51,8 @@ internal static class ConnectionEndpoints
     private static async Task<IResult> RegisterAsync(
         RegisterConnectionRequest? body,
         RegisterConnection useCase,
+        ClaimsPrincipal principal,
+        IAuditLog audit,
         CancellationToken cancellationToken)
     {
         if (body is null)
@@ -64,6 +70,20 @@ internal static class ConnectionEndpoints
                 body.Username,
                 body.Password),
             cancellationToken);
+
+        if (result is RegisterConnectionResult.Accepted registered)
+        {
+            // S2-06 (RF-TRZ-05): registro y edición (re-registro, D3) con usuario. Sin servidor ni credenciales.
+            await audit.AppendAsync(
+                new AuditEventDraft(
+                    registered.ReplacedPrevious ? AuditEventType.ConnectionReRegistered : AuditEventType.ConnectionRegistered,
+                    AuditTrail.UserId(principal),
+                    AuditTrail.UserName(principal),
+                    AuditEventDraft.OutcomeOk,
+                    AuditEventDraft.SubjectConnection,
+                    registered.ConnectionId),
+                cancellationToken);
+        }
 
         return result switch
         {
@@ -92,9 +112,27 @@ internal static class ConnectionEndpoints
 
     private const int IngestionRunsShown = 20;
 
-    private static async Task<IResult> RequestIngestionAsync(Guid id, RequestIngestion useCase, CancellationToken cancellationToken)
+    private static async Task<IResult> RequestIngestionAsync(
+        Guid id,
+        RequestIngestion useCase,
+        ClaimsPrincipal principal,
+        IAuditLog audit,
+        CancellationToken cancellationToken)
     {
         var result = await useCase.ExecuteAsync(id, cancellationToken);
+        if (result is RequestIngestionResult.Accepted)
+        {
+            // S2-06 (RF-TRZ-05): ingesta manual con usuario.
+            await audit.AppendAsync(
+                new AuditEventDraft(
+                    AuditEventType.ManualIngestionRequested,
+                    AuditTrail.UserId(principal),
+                    AuditTrail.UserName(principal),
+                    AuditEventDraft.OutcomeOk,
+                    AuditEventDraft.SubjectConnection,
+                    id),
+                cancellationToken);
+        }
 
         return result switch
         {
