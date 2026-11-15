@@ -15,6 +15,7 @@ internal static class QueryEndpoints
 
         group.MapGet("/", ListAsync);
         group.MapGet("/{queryId:guid}", GetDetailAsync);
+        group.MapGet("/{queryId:guid}/plans/{planId:guid}", GetPlanTreeAsync);
 
         return app;
     }
@@ -64,6 +65,26 @@ internal static class QueryEndpoints
                 detail: "La ventana de tiempo solicitada no es válida."),
 
             _ => throw new InvalidOperationException("Resultado de detalle de consulta no contemplado."),
+        };
+    }
+
+    private static async Task<IResult> GetPlanTreeAsync(
+        Guid queryId,
+        Guid planId,
+        GetQueryPlanTree useCase,
+        CancellationToken cancellationToken)
+    {
+        var result = await useCase.ExecuteAsync(queryId, planId, cancellationToken);
+
+        return result switch
+        {
+            GetQueryPlanTreeResult.Found found => Results.Ok(found.View),
+
+            GetQueryPlanTreeResult.NotFound => Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                detail: "El plan o la consulta solicitados no existen."),
+
+            _ => throw new InvalidOperationException("Resultado de árbol de plan no contemplado."),
         };
     }
 }

@@ -500,15 +500,483 @@
         var thText = Object.keys(f.thresholdsUsed).map(function (k) { return k + "=" + f.thresholdsUsed[k]; }).join(", ");
         addKv(dl, "Umbrales aplicados", thText);
       }
-      if (f.engineVersion) {
+    if (f.engineVersion) {
         addKv(dl, "Versión SQL / Catálogo", f.engineVersion + " · cat. " + f.catalogVersion);
       }
 
+      card.id = "finding-card-" + (f.findingCode || f.id);
       card.appendChild(dl);
+
+      if (f.nodes && f.nodes.length) {
+        var jumpRow = el("div", "node-jump-list");
+        f.nodes.forEach(function (n) {
+          var jumpBtn = el("button", "node-jump-btn", "Ver nodo #" + n.node_id + " en el plan →");
+          jumpBtn.type = "button";
+          jumpBtn.setAttribute("data-target-plan-id", f.planId);
+          jumpBtn.setAttribute("data-target-node-id", String(n.node_id));
+          jumpBtn.addEventListener("click", function () {
+            focusNodeInPlanViewer(f.planId, n.node_id);
+          });
+          jumpRow.appendChild(jumpBtn);
+        });
+        card.appendChild(jumpRow);
+      }
+
       list.appendChild(card);
     });
 
     section.appendChild(list);
+    return section;
+  }
+
+  // ---------- Render: Visor jerárquico del plan (S2-10) ----------
+  var planViewerState = {
+    queryId: null,
+    activePlanId: null,
+    selectedKey: null,
+    onlyFlagged: false,
+    collapsed: {},
+    cache: {},
+    renderBody: null,
+    tabsByPlanId: {}
+  };
+
+  function formatWarningBadge(w) {
+    if (!w) { return "Advertencia"; }
+    if (w.kind === "SpillToTempDb" || w.kind === "SortSpillDetails" || w.kind === "HashSpillDetails") {
+      return "Spill TempDB" + (w.spillLevel ? " (niv. " + w.spillLevel + ")" : "");
+    }
+    if (w.kind === "PlanAffectingConvert") {
+      return "Convert" + (w.convertIssue ? ": " + w.convertIssue : "");
+    }
+    if (w.kind === "NoJoinPredicate") { return "Sin predicado Join"; }
+    if (w.kind === "ColumnsWithNoStatistics") { return "Sin estadísticas"; }
+    if (w.kind === "MemoryGrantWarning") { return "Memoria" + (w.details ? ": " + w.details : ""); }
+    return w.kind || "Advertencia";
+  }
+
+  function buildTreePrefixes(operators) {
+    var activeBranches = [];
+    return operators.map(function (op) {
+      var prefix = "";
+      if (op.depth > 0) {
+        for (var d = 1; d < op.depth; d++) {
+          prefix += activeBranches[d] ? "│  " : "   ";
+        }
+        prefix += op.isLastSibling ? "└─ " : "├─ ";
+        activeBranches[op.depth] = !op.isLastSibling;
+      }
+      return prefix;
+    });
+  }
+
+  function computeVisibleSet(operators, onlyFlagged) {
+    var visible = new Array(operators.length);
+    if (!onlyFlagged) {
+      for (var i = 0; i < operators.length; i++) { visible[i] = true; }
+      return visible;
+    }
+
+    // Indexar por NodeId dentro de la sentencia para mantener visibles los ancestros de cualquier nodo relevante.
+    var indexByNodeId = {};
+    var idx;
+    for (idx = 0; idx < operators.length; idx++) {
+      visible[idx] = false;
+      indexByNodeId[operators[idx].nodeId] = idx;
+    }
+
+    for (idx = 0; idx < operators.length; idx++) {
+      var op = operators[idx];
+      var isFlagged = op.hasFindings || (op.warnings && op.warnings.length > 0);
+      if (!isFlagged) { continue; }
+      var cursorIdx = idx;
+      var guard = 0;
+      while (cursorIdx !== undefined && !visible[cursorIdx] && guard < operators.length) {
+        visible[cursorIdx] = true;
+        var parentId = operators[cursorIdx].parentNodeId;
+        cursorIdx = (parentId !== null && parentId !== undefined) ? indexByNodeId[parentId] : undefined;
+        guard++;
+      }
+    }
+    return visible;
+  }
+
+  function renderOperatorInspector(container, planId, stmtIdx, op) {
+    container.replaceChildren();
+    if (!op) {
+      container.appendChild(el("p", "panel-note", "Selecciona un operador del árbol para inspeccionar su costo, predicado enmascarado, advertencias y hallazgos."));
+      return;
+    }
+
+    var title = "Nodo #" + op.nodeId + " · " + op.physicalOp +
+      (op.logicalOp && op.logicalOp !== op.physicalOp ? " (" + op.logicalOp + ")" : "");
+    container.appendChild(el("h4", null, title));
+
+    var dl = el("dl", "kv-grid");
+    addKv(dl, "Costo estimado subárbol", formatNum(op.estimatedTotalSubtreeCost, 6) +
+      (typeof op.costSharePct === "number" ? " (" + formatNum(op.costSharePct, 1) + " %)" : ""));
+    addKv(dl, "Costo CPU / E/S", formatNum(op.estimateCpu, 6) + " / " + formatNum(op.estimateIo, 6));
+    addKv(dl, "Filas estimadas", formatNum(op.estimateRows, 2));
+    if (op.estimatedRowsRead !== null && op.estimatedRowsRead !== undefined) {
+      addKv(dl, "Filas leídas est.", formatNum(op.estimatedRowsRead, 2));
+    }
+    if (op.tableCardinality !== null && op.tableCardinality !== undefined) {
+      addKv(dl, "Cardinalidad de tabla", formatNum(op.tableCardinality, 0));
+    }
+    if (op.targetObject) { addKv(dl, "Objeto destino", op.targetObject); }
+    if (op.estimatedExecutionMode) {
+      addKv(dl, "Modo / Paralelismo", op.estimatedExecutionMode + (op.isParallel ? " (Paralelo)" : ""));
+    }
+    if (op.predicateScalarString) { addKv(dl, "Predicado (enmascarado)", op.predicateScalarString); }
+    if (op.seekColumns && op.seekColumns.length) { addKv(dl, "Columnas Seek", op.seekColumns.join(", ")); }
+    if (op.outputColumns && op.outputColumns.length) { addKv(dl, "Columnas de salida", op.outputColumns.join(", ")); }
+    if (op.implicitConversions && op.implicitConversions.length) {
+      addKv(dl, "Conversiones implícitas", op.implicitConversions.map(function (c) {
+        return (c.column ? c.column + " → " : "") + c.targetDataType +
+          (c.scalarString ? " [" + c.scalarString + "]" : "");
+      }).join("; "));
+    }
+    if (op.warnings && op.warnings.length) {
+      addKv(dl, "Advertencias del nodo", op.warnings.map(function (w) {
+        return formatWarningBadge(w) + (w.expression ? " — " + w.expression : (w.details ? " — " + w.details : ""));
+      }).join(" | "));
+    }
+    container.appendChild(dl);
+
+    if (op.findings && op.findings.length) {
+      var fRow = el("div", "node-jump-list");
+      op.findings.forEach(function (f) {
+        var btn = el("button", "node-jump-btn", "Ir al hallazgo " + f.ruleId + " (" + f.findingCode + ") ↓");
+        btn.type = "button";
+        btn.addEventListener("click", function () {
+          var card = document.getElementById("finding-card-" + f.findingCode);
+          if (card) { card.scrollIntoView({ behavior: "smooth", block: "center" }); }
+        });
+        fRow.appendChild(btn);
+      });
+      container.appendChild(fRow);
+    }
+
+    container.setAttribute("data-inspected-key", planId + ":" + stmtIdx + ":" + op.nodeId);
+  }
+
+  function renderLoadedPlanTree(planView) {
+    var body = planViewerState.renderBody;
+    if (!body) { return; }
+    body.replaceChildren();
+
+    if (planView.planMaskingFailure) {
+      body.appendChild(el("p", "panel-note", "No se pudo enmascarar el Showplan XML de forma segura (" + planView.planMaskingFailure + ")."));
+      return;
+    }
+    if (planView.planExpired) {
+      body.appendChild(el("p", "panel-note", "El XML del plan expiró por retención o no se recuperó durante la ingesta."));
+      return;
+    }
+    if (planView.parseFailureReason) {
+      body.appendChild(el("p", "panel-note", "Plan no analizable (" + (planView.notAnalyzableCause || planView.parseFailureReason) + ")."));
+      return;
+    }
+
+    var toolbar = el("div", "plan-toolbar");
+    toolbar.appendChild(el("span", "plan-summary-meta",
+      "Plan #" + planView.queryStorePlanId +
+      " · Operadores: " + formatIntText(planView.totalOperators) +
+      " · Nodos con hallazgos: " + formatIntText(planView.highlightedOperatorsCount) +
+      (planView.engineVersion ? " · SQL " + planView.engineVersion : "")));
+
+    var actions = el("div", "plan-toolbar-actions");
+    var filterBtn = el("button", "plan-btn", planViewerState.onlyFlagged ? "Mostrando hallazgos/advertencias" : "Solo hallazgos y advertencias");
+    filterBtn.type = "button";
+    filterBtn.setAttribute("aria-pressed", planViewerState.onlyFlagged ? "true" : "false");
+    filterBtn.addEventListener("click", function () {
+      planViewerState.onlyFlagged = !planViewerState.onlyFlagged;
+      renderLoadedPlanTree(planView);
+    });
+    actions.appendChild(filterBtn);
+
+    if (planView.totalOperators > 1) {
+      var expandBtn = el("button", "plan-btn", "Expandir todo");
+      expandBtn.type = "button";
+      expandBtn.addEventListener("click", function () {
+        planViewerState.collapsed = {};
+        renderLoadedPlanTree(planView);
+      });
+      actions.appendChild(expandBtn);
+
+      var collapseBtn = el("button", "plan-btn", "Colapsar ramas");
+      collapseBtn.type = "button";
+      collapseBtn.addEventListener("click", function () {
+        planView.statements.forEach(function (st, sIdx) {
+          st.operators.forEach(function (op) {
+            if (op.hasChildren && op.depth > 0) {
+              planViewerState.collapsed[planView.planId + ":" + sIdx + ":" + op.nodeId] = true;
+            }
+          });
+        });
+        renderLoadedPlanTree(planView);
+      });
+      actions.appendChild(collapseBtn);
+    }
+
+    toolbar.appendChild(actions);
+    body.appendChild(toolbar);
+
+    if (!planView.statements || !planView.statements.length) {
+      body.appendChild(el("p", "panel-note", "Este plan no contiene sentencias con operadores analizables."));
+      return;
+    }
+
+    var inspector = el("div", "plan-node-inspector");
+    var selectedOpRef = null;
+    var selectedStmtIdx = 0;
+
+    planView.statements.forEach(function (stmt, stmtIdx) {
+      var stmtBox = el("div", "plan-statement");
+      var stHead = el("div", "plan-statement-head");
+      stHead.appendChild(el("strong", null,
+        "Sentencia #" + stmt.statementId + " · " + (stmt.statementType || "SQL") +
+        (stmt.isDispatcherPlan ? " (Dispatcher PSP)" : "")));
+      stHead.appendChild(el("span", "plan-summary-meta",
+        "Costo total: " + formatNum(stmt.statementSubTreeCost, 4) +
+        " · Filas est.: " + formatNum(stmt.statementEstRows, 1) +
+        (stmt.statementOptmLevel ? " · Opt: " + stmt.statementOptmLevel : "")));
+      stmtBox.appendChild(stHead);
+
+      if (stmt.warnings && stmt.warnings.length) {
+        var warnBar = el("div", "plan-warnings-bar");
+        stmt.warnings.forEach(function (w) {
+          warnBar.appendChild(badge(formatWarningBadge(w), "warn"));
+        });
+        stmtBox.appendChild(warnBar);
+      }
+
+      if (!stmt.operators || !stmt.operators.length) {
+        stmtBox.appendChild(el("p", "panel-note", stmt.isDispatcherPlan
+          ? "Plan Dispatcher sin árbol RelOp directo."
+          : "Sin operadores RelOp en esta sentencia."));
+        body.appendChild(stmtBox);
+        return;
+      }
+
+      var prefixes = buildTreePrefixes(stmt.operators);
+      var visibleByFilter = computeVisibleSet(stmt.operators, planViewerState.onlyFlagged);
+      var list = el("ul", "plan-tree");
+      list.setAttribute("role", "tree");
+
+      var collapsedDepthCutoff = null;
+
+      stmt.operators.forEach(function (op, idx) {
+        if (collapsedDepthCutoff !== null && op.depth > collapsedDepthCutoff) {
+          return;
+        }
+        collapsedDepthCutoff = null;
+
+        var key = planView.planId + ":" + stmtIdx + ":" + op.nodeId;
+        var isCollapsed = Boolean(planViewerState.collapsed[key]);
+        if (isCollapsed && op.hasChildren) {
+          collapsedDepthCutoff = op.depth;
+        }
+
+        if (!visibleByFilter[idx]) {
+          return;
+        }
+
+        var li = el("li", "plan-node-item");
+        li.setAttribute("role", "treeitem");
+
+        var row = el("div", "plan-node-row");
+        row.id = "plan-node-" + planView.planId + "-" + op.nodeId;
+        row.setAttribute("data-node-id", String(op.nodeId));
+        row.setAttribute("data-has-findings", op.hasFindings ? "true" : "false");
+        if (op.hasFindings) {
+          row.className += " is-highlighted";
+          row.setAttribute("data-severity", op.maxFindingSeverity || "");
+        }
+        if (planViewerState.selectedKey === key) {
+          row.className += " is-selected";
+          selectedOpRef = op;
+          selectedStmtIdx = stmtIdx;
+        }
+
+        var main = el("div", "plan-node-main");
+        if (prefixes[idx]) {
+          main.appendChild(el("span", "plan-tree-prefix", prefixes[idx]));
+        }
+
+        if (op.hasChildren) {
+          var toggleBtn = el("button", "plan-toggle-btn", isCollapsed ? "▸" : "▾");
+          toggleBtn.type = "button";
+          toggleBtn.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+          toggleBtn.setAttribute("aria-label", (isCollapsed ? "Expandir" : "Colapsar") + " nodo " + op.nodeId);
+          toggleBtn.addEventListener("click", function () {
+            planViewerState.collapsed[key] = !isCollapsed;
+            renderLoadedPlanTree(planView);
+          });
+          main.appendChild(toggleBtn);
+        }
+
+        var selectBtn = el("button", "plan-node-select", "#" + op.nodeId + " " + op.physicalOp);
+        selectBtn.type = "button";
+        selectBtn.addEventListener("click", function () {
+          planViewerState.selectedKey = key;
+          renderLoadedPlanTree(planView);
+        });
+        main.appendChild(selectBtn);
+
+        if (op.targetObject) {
+          main.appendChild(el("span", "plan-node-obj", "[" + op.targetObject + "]"));
+        }
+
+        var metrics = el("div", "plan-node-metrics");
+        var costText = "Costo " + formatNum(op.estimatedTotalSubtreeCost, 4) +
+          (typeof op.costSharePct === "number" ? " (" + formatNum(op.costSharePct, 1) + "%)" : "");
+        metrics.appendChild(badge(costText, "neutral"));
+        metrics.appendChild(badge("Filas " + formatNum(op.estimateRows, 0), "neutral"));
+        if (op.isParallel) { metrics.appendChild(badge("Paralelo", "neutral")); }
+
+        (op.warnings || []).forEach(function (w) {
+          metrics.appendChild(badge(formatWarningBadge(w), "warn"));
+        });
+
+        (op.findings || []).forEach(function (f) {
+          var sev = SEVERITY_TONE[f.severity];
+          metrics.appendChild(badge(f.ruleId + " · " + (sev ? sev[0] : f.severity), sev ? sev[1] : "danger"));
+        });
+
+        row.appendChild(main);
+        row.appendChild(metrics);
+        li.appendChild(row);
+        list.appendChild(li);
+      });
+
+      stmtBox.appendChild(list);
+      body.appendChild(stmtBox);
+    });
+
+    if (!selectedOpRef && planView.statements[0] && planView.statements[0].operators[0]) {
+      selectedOpRef = planView.statements[0].operators[0];
+    }
+    renderOperatorInspector(inspector, planView.planId, selectedStmtIdx, selectedOpRef);
+    body.appendChild(inspector);
+  }
+
+  function formatIntText(value) {
+    return typeof value === "number" ? value.toLocaleString("es-CO") : "0";
+  }
+
+  function selectAndLoadPlan(planId, focusNodeId) {
+    planViewerState.activePlanId = planId;
+    Object.keys(planViewerState.tabsByPlanId).forEach(function (id) {
+      planViewerState.tabsByPlanId[id].setAttribute("aria-selected", id === planId ? "true" : "false");
+    });
+
+    var cached = planViewerState.cache[planId];
+    var applyFocus = function (view) {
+      if (focusNodeId !== undefined && focusNodeId !== null && view && view.statements) {
+        planViewerState.onlyFlagged = false;
+        planViewerState.collapsed = {};
+        view.statements.forEach(function (st, sIdx) {
+          (st.operators || []).forEach(function (op) {
+            if (op.nodeId === focusNodeId) {
+              planViewerState.selectedKey = planId + ":" + sIdx + ":" + focusNodeId;
+            }
+          });
+        });
+      }
+      renderLoadedPlanTree(view);
+      if (focusNodeId !== undefined && focusNodeId !== null) {
+        var row = document.getElementById("plan-node-" + planId + "-" + focusNodeId);
+        if (row) {
+          row.scrollIntoView({ behavior: "smooth", block: "center" });
+          var btn = row.querySelector(".plan-node-select");
+          if (btn) { btn.focus({ preventScroll: true }); }
+        }
+      }
+    };
+
+    if (cached) {
+      applyFocus(cached);
+      return Promise.resolve(cached);
+    }
+
+    if (planViewerState.renderBody) {
+      planViewerState.renderBody.replaceChildren(el("p", "panel-note", "Cargando árbol jerárquico del plan..."));
+    }
+
+    return fetch("/api/queries/" + encodeURIComponent(planViewerState.queryId) + "/plans/" + encodeURIComponent(planId), {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    }).then(function (response) {
+      if (response.status === 401) { goToLogin(); return null; }
+      if (!response.ok) { throw new Error("plan-tree " + response.status); }
+      return response.json();
+    }).then(function (view) {
+      if (!view) { return null; }
+      planViewerState.cache[planId] = view;
+      applyFocus(view);
+      return view;
+    }).catch(function () {
+      if (planViewerState.renderBody) {
+        planViewerState.renderBody.replaceChildren(el("p", "panel-note", "No pudimos cargar el árbol de este plan."));
+      }
+      return null;
+    });
+  }
+
+  function focusNodeInPlanViewer(planId, nodeId) {
+    if (!planId) { return; }
+    selectAndLoadPlan(planId, nodeId);
+  }
+
+  function renderPlanTreePanel(detail) {
+    planViewerState.queryId = detail.id;
+    planViewerState.cache = {};
+    planViewerState.collapsed = {};
+    planViewerState.selectedKey = null;
+    planViewerState.onlyFlagged = false;
+    planViewerState.tabsByPlanId = {};
+
+    var section = el("section", "panel");
+    section.id = "plan-viewer-panel";
+    var head = el("div", "panel-head");
+    head.appendChild(el("h2", null, "Plan de ejecución (árbol jerárquico)"));
+    head.appendChild(el("p", "panel-note", "Operadores en jerarquía con costos estimados, advertencias y nodos asociados a hallazgos."));
+    section.appendChild(head);
+
+    var plans = detail.plans || [];
+    if (!plans.length) {
+      section.appendChild(el("p", "panel-note", "Esta consulta todavía no tiene planes de ejecución ingeridos."));
+      return section;
+    }
+
+    var tabs = el("div", "plan-tabs");
+    tabs.setAttribute("role", "tablist");
+    tabs.setAttribute("aria-label", "Planes de ejecución de la consulta");
+
+    plans.forEach(function (plan, index) {
+      var label = "Plan #" + plan.queryStorePlanId +
+        (plan.queryPlanHash ? " (" + plan.queryPlanHash + ")" : "");
+      var tab = el("button", "plan-tab", label);
+      tab.type = "button";
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", index === 0 ? "true" : "false");
+      if (plan.analysisStatus === "NotAnalyzable") {
+        tab.appendChild(badge("No analizable", "warn"));
+      }
+      tab.addEventListener("click", function () {
+        selectAndLoadPlan(plan.planId, null);
+      });
+      planViewerState.tabsByPlanId[plan.planId] = tab;
+      tabs.appendChild(tab);
+    });
+    section.appendChild(tabs);
+
+    var body = el("div", "plan-viewer-body");
+    planViewerState.renderBody = body;
+    section.appendChild(body);
+
+    selectAndLoadPlan(plans[0].planId, null);
     return section;
   }
 
@@ -525,6 +993,7 @@
     stack.appendChild(renderScorePanel(detail.score));
     stack.appendChild(renderSqlPanel(detail));
     stack.appendChild(renderSeriesPanel(detail));
+    stack.appendChild(renderPlanTreePanel(detail));
     stack.appendChild(renderFindingsPanel(detail.findings));
     root.appendChild(stack);
   }

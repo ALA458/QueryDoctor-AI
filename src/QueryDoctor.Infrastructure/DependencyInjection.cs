@@ -187,9 +187,11 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddQueryViews(this IServiceCollection services)
     {
+        services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
         services.TryAddSingleton<IMasker, LiteralMasker>();
         services.AddScoped<GetQueries>();
         services.AddScoped<GetQueryDetail>();
+        services.AddScoped<GetQueryPlanTree>();
         return services;
     }
 

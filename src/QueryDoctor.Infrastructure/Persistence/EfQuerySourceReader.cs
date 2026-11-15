@@ -299,6 +299,53 @@ public sealed class EfQuerySourceReader : IQuerySourceReader
             ScoreHistory: scoreHistory);
     }
 
+    public async Task<QueryPlanTreeSource?> GetPlanTreeAsync(
+        Guid queryId,
+        Guid planId,
+        CancellationToken cancellationToken = default)
+    {
+        var plan = await _db.Plans.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Id == planId && p.QueryId == queryId, cancellationToken);
+
+        if (plan is null)
+        {
+            return null;
+        }
+
+        var latestSucceededRunId = await _db.AnalysisRuns.AsNoTracking()
+            .Where(r => r.QueryId == queryId && r.PlanId == planId && r.Status == AnalysisRunStatus.Succeeded)
+            .OrderByDescending(r => r.StartedAt)
+            .ThenByDescending(r => r.Id)
+            .Select(r => (Guid?)r.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var findings = latestSucceededRunId is null
+            ? []
+            : (await _db.Findings.AsNoTracking()
+                .Where(f => f.AnalysisRunId == latestSucceededRunId.Value)
+                .ToListAsync(cancellationToken))
+                .OrderByDescending(f => f.Severity)
+                .ThenBy(f => f.FindingCode, StringComparer.Ordinal)
+                .ToList();
+
+        var plansById = new Dictionary<Guid, Plan>(1) { [plan.Id] = plan };
+        var findingSources = findings
+            .Select(f => ToFindingSource(f, plansById))
+            .ToArray();
+
+        return new QueryPlanTreeSource(
+            QueryId: queryId,
+            PlanId: plan.Id,
+            QueryStorePlanId: plan.QueryStorePlanId,
+            QueryPlanHash: plan.QueryPlanHash,
+            EngineVersion: plan.EngineVersion,
+            AnalysisStatus: plan.AnalysisStatus,
+            NotAnalyzableCause: plan.NotAnalyzableCause,
+            IngestedAt: plan.IngestedAt,
+            DecryptedPlanXml: TryDecrypt(plan.EncryptedPlanXml),
+            Findings: findingSources);
+    }
+
     private async Task<DateTimeOffset> ResolveConnectionWindowEndAsync(
         Guid connectionId,
         DateTimeOffset fallbackTimestamp,

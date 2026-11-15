@@ -41,6 +41,12 @@ public sealed class QueryUseCasesTests
 
             return Task.FromResult<QueryDetailSource?>(null);
         }
+
+        public Task<QueryPlanTreeSource?> GetPlanTreeAsync(
+            Guid queryId,
+            Guid planId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<QueryPlanTreeSource?>(null);
     }
 
     private static QueryFindingSource CreateFinding(
