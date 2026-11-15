@@ -68,7 +68,7 @@ public sealed class RequestExplanation
             latest.State = ExplanationState.Unavailable;
             latest.Cause = ExplanationCause.Abandoned;
             latest.CompletedAt = now;
-            await _store.SaveAsync(latest, cancellationToken);
+            await _store.FinishAsync(latest, cancellationToken);
         }
 
         var explanation = new Explanation

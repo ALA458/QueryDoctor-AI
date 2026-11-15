@@ -21,6 +21,9 @@ internal sealed class InMemoryExplanationStore : IExplanationStore, IExplanation
 
     public List<ExplanationClaim> Claims { get; } = [];
 
+    /// <summary>Entradas de traza escritas con cada estado final (S2-06).</summary>
+    public List<QueryDoctor.Domain.Audit.TraceEntry> Traces { get; } = [];
+
     public void AddSource(EncryptedExplanationSource source) => _sources[source.QueryId] = source;
 
     public Task<ExplanationTarget?> FindTargetAsync(Guid queryId, CancellationToken cancellationToken) =>
@@ -59,6 +62,13 @@ internal sealed class InMemoryExplanationStore : IExplanationStore, IExplanation
     public Task CompleteAsync(Explanation explanation, IReadOnlyList<ExplanationClaim> claims, CancellationToken cancellationToken)
     {
         Claims.AddRange(claims);
+        Traces.Add(Application.Traceability.TraceEntries.FromExplanation(explanation));
+        return Task.CompletedTask;
+    }
+
+    public Task FinishAsync(Explanation explanation, CancellationToken cancellationToken)
+    {
+        Traces.Add(Application.Traceability.TraceEntries.FromExplanation(explanation));
         return Task.CompletedTask;
     }
 

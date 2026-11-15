@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using QueryDoctor.Application.Ai;
 using QueryDoctor.Application.Explanations;
+using QueryDoctor.Application.Traceability;
 using QueryDoctor.Application.Validation;
 using QueryDoctor.Domain.Ai;
 using QueryDoctor.Domain.Analysis;
+using QueryDoctor.Domain.Audit;
 using QueryDoctor.Infrastructure.Persistence;
+using QueryDoctor.Infrastructure.Traceability;
 
 namespace QueryDoctor.Infrastructure.Explanations;
 
@@ -15,10 +18,12 @@ namespace QueryDoctor.Infrastructure.Explanations;
 public sealed class EfExplanationStore : IExplanationStore, IExplanationSourceReader
 {
     private readonly AppDbContext _db;
+    private readonly TimeProvider _clock;
 
-    public EfExplanationStore(AppDbContext db)
+    public EfExplanationStore(AppDbContext db, TimeProvider clock)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
     public async Task<ExplanationTarget?> FindTargetAsync(Guid queryId, CancellationToken cancellationToken)
@@ -81,17 +86,43 @@ public sealed class EfExplanationStore : IExplanationStore, IExplanationSourceRe
         await _db.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task CompleteAsync(Explanation explanation, IReadOnlyList<ExplanationClaim> claims, CancellationToken cancellationToken)
+    public Task CompleteAsync(Explanation explanation, IReadOnlyList<ExplanationClaim> claims, CancellationToken cancellationToken) =>
+        SaveFinalAsync(explanation, claims, cancellationToken);
+
+    public Task FinishAsync(Explanation explanation, CancellationToken cancellationToken) =>
+        SaveFinalAsync(explanation, [], cancellationToken);
+
+    /// <summary>
+    /// S2-06, T2: el estado final, las afirmaciones y la entrada de traza (RF-TRZ-01) van en una sola transacción. Si
+    /// falla, no queda ninguna: ni una explicación terminada sin traza ni una traza de algo que no se guardó.
+    /// </summary>
+    private async Task SaveFinalAsync(Explanation explanation, IReadOnlyList<ExplanationClaim> claims, CancellationToken cancellationToken)
     {
-        if (_db.Entry(explanation).State == EntityState.Detached)
+        await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+        try
         {
-            _db.Explanations.Update(explanation);
+            if (_db.Entry(explanation).State == EntityState.Detached)
+            {
+                _db.Explanations.Update(explanation);
+            }
+
+            _db.ExplanationClaims.AddRange(claims);
+            await ChainWriter.AppendTraceAsync(_db, TraceEntries.FromExplanation(explanation), _clock.GetUtcNow(), cancellationToken);
+            await _db.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
         }
+        catch
+        {
+            // Lo agregado en este intento no debe volver a insertarse si quien llama reintenta con el mismo contexto.
+            foreach (var entry in _db.ChangeTracker.Entries()
+                .Where(e => e.State == EntityState.Added && e.Entity is TraceEntry or ExplanationClaim or ExplanationClaimReference)
+                .ToList())
+            {
+                entry.State = EntityState.Detached;
+            }
 
-        _db.ExplanationClaims.AddRange(claims);
-
-        // Una sola llamada a SaveChanges: explicación, afirmaciones y referencias quedan juntas o no quedan.
-        await _db.SaveChangesAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task<IReadOnlyList<ExplanationClaim>> GetClaimsAsync(Guid explanationId, CancellationToken cancellationToken) =>
