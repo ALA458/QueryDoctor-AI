@@ -59,9 +59,20 @@ public sealed class KnowledgeBaseModelTests : IDisposable
     [InlineData("REG-02")]
     [InlineData("REG-03")]
     [InlineData("REG-04")]
+    [InlineData("REG-11")]
     public void LosFragmentosInicialesContienenLasReglasRequeridas(string ruleId)
     {
         Assert.Contains(ruleId, _script, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("a1010003-0003-0000-0000-000000000003")]
+    [InlineData("a1010003-0003-0000-0000-000000000004")]
+    [InlineData("a1010011-0011-0000-0000-000000000001")]
+    [InlineData("a1010011-0011-0000-0000-000000000002")]
+    public void LosFragmentosAmpliadosDeS208EstanSembradosEnElModelo(string fragmentId)
+    {
+        Assert.Contains(fragmentId, _script, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

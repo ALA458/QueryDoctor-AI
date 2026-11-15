@@ -222,6 +222,20 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            Id = new Guid("b1010003-0003-0000-0000-000000000003"),
+                            FragmentId = new Guid("a1010003-0003-0000-0000-000000000003"),
+                            RelationType = "Interpretacion",
+                            RuleId = "REG-03"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010003-0003-0000-0000-000000000004"),
+                            FragmentId = new Guid("a1010003-0003-0000-0000-000000000004"),
+                            RelationType = "Recomendacion",
+                            RuleId = "REG-03"
+                        },
+                        new
+                        {
                             Id = new Guid("b1010004-0004-0000-0000-000000000001"),
                             FragmentId = new Guid("a1010004-0004-0000-0000-000000000001"),
                             RelationType = "Interpretacion",
@@ -233,6 +247,20 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                             FragmentId = new Guid("a1010004-0004-0000-0000-000000000002"),
                             RelationType = "Recomendacion",
                             RuleId = "REG-04"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010011-0011-0000-0000-000000000001"),
+                            FragmentId = new Guid("a1010011-0011-0000-0000-000000000001"),
+                            RelationType = "Interpretacion",
+                            RuleId = "REG-11"
+                        },
+                        new
+                        {
+                            Id = new Guid("b1010011-0011-0000-0000-000000000002"),
+                            FragmentId = new Guid("a1010011-0011-0000-0000-000000000002"),
+                            RelationType = "Recomendacion",
+                            RuleId = "REG-11"
                         });
                 });
 
@@ -357,6 +385,28 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         },
                         new
                         {
+                            Id = new Guid("a1010003-0003-0000-0000-000000000003"),
+                            Content = "Cuando un operador Table Scan, Clustered Index Scan o Index Scan recorre un volumen elevado de filas en una consulta con alta participación de consumo dentro de la ventana de Query Store, el motor lee secuencialmente gran cantidad de páginas de datos hacia el buffer pool incluso sin predicado residual selectivo. Este acceso amplio incrementa las lecturas lógicas, presiona la caché de páginas para otras consultas y amplifica el tiempo de CPU y duración acumulada según la frecuencia de ejecución.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-03",
+                            SourceCitation = "Sección 'Operadores lógicos y físicos de Showplan: Recorrido de tabla y Recorrido de índice agrupado'.",
+                            SourceTitle = "Microsoft Learn: Guía de arquitectura de procesamiento de consultas",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/query-processing-architecture-guide",
+                            Title = "Sobrecarga de E/S y buffer pool en recorridos de alto volumen y consumo"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010003-0003-0000-0000-000000000004"),
+                            Content = "Para mitigar recorridos completos de alto volumen donde no existe un filtro puntual único, proyecte únicamente las columnas necesarias evitando SELECT * y evalúe un índice no agrupado cubriente más estrecho que el índice agrupado base para reducir el número de páginas leídas por ejecución. Cuando la consulta deba leer la mayoría de la tabla, analice compresión de páginas o particionamiento por rango para acotar las particiones examinadas y disminuir la presión sobre memoria y E/S.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-03",
+                            SourceCitation = "Sección 'Directrices generales para el diseño de índices' y 'Ancho del índice'.",
+                            SourceTitle = "Microsoft Learn: Guía de arquitectura y diseño de índices de SQL Server",
+                            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/sql-server-index-design-guide",
+                            Title = "Índices no agrupados estrechos, cobertura y proyección mínima de columnas"
+                        },
+                        new
+                        {
                             Id = new Guid("a1010004-0004-0000-0000-000000000001"),
                             Content = "Un operador Key Lookup (Clustered) ocurre cuando una consulta aprovecha un índice no agrupado para localizar filas mediante un Index Seek, pero la lista de selección (SELECT) o condiciones posteriores requieren columnas que no están presentes en dicho índice. Por cada fila recuperada en el Index Seek, el operador Nested Loops realiza una búsqueda puntual individual en el índice agrupado base para recuperar las columnas faltantes. Cuando la cardinalidad resultante es alta, la multiplicación de búsquedas puntuales supera ampliamente el costo de un escaneo completo y dispara las lecturas lógicas.",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
@@ -376,6 +426,28 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                             SourceTitle = "Microsoft Learn: Crear índices con columnas incluidas",
                             SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/indexes/create-indexes-with-included-columns",
                             Title = "Cobertura de índice mediante cláusula INCLUDE para erradicar Key Lookups"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010011-0011-0000-0000-000000000001"),
+                            Content = "En SQL Server, las vistas sys.query_store_plan y sys.dm_exec_query_plan_stats exponen el Showplan en formato XML (o texto XML en Query Store), sujeto al límite estructural de 128 niveles de anidamiento del tipo xml y a posibles truncamientos o ausencia de plan compilado en caché. Cuando el documento recibido es nulo, queda incompleto o presenta una estructura XML no válida o no soportada, el analizador no puede construir el árbol de operadores de forma segura y registra el hallazgo informativo REG-11 sin interrumpir el lote.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-11",
+                            SourceCitation = "Sección 'Observaciones' (límite de niveles de anidamiento del tipo de datos xml en Showplan).",
+                            SourceTitle = "Microsoft Learn: sys.dm_exec_query_plan_stats (Transact-SQL)",
+                            SourceUrl = "https://learn.microsoft.com/sql/relational-databases/system-dynamic-management-views/sys-dm-exec-query-plan-stats-transact-sql",
+                            Title = "Límites de representación XML de Showplan y planes truncados o no recuperables"
+                        },
+                        new
+                        {
+                            Id = new Guid("a1010011-0011-0000-0000-000000000002"),
+                            Content = "Ante un hallazgo REG-11, utilice las métricas agregadas de ejecución de sys.query_store_runtime_stats para priorizar la consulta aunque el XML no haya sido analizable y consulte sys.query_store_plan en modo de solo lectura para verificar si el plan está vacío, truncado o supera el anidamiento XML permitido. Si el plan supera los 128 niveles por subconsultas, CTE encadenadas o expresiones complejas, refactorice la consulta en pasos más simples o tablas temporales para recuperar un Showplan XML analizable.",
+                            CreatedAt = new DateTimeOffset(new DateTime(2026, 11, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            RuleId = "REG-11",
+                            SourceCitation = "Descripción de la columna 'query_plan' y compatibilidad de representación Showplan XML.",
+                            SourceTitle = "Microsoft Learn: sys.query_store_plan (Transact-SQL)",
+                            SourceUrl = "https://learn.microsoft.com/sql/relational-databases/system-catalog-views/sys-query-store-plan-transact-sql",
+                            Title = "Inspección de query_plan en Query Store y simplificación de planes profundamente anidados"
                         });
                 });
 

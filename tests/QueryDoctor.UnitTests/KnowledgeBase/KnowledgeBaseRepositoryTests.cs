@@ -97,6 +97,42 @@ public class KnowledgeBaseRepositoryTests
             CausalRelationType.Interpretacion);
         Assert.False(notFound);
     }
+
+    [Fact]
+    public async Task GetFragmentsByRuleAndCausalRelationsCoverReg03ConditionsAndReg11()
+    {
+        var repository = new InMemoryKnowledgeBaseRepository();
+
+        var reg03Fragments = await repository.GetFragmentsByRuleAsync("REG-03");
+        Assert.Equal(4, reg03Fragments.Count);
+        Assert.Contains(reg03Fragments, f => f.Id == KnowledgeBaseSeedData.FragmentReg03InterpretacionId);
+        Assert.Contains(reg03Fragments, f => f.Id == KnowledgeBaseSeedData.FragmentReg03RecomendacionId);
+        Assert.Contains(reg03Fragments, f => f.Id == KnowledgeBaseSeedData.FragmentReg03VolumenInterpretacionId);
+        Assert.Contains(reg03Fragments, f => f.Id == KnowledgeBaseSeedData.FragmentReg03VolumenRecomendacionId);
+
+        Assert.True(await repository.HasCausalRelationAsync(
+            "REG-03",
+            KnowledgeBaseSeedData.FragmentReg03VolumenInterpretacionId,
+            CausalRelationType.Interpretacion));
+        Assert.True(await repository.HasCausalRelationAsync(
+            "REG-03",
+            KnowledgeBaseSeedData.FragmentReg03VolumenRecomendacionId,
+            CausalRelationType.Recomendacion));
+
+        var reg11Fragments = await repository.GetFragmentsByRuleAsync("REG-11");
+        Assert.Equal(2, reg11Fragments.Count);
+        Assert.Contains(reg11Fragments, f => f.Id == KnowledgeBaseSeedData.FragmentReg11InterpretacionId);
+        Assert.Contains(reg11Fragments, f => f.Id == KnowledgeBaseSeedData.FragmentReg11RecomendacionId);
+
+        Assert.True(await repository.HasCausalRelationAsync(
+            "REG-11",
+            KnowledgeBaseSeedData.FragmentReg11InterpretacionId,
+            CausalRelationType.Interpretacion));
+        Assert.True(await repository.HasCausalRelationAsync(
+            "REG-11",
+            KnowledgeBaseSeedData.FragmentReg11RecomendacionId,
+            CausalRelationType.Recomendacion));
+    }
 }
 
 internal sealed class InMemoryKnowledgeBaseRepository : IKnowledgeBaseRepository
