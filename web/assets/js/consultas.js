@@ -6,7 +6,14 @@
   var SEVERITY = {
     High: ["Alta", "danger"], Alta: ["Alta", "danger"],
     Medium: ["Media", "warn"], Media: ["Media", "warn"],
-    Low: ["Baja", "neutral"], Baja: ["Baja", "neutral"]
+    Low: ["Baja", "neutral"], Baja: ["Baja", "neutral"],
+    Info: ["Informativo", "neutral"]
+  };
+
+  var BANDS = {
+    Critica: ["Crítica", "danger"], "Crítica": ["Crítica", "danger"],
+    Atencion: ["Atención", "warn"], "Atención": ["Atención", "warn"],
+    Saludable: ["Saludable", "ok"]
   };
 
   var $ = function (id) { return document.getElementById(id); };
@@ -81,6 +88,14 @@
     return node;
   }
 
+  function bandBadge(value) {
+    var entry = BANDS[value];
+    var node = el("span", "badge", entry ? entry[0] : (value || "Ref. provisional"));
+    node.setAttribute("data-tone", entry ? entry[1] : "neutral");
+    node.setAttribute("title", "Banda de referencia provisional; usa la posición relativa en la ventana");
+    return node;
+  }
+
   function formatPct(value) {
     if (typeof value !== "number" || isNaN(value)) { return "—"; }
     return value.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + " %";
@@ -103,7 +118,7 @@
     var wrap = el("div", "table-wrap");
     var table = el("table", "table");
     var head = el("tr");
-    ["Consulta", "Consumo", "Ejecuciones", "Hallazgos"].forEach(function (name) {
+    ["Consulta", "Score", "Consumo", "Ejecuciones", "Hallazgos"].forEach(function (name) {
       var th = el("th", null, name);
       th.setAttribute("scope", "col");
       head.appendChild(th);
@@ -112,14 +127,31 @@
     thead.appendChild(head);
     table.appendChild(thead);
 
+    var currentWindow = $("f-window").value || "24h";
     var body = el("tbody");
     items.forEach(function (item) {
       var row = el("tr");
 
       cell(row, function (td) {
         // El texto SQL viene de la base del cliente: no es confiable. Solo textContent.
-        td.appendChild(el("code", "q-sql", item.sqlPreview || ""));
-        td.appendChild(el("span", "secondary", item.databaseName || ""));
+        var link = document.createElement("a");
+        link.className = "q-link";
+        link.href = "/consulta?id=" + encodeURIComponent(item.id) + "&window=" + encodeURIComponent(currentWindow);
+        link.appendChild(el("code", "q-sql", item.sqlPreview || (item.sqlExpired ? "[SQL expirado]" : "")));
+        td.appendChild(link);
+        var sub = (item.server ? item.server + " · " : "") + (item.databaseName || "");
+        td.appendChild(el("span", "secondary", sub));
+      });
+
+      cell(row, function (td) {
+        if (typeof item.score === "number" && !isNaN(item.score)) {
+          var box = el("div", "q-score-cell");
+          box.appendChild(el("span", "q-score-val", item.score.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 })));
+          if (item.band) { box.appendChild(bandBadge(item.band)); }
+          td.appendChild(box);
+        } else {
+          td.appendChild(el("span", "no-findings", "Sin score"));
+        }
       });
 
       cell(row, function (td) {
@@ -166,7 +198,7 @@
     hideNotice();
     var params = new URLSearchParams();
     params.set("window", $("f-window").value);
-    params.set("sort", "consumption");
+    params.set("sort", $("f-sort").value || "consumption");
     if ($("f-connection").value) { params.set("connectionId", $("f-connection").value); }
     if ($("f-severity").value) { params.set("severity", $("f-severity").value); }
 
@@ -195,7 +227,7 @@
       });
   }
 
-  ["f-connection", "f-window", "f-severity"].forEach(function (id) {
+  ["f-connection", "f-window", "f-severity", "f-sort"].forEach(function (id) {
     $(id).addEventListener("change", loadQueries);
   });
   $("filters").addEventListener("submit", function (event) { event.preventDefault(); });
