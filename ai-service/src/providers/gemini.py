@@ -12,6 +12,36 @@ from src.prompts.prompt_v1 import build_prompt_v1
 from src.providers.base import BaseLLMProvider
 
 
+_GEMINI_RESPONSE_SCHEMA: dict[str, Any] = {
+    "type": "OBJECT",
+    "required": ["summary", "claims"],
+    "properties": {
+        "summary": {"type": "STRING"},
+        "claims": {
+            "type": "ARRAY",
+            "minItems": 1,
+            "items": {
+                "type": "OBJECT",
+                "required": ["claim_type", "statement", "finding_ids", "kb_fragment_id"],
+                "properties": {
+                    "claim_type": {
+                        "type": "STRING",
+                        "enum": ["OBSERVACION", "INTERPRETACION", "RECOMENDACION"],
+                    },
+                    "statement": {"type": "STRING"},
+                    "finding_ids": {
+                        "type": "ARRAY",
+                        "minItems": 1,
+                        "items": {"type": "STRING"},
+                    },
+                    "kb_fragment_id": {"type": "STRING", "nullable": True},
+                },
+            },
+        },
+    },
+}
+
+
 class GeminiProvider(BaseLLMProvider):
     """Adaptador para la API de Gemini (plan gratuito)."""
 
@@ -35,14 +65,21 @@ class GeminiProvider(BaseLLMProvider):
             f"https://generativelanguage.googleapis.com/v1beta/models/"
             f"{self.model_name}:generateContent?key={api_key}"
         )
+        generation_config: dict[str, Any] = {
+            "responseMimeType": "application/json",
+            "responseSchema": _GEMINI_RESPONSE_SCHEMA,
+            "temperature": 0.1,
+            "maxOutputTokens": self.settings.MAX_TOKENS_PER_REQUEST,
+        }
+        # Los modelos gemini-2.5-* consumen maxOutputTokens con pensamiento interno por defecto;
+        # al desactivar el presupuesto de pensamiento evitamos JSON truncado por MAX_TOKENS.
+        if "gemini-2.5" in self.model_name.lower():
+            generation_config["thinkingConfig"] = {"thinkingBudget": 0}
+
         payload = {
             "system_instruction": {"parts": [{"text": system_prompt}]},
             "contents": [{"role": "user", "parts": [{"text": user_prompt}]}],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "temperature": 0.1,
-                "maxOutputTokens": self.settings.MAX_TOKENS_PER_REQUEST,
-            },
+            "generationConfig": generation_config,
         }
 
         start_time = time.perf_counter()
