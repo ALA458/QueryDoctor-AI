@@ -295,7 +295,8 @@ Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA (DA-
 
 **Mecánica que conviene conocer:**
 - `AppDbContext` exige un `IAccessScope` (`None`, `Developer`, `Dba`, `System`) y aplica el filtro con nombre
-  `ConnectionAccess` a las 11 entidades con `connection_id` (más `claim` y `claim_reference` a través de su explicación).
+  `ConnectionAccess` a 13 entidades: `connection` (por su `id`), las 10 con `connection_id` y `claim` y
+  `claim_reference` a través de su explicación.
   `AddInfrastructure` **no** registra ningún acceso: la Api usa `AddRequestAccessScope` y el Worker `AddSystemAccessScope`.
   Un host que lo olvide no arranca.
 - En la Api, `AccessScopeMiddleware` (después de `UseAuthorization`) lee las asignaciones de la base **en cada
@@ -306,8 +307,15 @@ Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA (DA-
   ya ve todo, así que no hace falta en ningún lado.
 - `ConnectionAccessFilterCoverageTests` recorre el modelo de EF: una entidad nueva con `ConnectionId`, o hija de una
   filtrada, sin filtro deja la prueba en rojo.
-- El SQL directo (`ExecuteSql*`, `FromSql` no componible) **no** pasa por el filtro. Hoy solo lo usan el Worker
-  (ingesta), el bloqueo de cadena y el `INSERT … ON CONFLICT` de las asignaciones (DBA).
+- `ExecuteSql*` **no** pasa por el filtro. Hoy solo lo usan el Worker (ingesta), el bloqueo de cadena y el
+  `INSERT … ON CONFLICT` de las asignaciones (DBA). `FromSql` sobre un `DbSet` sí lo pasa: EF aplica el filtro encima
+  (el único uso es la detección de duplicados del alta, solo DBA).
+- Asignar y quitar escriben el cambio y su evento de auditoría en **una** transacción (`EfConnectionAssignmentStore`):
+  si la auditoría falla no queda ninguno, y el reintento deja los dos (`AssignmentAuditAtomicityTests`).
+- La política `ConnectionReader` corta primero (403); el acceso `None` del middleware es la segunda barrera y se prueba
+  en aislado (`AccessScopeMiddlewareTests`).
+- `docs/arquitectura/ARQUITECTURA_v0.1.md` §autorización todavía llama `ConnectionMember` a la política que el código
+  llama `ConnectionReader`: error de nombre del documento de arquitectura, reportado y sin corregir aquí.
 
 **Deuda de S2-12:**
 - No hay alta de usuarios Desarrollador (D6): para la demo hay que sembrarlos a mano. Corresponde a Identity (S1-06).

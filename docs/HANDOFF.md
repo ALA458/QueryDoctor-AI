@@ -14,10 +14,16 @@
 - Decisiones D1–D7, mecánica y deuda: `docs/ARCHITECTURE_PLAN.md` §S2-12. Contrato: `docs/CONTRATO_API_CONEXIONES.md`.
 
 ## Cómo probarla
-- `dotnet test tests/QueryDoctor.IntegrationTests --filter "FullyQualifiedName~DeveloperAccess|FullyQualifiedName~AssignmentEndpoints|FullyQualifiedName~ConnectionAccessFilter|FullyQualifiedName~WorkerSystemAccess"`.
-- Cobertura del modelo y arquitectura: `ConnectionAccessFilterCoverageTests` y `AccessScopeArchitectureTests`.
+- `dotnet test tests/QueryDoctor.IntegrationTests --filter "FullyQualifiedName~DeveloperAccess|FullyQualifiedName~Assignment|FullyQualifiedName~ConnectionAccessFilter|FullyQualifiedName~WorkerSystemAccess"`.
+- Unitarias: `ConnectionAccessFilterCoverageTests`, `AccessScopeMiddlewareTests` (None sin la política delante) y
+  `AccessScopeArchitectureTests`.
 - Suite completa: `dotnet test -m:1`.
 - Rotura a propósito: quitar el filtro de `Finding` o hacer que `None` vea todo pone pruebas en rojo (ver el PR).
+  También: confirmar la asignación antes de auditar (`AssignmentAuditAtomicityTests`) o ignorar el cambio de
+  contraseña pendiente en el middleware (`AccessScopeMiddlewareTests`).
+- Auditoría (`/audit`, sesión aparte) hecha: sin bloqueantes. Corregidos la transacción única asignación + auditoría
+  (RF-TRZ-05), las pruebas del middleware (D7) y la documentación. `ARQUITECTURA_v0.1.md` sigue diciendo
+  `ConnectionMember` (reportado, sin tocar).
 
 ## Lo que necesita saber cada uno
 **Daniel**
@@ -44,4 +50,5 @@
 
 ## Siguiente paso
 Revisión por ejes de S2-12 en una sesión aparte (`/audit`) y abrir el PR `feat/S2-12-rbac-desarrollador` → `main`.
-Si `main` recibió otra migración, regenerar `AuditoriaUsuarioRelacionado` encima. Después, **S2-13** (retención).
+Si `main` recibió otra migración, regenerar `AuditoriaUsuarioRelacionado` encima (al 2026-11-15 no la recibió).
+Repetir `dotnet list package --vulnerable` (en la auditoría NuGet no respondió). Después, **S2-13** (retención).

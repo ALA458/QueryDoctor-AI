@@ -227,4 +227,5 @@ Sin cuerpo. Idempotente: asignar algo ya asignado también da **204** y no deja 
 ### Auditoría
 Asignar y quitar dejan `ConnectionAssigned` / `ConnectionUnassigned` en `GET /audit`, con `subject_type: "connection"`,
 `subject_id` = la conexión, `user_id` = el DBA y el campo **nuevo** `related_user_id` = el Desarrollador. En los demás
-eventos `related_user_id` es `null`.
+eventos `related_user_id` es `null`. El cambio y su evento van en la misma transacción: si la auditoría falla, la
+respuesta es **500** y la asignación queda como estaba, así que reintentar es seguro.
