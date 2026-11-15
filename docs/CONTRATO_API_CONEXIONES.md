@@ -7,8 +7,18 @@
 
 ## Reglas comunes
 
-- Todo exige sesión (cookie de S1-06) y rol **DBA** (política `DbaOnly`): sin sesión **401**, sin rol **403**.
-  El acceso de Desarrollador a sus conexiones asignadas llega en S2-12.
+- Todo exige sesión (cookie de S1-06): sin sesión **401**. Un usuario sin rol, con un rol desconocido o con cambio
+  de contraseña pendiente recibe **403**.
+- **S2-12 (RNF-SEG-12):** qué puede hacer cada rol.
+  - **DBA:** todo lo de este documento, sobre todas las conexiones.
+  - **Desarrollador:** solo lectura de las conexiones que el DBA le asignó (`GET /connections`, `GET /connections/{id}`,
+    `GET /connections/{id}/ingestions`). Además puede pedir y leer explicaciones de sus consultas (CU-05).
+  - Registrar, iniciar ingestas y gestionar asignaciones es solo DBA: el Desarrollador recibe **403**, aunque la
+    conexión sea suya.
+  - Una conexión no asignada **no existe** para el Desarrollador: no aparece en el listado y por id directo responde
+    **404** con el mismo `detail` que un id inexistente. Vale también para sus ingestas y para las explicaciones de
+    sus consultas.
+  - Quitar una asignación surte efecto en la siguiente solicitud, con la misma sesión: no hay que volver a entrar.
 - **CSRF:** `POST /connections` exige mismo origen (cabecera `Origin` o `Sec-Fetch-Site: same-origin`), como
   `/auth/*`. Desde otro origen: **403**. `fetch` con `credentials: "same-origin"` ya cumple.
 - Enumerados siempre como **texto** (nunca número).
@@ -160,7 +170,8 @@ la ingesta corre en el Worker (invariante 2).
 
 ## `GET /connections/{id}/ingestions` → 200 — **nuevo** (S1-11)
 
-Últimas 20 ejecuciones, la más reciente primero. Solo DBA. **404** si la conexión no existe.
+Últimas 20 ejecuciones, la más reciente primero. DBA y Desarrollador con la conexión asignada (S2-12). **404** si la
+conexión no existe o no está asignada.
 
 ```json
 [
@@ -183,3 +194,37 @@ la ingesta corre en el Worker (invariante 2).
   `TlsCertificateInvalid`, `Timeout`, `Interrupted`, `Unknown`. Mostrar `causeMessage` tal cual, como texto.
 - `ServerUnreachable`, `Timeout` y `Unknown` se reintentan solos (30, 60, 120 y 240 s): cada intento es una fila
   nueva y retoma desde la marca de agua (RNF-FIA-01).
+
+## Asignaciones de conexiones — **nuevo** (S2-12, RNF-SEG-12)
+
+Solo DBA y mismo origen (CSRF) en `PUT` y `DELETE`. El Desarrollador recibe **403** y sin sesión es **401**.
+
+### `GET /users?role=Desarrollador` → 200
+Para elegir a quién asignar. `role` es obligatorio y `Desarrollador` es el único valor; cualquier otro da **400**.
+```json
+[ { "id": "9a1c…", "userName": "ana" } ]
+```
+Crear usuarios Desarrollador **no** está en S2-12: hoy no hay pantalla ni endpoint para hacerlo (ver HANDOFF).
+
+### `GET /connections/{id}/assignments` → 200
+```json
+[ { "userId": "9a1c…", "userName": "ana", "assignedAt": "2026-11-15T19:00:00Z" } ]
+```
+**404** si la conexión no existe.
+
+### `PUT /connections/{id}/assignments/{userId}` → 204
+Sin cuerpo. Idempotente: asignar algo ya asignado también da **204** y no deja un segundo evento de auditoría.
+| Respuesta | Cuándo |
+|---|---|
+| **204** | Asignada (o ya lo estaba) |
+| **404** `detail: "La conexión no existe."` | Conexión inexistente |
+| **404** `detail: "El usuario no existe."` | Usuario inexistente |
+| **400** `cause: "NotDeveloper"` | El usuario no tiene rol Desarrollador (un DBA ya ve todo) |
+
+### `DELETE /connections/{id}/assignments/{userId}` → 204
+**404** `detail: "La asignación no existe."` si no estaba asignada o la conexión no existe.
+
+### Auditoría
+Asignar y quitar dejan `ConnectionAssigned` / `ConnectionUnassigned` en `GET /audit`, con `subject_type: "connection"`,
+`subject_id` = la conexión, `user_id` = el DBA y el campo **nuevo** `related_user_id` = el Desarrollador. En los demás
+eventos `related_user_id` es `null`.

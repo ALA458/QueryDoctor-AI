@@ -236,7 +236,9 @@ ApplicationRole, Guid>`), con sus tablas movidas a `ops` y columnas en `snake_ca
   `access_failed_count`) más dos propias: `must_change_password` boolean no nulo (primer ingreso,
   RNF-SEG-13) y `created_at` timestamptz no nulo.
 - **`ops.user_connection`**: `user_id` uuid, `connection_id` uuid, `assigned_at` timestamptz no nulo.
-  Qué conexiones puede consultar un usuario Desarrollador (RNF-SEG-12).
+  Qué conexiones puede consultar un usuario Desarrollador (RNF-SEG-12). Desde S2-12 la gestiona el DBA
+  (`/connections/{id}/assignments`) y la lee el filtro por conexión en cada solicitud. Es la única tabla con
+  `connection_id` de `ops` sin filtro global: es la fuente del propio filtro.
 - **Roles sembrados** en la migración `Inicial` con identificadores fijos: `DBA`
   (`6f1c3b0e-…-1001`) y `Desarrollador` (`6f1c3b0e-…-1002`) (RNF-SEG-12).
 - **No existe `ops.job`** en las migraciones de EF (ver MD-08).
@@ -344,7 +346,7 @@ Sembrado en la migración con el conjunto de umbrales por defecto del Cuadro 4.5
 |---|---|---|
 | analysis | health_score | S2-02 (`rule_catalog`, `threshold_set`, `analysis_run` y `finding` ya existen desde S1-13) |
 | ai | ~~explanation, claim, claim_reference~~ creadas en S2-05 (migraciones `ExplicacionesIa` y `AfirmacionesExplicacion`); kb_fragment y kb_causal_relation existen desde S1-17 | S1-17, S2-05 |
-| audit | ~~trace_entry, audit_event~~ creadas en S2-06 (migración `TrazaYAuditoria`, trigger de solo adición, `prev_hash`/`entry_hash`, sin FK); statement_log sigue pendiente | S2-06; statement_log: S1-08 usa hoy un escritor en memoria |
+| audit | ~~trace_entry, audit_event~~ creadas en S2-06 (migración `TrazaYAuditoria`, trigger de solo adición, `prev_hash`/`entry_hash`, sin FK); S2-12 agrega `audit_event.related_user_id` uuid nulo (migración `AuditoriaUsuarioRelacionado`); statement_log sigue pendiente | S2-06; statement_log: S1-08 usa hoy un escritor en memoria |
 
 ---
 
