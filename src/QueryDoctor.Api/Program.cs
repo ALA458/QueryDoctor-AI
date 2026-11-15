@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using QueryDoctor.Api.Auth;
 using QueryDoctor.Api.Connections;
 using QueryDoctor.Api.Explanations;
+using QueryDoctor.Api.Traceability;
 using QueryDoctor.Infrastructure;
 using QueryDoctor.Infrastructure.Persistence;
 
@@ -67,6 +68,9 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapAuthEndpoints();
 app.MapConnectionEndpoints();
 app.MapExplanationEndpoints();
+
+// S2-06: traza y auditoría, solo lectura (RF-TRZ-02/03).
+app.MapTraceabilityEndpoints();
 
 app.Run();
 
