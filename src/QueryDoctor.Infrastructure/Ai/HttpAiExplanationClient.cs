@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using System.Text.Json;
 using QueryDoctor.Application.Ai;
 using QueryDoctor.Domain.Ai;
 
@@ -57,6 +58,10 @@ public sealed class AiServiceOptions
 public sealed class HttpAiExplanationClient : IAiExplanationClient
 {
     private const string ExplainPath = "explain";
+    private const string InfoPath = "info";
+
+    /// <summary>Tiempo para leer el perfil: si <c>/info</c> tarda, no se usa la caché y se sigue con la explicación.</summary>
+    public static readonly TimeSpan ProfileTimeout = TimeSpan.FromSeconds(5);
 
     private readonly HttpClient _http;
     private readonly AiServiceOptions _options;
@@ -106,6 +111,52 @@ public sealed class HttpAiExplanationClient : IAiExplanationClient
         catch (HttpRequestException ex)
         {
             throw new AiServiceUnavailableException(ExplanationCause.ServiceUnreachable, ex);
+        }
+    }
+
+    public async Task<AiServiceProfile?> GetProfileAsync(CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_options.BaseUrl))
+        {
+            return null;
+        }
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeout.CancelAfter(ProfileTimeout);
+        try
+        {
+            using var response = await _http.GetAsync(new Uri(new Uri(EnsureTrailingSlash(_options.BaseUrl)), InfoPath), timeout.Token);
+            if (!response.IsSuccessStatusCode)
+            {
+                return null;
+            }
+
+            using var json = JsonDocument.Parse(await ReadLimitedAsync(response.Content, timeout.Token));
+            var promptVersion = json.RootElement.TryGetProperty("prompt_version", out var prompt) ? prompt.GetString() : null;
+            var llmProfile = json.RootElement.TryGetProperty("llm_profile", out var llm) ? llm.GetString() : null;
+            return string.IsNullOrWhiteSpace(promptVersion) || string.IsNullOrWhiteSpace(llmProfile)
+                ? null
+                : new AiServiceProfile(promptVersion, llmProfile);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return null;
+        }
+        catch (HttpRequestException)
+        {
+            return null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+        catch (AiServiceUnavailableException)
+        {
+            return null;
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
         }
     }
 

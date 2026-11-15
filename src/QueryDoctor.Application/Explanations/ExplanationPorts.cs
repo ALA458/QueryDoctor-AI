@@ -35,6 +35,15 @@ public interface IExplanationStore
 
     Task AddAsync(Explanation explanation, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Guarda la explicación completada junto con sus afirmaciones y referencias en una sola transacción
+    /// (<c>ai.claim</c>, <c>ai.claim_reference</c>, §7).
+    /// </summary>
+    Task CompleteAsync(Explanation explanation, IReadOnlyList<ExplanationClaim> claims, CancellationToken cancellationToken);
+
+    /// <summary>Afirmaciones de una explicación con sus referencias, en orden.</summary>
+    Task<IReadOnlyList<ExplanationClaim>> GetClaimsAsync(Guid explanationId, CancellationToken cancellationToken);
+
     Task SaveAsync(Explanation explanation, CancellationToken cancellationToken);
 }
 

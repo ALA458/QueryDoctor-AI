@@ -46,7 +46,47 @@ public sealed class ExplainQueryTests
         var body = _harness.Body(explanation);
         Assert.Equal(ExplanationValidationConstants.StatusTrazadaCode, body.Status);
         Assert.Equal(ExplanationValidationConstants.PersistentNoticeText, body.PersistentNotice);
-        Assert.NotEmpty(body.Claims);
+    }
+
+    [Fact]
+    public async Task CadaAfirmacionSeGuardaCifradaConSusHallazgosYLosNodosDelPlan()
+    {
+        // §7 (ai.claim, ai.claim_reference) y RF-DASH-05: enlaces a los hallazgos y a los nodos que sustentan.
+        var queryId = _harness.SeedQuery();
+        var explanation = _harness.Request(queryId);
+        var client = new ScriptedAiExplanationClient(ExplainQueryHarness.TracedResponse);
+
+        await _harness.Create(client).ExecuteAsync(explanation.Id, CancellationToken.None);
+
+        var claims = _harness.Store.Claims.Where(c => c.ExplanationId == explanation.Id).OrderBy(c => c.ClaimIndex).ToArray();
+        Assert.NotEmpty(claims);
+        Assert.Equal(Enumerable.Range(0, claims.Length), claims.Select(c => c.ClaimIndex));
+        Assert.All(claims, claim =>
+        {
+            Assert.Equal("OBSERVACION", claim.ClaimType);
+            Assert.True(claim.Passed);
+            Assert.StartsWith("enc:", claim.EncryptedText, StringComparison.Ordinal);
+            Assert.Equal("El motor señaló este operador del plan.", _harness.Encryptor.Decrypt(claim.EncryptedText));
+            var reference = Assert.Single(claim.References);
+            Assert.StartsWith("F-", reference.FindingCode, StringComparison.Ordinal);
+            Assert.NotEqual("[]", reference.NodeIdsJson);
+        });
+    }
+
+    [Fact]
+    public async Task UnHallazgoCitadoQueNoEstaEnElContextoQuedaSinNodosYLaAfirmacionNoPasa()
+    {
+        var queryId = _harness.SeedQuery();
+        var explanation = _harness.Request(queryId);
+
+        await _harness.Create(new ScriptedAiExplanationClient(ExplainQueryHarness.UntracedResponse))
+            .ExecuteAsync(explanation.Id, CancellationToken.None);
+
+        var claim = Assert.Single(_harness.Store.Claims);
+        Assert.False(claim.Passed);
+        var reference = Assert.Single(claim.References);
+        Assert.Equal("F-NO-EXISTE", reference.FindingCode);
+        Assert.Equal("[]", reference.NodeIdsJson);
     }
 
     [Fact]
@@ -134,6 +174,39 @@ public sealed class ExplainQueryTests
         Assert.Equal(first.ContextHash, second.ContextHash);
         Assert.Equal(first.EncryptedBody, second.EncryptedBody);
         Assert.Equal(ExplanationValidationConstants.StatusTrazadaCode, second.ValidationStatus);
+    }
+
+    [Fact]
+    public async Task ConOtroPromptNoSeReutilizaLaExplicacion()
+    {
+        // RF-IA-07: el prompt y el perfil de LLM forman parte del contexto.
+        var queryId = _harness.SeedQuery();
+        var client = new ScriptedAiExplanationClient(ExplainQueryHarness.TracedResponse);
+        var explain = _harness.Create(client);
+        await explain.ExecuteAsync(_harness.Request(queryId).Id, CancellationToken.None);
+
+        client.Profile = ExplainQueryHarness.Profile with { PromptVersion = "v2" };
+        var outcome = await explain.ExecuteAsync(_harness.Request(queryId).Id, CancellationToken.None);
+
+        Assert.Equal(2, client.RecordedBodies.Count);
+        Assert.False(outcome!.FromCache);
+    }
+
+    [Fact]
+    public async Task SiNoSePuedeLeerElPerfilNoSeUsaLaCacheYSeGeneraIgual()
+    {
+        var queryId = _harness.SeedQuery();
+        var client = new ScriptedAiExplanationClient(ExplainQueryHarness.TracedResponse);
+        var explain = _harness.Create(client);
+        await explain.ExecuteAsync(_harness.Request(queryId).Id, CancellationToken.None);
+
+        client.Profile = null;
+        var second = _harness.Request(queryId);
+        var outcome = await explain.ExecuteAsync(second.Id, CancellationToken.None);
+
+        Assert.Equal(2, client.RecordedBodies.Count);
+        Assert.False(outcome!.FromCache);
+        Assert.Equal(ExplanationState.Completed, second.State);
     }
 
     [Fact]

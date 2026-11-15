@@ -211,9 +211,8 @@ public sealed class ExplanationEndpointsTests(PostgresFixture postgres) : IDispo
             "TRAZADA",
             "Trazada a evidencia del motor; no equivale a un diagnóstico confirmado",
             "Resumen",
-            [new ExplanationBodyClaim("OBSERVACION", "Afirmación", ["F-0000"], null, null, true)],
             []);
-        await AddExplanationAsync(queryId, e =>
+        var explanation = await AddExplanationAsync(queryId, e =>
         {
             e.State = ExplanationState.Completed;
             e.ValidationStatus = "TRAZADA";
@@ -221,6 +220,21 @@ public sealed class ExplanationEndpointsTests(PostgresFixture postgres) : IDispo
             e.ContextHash = new string('a', 64);
             e.CompletedAt = DateTimeOffset.UtcNow;
         });
+        await using (var db = postgres.CreateContext())
+        {
+            var claimId = Guid.NewGuid();
+            db.ExplanationClaims.Add(new ExplanationClaim
+            {
+                Id = claimId,
+                ExplanationId = explanation.Id,
+                ClaimIndex = 0,
+                ClaimType = "OBSERVACION",
+                EncryptedText = encryptor.Encrypt("Afirmación"),
+                Passed = true,
+                References = [new ExplanationClaimReference { Id = Guid.NewGuid(), ClaimId = claimId, FindingCode = "F-0000", NodeIdsJson = "[3,7]" }],
+            });
+            await db.SaveChangesAsync();
+        }
         using var client = await _api.ClientAsync(RoleNames.Dba);
 
         var view = await client.GetFromJsonAsync<JsonElement>($"/queries/{queryId}/explanations/latest");
@@ -228,7 +242,13 @@ public sealed class ExplanationEndpointsTests(PostgresFixture postgres) : IDispo
         Assert.Equal(ExplanationCodes.StateCompleted, view.GetProperty("status").GetString());
         Assert.Equal("TRAZADA", view.GetProperty("validation_status").GetString());
         Assert.Equal(body.PersistentNotice, view.GetProperty("notice").GetString());
-        Assert.Equal("Afirmación", view.GetProperty("claims")[0].GetProperty("statement").GetString());
+        var claim = view.GetProperty("claims")[0];
+        Assert.Equal("Afirmación", claim.GetProperty("statement").GetString());
+
+        // RF-DASH-05: cada afirmación enlaza sus hallazgos y los nodos del plan.
+        var reference = claim.GetProperty("references")[0];
+        Assert.Equal("F-0000", reference.GetProperty("finding_code").GetString());
+        Assert.Equal([3, 7], reference.GetProperty("node_ids").EnumerateArray().Select(n => n.GetInt32()));
     }
 
     [Fact]

@@ -112,6 +112,30 @@ public sealed class ExplanationRequestTests
         Assert.Equal(ExplanationValidationConstants.PersistentNoticeText, view.Notice);
         Assert.NotEmpty(view.Claims);
         Assert.False(view.FromCache);
+
+        // RF-DASH-05: cada afirmación trae el texto descifrado y sus hallazgos con los nodos del plan.
+        Assert.All(view.Claims, claim =>
+        {
+            Assert.Equal("El motor señaló este operador del plan.", claim.Statement);
+            Assert.NotEmpty(Assert.Single(claim.References).NodeIds);
+        });
+    }
+
+    [Fact]
+    public async Task UnaExplicacionDeCacheMuestraLasAfirmacionesDeLaOriginal()
+    {
+        var queryId = _harness.SeedQuery();
+        var explain = _harness.Create(new ScriptedAiExplanationClient(ExplainQueryHarness.TracedResponse));
+        await explain.ExecuteAsync(_harness.Request(queryId).Id, CancellationToken.None);
+        var second = _harness.Request(queryId);
+        second.RequestedAt = DateTimeOffset.UtcNow.AddSeconds(1);
+        await explain.ExecuteAsync(second.Id, CancellationToken.None);
+
+        var view = Assert.IsType<GetLatestExplanationResult.Found>(await Latest().ExecuteAsync(queryId)).View;
+
+        Assert.Equal(second.Id, view.ExplanationId);
+        Assert.True(view.FromCache);
+        Assert.NotEmpty(view.Claims);
     }
 
     [Fact]

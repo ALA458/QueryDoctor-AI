@@ -13,4 +13,14 @@ public interface IAiExplanationClient
     /// validarlo es tarea del <c>ExplanationValidator</c> (S2-03).
     /// </summary>
     Task<string> SendAsync(MaskedExplanationRequest request, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Perfil activo del servicio (<c>GET /info</c>): versión del prompt y perfil de LLM. Entran en el hash de la caché
+    /// (RF-IA-07) para no reutilizar una explicación de otro prompt o modelo. <see langword="null"/> si no se pudo leer:
+    /// entonces no se consulta la caché.
+    /// </summary>
+    Task<AiServiceProfile?> GetProfileAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>Versión del prompt y perfil de LLM con que el servicio de IA genera (ADR-10, RF-TRZ-01).</summary>
+public sealed record AiServiceProfile(string PromptVersion, string LlmProfile);

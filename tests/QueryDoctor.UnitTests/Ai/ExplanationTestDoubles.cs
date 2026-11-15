@@ -19,6 +19,8 @@ internal sealed class InMemoryExplanationStore : IExplanationStore, IExplanation
 
     public List<Explanation> Explanations { get; } = [];
 
+    public List<ExplanationClaim> Claims { get; } = [];
+
     public void AddSource(EncryptedExplanationSource source) => _sources[source.QueryId] = source;
 
     public Task<ExplanationTarget?> FindTargetAsync(Guid queryId, CancellationToken cancellationToken) =>
@@ -54,6 +56,15 @@ internal sealed class InMemoryExplanationStore : IExplanationStore, IExplanation
 
     public Task SaveAsync(Explanation explanation, CancellationToken cancellationToken) => Task.CompletedTask;
 
+    public Task CompleteAsync(Explanation explanation, IReadOnlyList<ExplanationClaim> claims, CancellationToken cancellationToken)
+    {
+        Claims.AddRange(claims);
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyList<ExplanationClaim>> GetClaimsAsync(Guid explanationId, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<ExplanationClaim>>(Claims.Where(c => c.ExplanationId == explanationId).OrderBy(c => c.ClaimIndex).ToArray());
+
     public Task<EncryptedExplanationSource?> LoadAsync(Guid queryId, CancellationToken cancellationToken) =>
         Task.FromResult(_sources.TryGetValue(queryId, out var source) ? source : null);
 }
@@ -70,6 +81,11 @@ internal sealed class ScriptedAiExplanationClient : IAiExplanationClient
 
     public List<string> RecordedBodies { get; } = [];
 
+    /// <summary>Perfil que informa <c>/info</c>; coincide con la metadata de <see cref="ExplainQueryHarness.TracedResponse"/>.</summary>
+    public AiServiceProfile? Profile { get; set; } = ExplainQueryHarness.Profile;
+
+    public Task<AiServiceProfile?> GetProfileAsync(CancellationToken cancellationToken) => Task.FromResult(Profile);
+
     public Task<string> SendAsync(MaskedExplanationRequest request, CancellationToken cancellationToken)
     {
         RecordedBodies.Add(request.ToWireJson());
@@ -83,6 +99,8 @@ internal sealed class ScriptedAiExplanationClient : IAiExplanationClient
 internal sealed class ExplainQueryHarness
 {
     public static readonly VersionedRuleCatalog Catalog = new(VersionedRuleCatalog.DiscoverBuiltInRules());
+
+    public static readonly AiServiceProfile Profile = new("v1", "mock");
 
     public InMemoryExplanationStore Store { get; } = new();
 

@@ -135,6 +135,47 @@ public sealed class HttpAiExplanationClientTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => Client(handler).SendAsync(Request(), cts.Token));
     }
 
+    [Fact]
+    public async Task ElPerfilSeLeeDeInfo()
+    {
+        var handler = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent("{\"llm_profile\":\"openrouter_free\",\"prompt_version\":\"v1\",\"timeout_seconds\":60}"),
+        });
+
+        var profile = await Client(handler).GetProfileAsync(CancellationToken.None);
+
+        Assert.Equal(new AiServiceProfile("v1", "openrouter_free"), profile);
+        var sent = Assert.Single(handler.Requests);
+        Assert.Equal(HttpMethod.Get, sent.Method);
+        Assert.Equal(new Uri("http://ai:8000/info"), sent.Uri);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.ServiceUnavailable, "{}")]
+    [InlineData(HttpStatusCode.OK, "no es json")]
+    [InlineData(HttpStatusCode.OK, "{\"llm_profile\":\"mock\"}")]
+    public async Task SiElPerfilNoSePuedeLeerSeDevuelveNull(HttpStatusCode status, string body)
+    {
+        var handler = new StubHandler(_ => new HttpResponseMessage(status) { Content = new StringContent(body) });
+
+        Assert.Null(await Client(handler).GetProfileAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SiInfoNoRespondeSeDevuelveNullSinEsperarElTiempoTotal()
+    {
+        var handler = new StubHandler(async (_, ct) =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(60), ct);
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
+        var started = DateTimeOffset.UtcNow;
+        Assert.Null(await Client(handler).GetProfileAsync(CancellationToken.None));
+        Assert.True(DateTimeOffset.UtcNow - started < HttpAiExplanationClient.ProfileTimeout + TimeSpan.FromSeconds(5));
+    }
+
     [Theory]
     [InlineData("ftp://ai:8000/")]
     [InlineData("ai:8000")]

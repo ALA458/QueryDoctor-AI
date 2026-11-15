@@ -41,6 +41,25 @@ public sealed class ExplanationModelTests : IDisposable
     }
 
     [Fact]
+    public void LasAfirmacionesYSusReferenciasTienenTablaPropiaYSiguenASuExplicacion()
+    {
+        // §7: ai.claim con texto cifrado y ai.claim_reference con hallazgo y nodos (RF-DASH-05).
+        Assert.Contains("CREATE TABLE ai.claim (", _script, StringComparison.Ordinal);
+        Assert.Contains("encrypted_text text NOT NULL", _script, StringComparison.Ordinal);
+        Assert.Contains("CREATE TABLE ai.claim_reference (", _script, StringComparison.Ordinal);
+        Assert.Contains("node_ids_json text NOT NULL", _script, StringComparison.Ordinal);
+        Assert.Matches(@"CREATE UNIQUE INDEX \S+ ON ai\.claim \(explanation_id, claim_index\)", _script);
+        Assert.Contains(
+            "FOREIGN KEY (explanation_id) REFERENCES ai.explanation (id) ON DELETE CASCADE",
+            _script,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "FOREIGN KEY (claim_id) REFERENCES ai.claim (id) ON DELETE CASCADE",
+            _script,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void LaExplicacionSigueASuConsultaConBorradoEnCascada()
     {
         Assert.Contains(

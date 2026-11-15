@@ -53,9 +53,10 @@ public enum ExplanationCause
 }
 
 /// <summary>
-/// Explicación de una consulta (tabla <c>ai.explanation</c>, S2-05, E4). Las afirmaciones y el resumen viven en
-/// <see cref="EncryptedBody"/>, cifrado (RNF-SEG-14). Las demás columnas son identificadores, códigos y el hash del
-/// contexto enmascarado, que alimentan la caché (RF-IA-07) y la trazabilidad (RF-TRZ-01).
+/// Explicación de una consulta (tabla <c>ai.explanation</c>, S2-05, §7). El resumen va en <see cref="EncryptedBody"/> y
+/// las afirmaciones en <see cref="ExplanationClaim"/>, ambos cifrados (RNF-SEG-14). Las demás columnas son
+/// identificadores, códigos y el hash del contexto enmascarado, que alimentan la caché (RF-IA-07) y la trazabilidad
+/// (RF-TRZ-01).
 /// </summary>
 public sealed class Explanation
 {
@@ -90,7 +91,7 @@ public sealed class Explanation
 
     public string? DataPolicy { get; set; }
 
-    /// <summary>Resultado validado (resumen, afirmaciones y fallos) cifrado con <c>IFieldEncryptor</c>.</summary>
+    /// <summary>Resumen y fallos del validador, cifrados con <c>IFieldEncryptor</c>. Las afirmaciones van en <c>ai.claim</c>.</summary>
     public string? EncryptedBody { get; set; }
 
     /// <summary>Explicación de la que se tomó el resultado cuando vino de la caché.</summary>

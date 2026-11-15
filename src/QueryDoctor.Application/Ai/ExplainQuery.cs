@@ -116,11 +116,19 @@ public sealed class ExplainQuery
             return Outcome(explanation, fromCache: false, findingsSent: 0, context.Masked.Metrics);
         }
 
-        explanation.ContextHash = request.ComputeContextHash();
         explanation.CatalogVersion = request.CatalogVersion;
         explanation.FindingCodesJson = JsonSerializer.Serialize(request.Findings.Select(f => f.FindingId).ToArray(), ContractJson);
 
-        var cached = await _store.FindTracedByContextHashAsync(explanation.ContextHash, cancellationToken);
+        // RF-IA-07: el hash incluye el prompt y el perfil de LLM activos. Si no se pueden leer, no se usa la caché.
+        var profile = await _client.GetProfileAsync(cancellationToken);
+        if (profile is not null)
+        {
+            explanation.ContextHash = request.ComputeContextHash(profile);
+        }
+
+        var cached = explanation.ContextHash is null
+            ? null
+            : await _store.FindTracedByContextHashAsync(explanation.ContextHash, cancellationToken);
         if (cached is not null && cached.Id != explanation.Id)
         {
             explanation.EncryptedBody = cached.EncryptedBody;
@@ -168,8 +176,60 @@ public sealed class ExplainQuery
         explanation.ServedBy = result.Metadata?.ServedBy;
         explanation.DataPolicy = result.Metadata?.DataPolicy;
         explanation.EncryptedBody = _encryptor.Encrypt(ToBody(result).ToJson());
-        await FinishAsync(explanation, ExplanationState.Completed, cause: null, cancellationToken);
+
+        // El hash que se guarda refleja el prompt y el perfil que de verdad generaron la respuesta; si el servicio no
+        // los informó, la explicación no entra en la caché.
+        explanation.ContextHash = !string.IsNullOrWhiteSpace(explanation.PromptVersion) && !string.IsNullOrWhiteSpace(explanation.LlmProfile)
+            ? request.ComputeContextHash(new AiServiceProfile(explanation.PromptVersion, explanation.LlmProfile))
+            : null;
+
+        explanation.State = ExplanationState.Completed;
+        explanation.Cause = null;
+        explanation.CompletedAt = _clock.GetUtcNow();
+        await _store.CompleteAsync(explanation, ToClaims(explanation.Id, result, request), cancellationToken);
         return Outcome(explanation, fromCache: false, request.Findings.Count, context.Masked.Metrics);
+    }
+
+    /// <summary>
+    /// Afirmaciones con sus referencias a hallazgos y a los nodos del plan de cada hallazgo (§7, RF-DASH-05). Un
+    /// hallazgo citado que no está en el contexto queda referenciado sin nodos; su afirmación no pasó el criterio (a).
+    /// </summary>
+    private ExplanationClaim[] ToClaims(Guid explanationId, ValidatedExplanationResult result, MaskedExplanationRequest request)
+    {
+        var nodesByFinding = request.Findings.ToDictionary(
+            f => f.FindingId,
+            f => f.Nodes.Select(n => n.NodeId).Distinct().Order().ToArray(),
+            StringComparer.OrdinalIgnoreCase);
+
+        return result.Claims
+            .Select(c =>
+            {
+                var claimId = Guid.NewGuid();
+                return new ExplanationClaim
+                {
+                    Id = claimId,
+                    ExplanationId = explanationId,
+                    ClaimIndex = c.ClaimIndex,
+                    ClaimType = c.ClaimTypeCode,
+                    EncryptedText = _encryptor.Encrypt(c.Statement),
+                    KbFragmentId = c.KbFragmentId,
+                    IndicationLabel = c.IndicationLabel,
+                    Passed = c.Passed,
+                    References = c.FindingIds
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .Select(findingId => new ExplanationClaimReference
+                        {
+                            Id = Guid.NewGuid(),
+                            ClaimId = claimId,
+                            FindingCode = findingId,
+                            NodeIdsJson = JsonSerializer.Serialize(
+                                nodesByFinding.TryGetValue(findingId, out var nodes) ? nodes : [],
+                                ContractJson),
+                        })
+                        .ToList(),
+                };
+            })
+            .ToArray();
     }
 
     private ExplanationSource Decrypt(EncryptedExplanationSource encrypted) => new(
@@ -224,9 +284,6 @@ public sealed class ExplainQuery
         result.StatusCode,
         result.PersistentNotice,
         result.Summary,
-        result.Claims
-            .Select(c => new ExplanationBodyClaim(c.ClaimTypeCode, c.Statement, c.FindingIds, c.KbFragmentId, c.IndicationLabel, c.Passed))
-            .ToArray(),
         result.Failures
             .Select(f => new ExplanationBodyFailure(f.Code.ToString(), f.ClaimIndex, f.Criterion))
             .ToArray());

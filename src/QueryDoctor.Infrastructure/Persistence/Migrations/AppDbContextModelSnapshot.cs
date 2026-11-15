@@ -251,6 +251,84 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                     b.ToTable("explanation", "ai");
                 });
 
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.ExplanationClaim", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("ClaimIndex")
+                        .HasColumnType("integer")
+                        .HasColumnName("claim_index");
+
+                    b.Property<string>("ClaimType")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("claim_type");
+
+                    b.Property<string>("EncryptedText")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("encrypted_text");
+
+                    b.Property<Guid>("ExplanationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("explanation_id");
+
+                    b.Property<string>("IndicationLabel")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("indication_label");
+
+                    b.Property<Guid?>("KbFragmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("kb_fragment_id");
+
+                    b.Property<bool>("Passed")
+                        .HasColumnType("boolean")
+                        .HasColumnName("passed");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExplanationId", "ClaimIndex")
+                        .IsUnique();
+
+                    b.ToTable("claim", "ai");
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.ExplanationClaimReference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ClaimId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("claim_id");
+
+                    b.Property<string>("FindingCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("finding_code");
+
+                    b.Property<string>("NodeIdsJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("node_ids_json");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClaimId");
+
+                    b.HasIndex("FindingCode");
+
+                    b.ToTable("claim_reference", "ai");
+                });
+
             modelBuilder.Entity("QueryDoctor.Domain.Ai.KbCausalRelation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1764,6 +1842,24 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
                 });
 
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.ExplanationClaim", b =>
+                {
+                    b.HasOne("QueryDoctor.Domain.Ai.Explanation", null)
+                        .WithMany()
+                        .HasForeignKey("ExplanationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.ExplanationClaimReference", b =>
+                {
+                    b.HasOne("QueryDoctor.Domain.Ai.ExplanationClaim", null)
+                        .WithMany("References")
+                        .HasForeignKey("ClaimId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("QueryDoctor.Domain.Ai.KbCausalRelation", b =>
                 {
                     b.HasOne("QueryDoctor.Domain.Ai.KbFragment", "Fragment")
@@ -1933,6 +2029,11 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.ExplanationClaim", b =>
+                {
+                    b.Navigation("References");
                 });
 
             modelBuilder.Entity("QueryDoctor.Domain.Ai.KbFragment", b =>

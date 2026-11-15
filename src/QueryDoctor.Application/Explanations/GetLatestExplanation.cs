@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Engine.Rules;
@@ -13,6 +14,21 @@ public sealed record ExplanationFindingView(
     [property: JsonPropertyName("rule_name")] string RuleName,
     [property: JsonPropertyName("severity")] string Severity,
     [property: JsonPropertyName("evidence_class")] string EvidenceClass);
+
+/// <summary>Hallazgo citado por una afirmación y los nodos del plan que la sustentan (RF-DASH-05).</summary>
+public sealed record ExplanationClaimReferenceView(
+    [property: JsonPropertyName("finding_code")] string FindingCode,
+    [property: JsonPropertyName("node_ids")] IReadOnlyList<int> NodeIds);
+
+/// <summary>Afirmación tipada (RF-IA-02) con la etiqueta de indicio (RF-IA-12) y sus enlaces a evidencia (RF-DASH-05).</summary>
+public sealed record ExplanationClaimView(
+    [property: JsonPropertyName("claim_index")] int ClaimIndex,
+    [property: JsonPropertyName("claim_type")] string ClaimType,
+    [property: JsonPropertyName("statement")] string Statement,
+    [property: JsonPropertyName("kb_fragment_id")] Guid? KbFragmentId,
+    [property: JsonPropertyName("indication_label")] string? IndicationLabel,
+    [property: JsonPropertyName("passed")] bool Passed,
+    [property: JsonPropertyName("references")] IReadOnlyList<ExplanationClaimReferenceView> References);
 
 /// <summary>
 /// Estado de la última explicación de una consulta (S2-05). Siempre lleva los hallazgos del último análisis: si la
@@ -31,7 +47,7 @@ public sealed record ExplanationView(
     [property: JsonPropertyName("model")] string? Model,
     [property: JsonPropertyName("prompt_version")] string? PromptVersion,
     [property: JsonPropertyName("summary")] string? Summary,
-    [property: JsonPropertyName("claims")] IReadOnlyList<ExplanationBodyClaim> Claims,
+    [property: JsonPropertyName("claims")] IReadOnlyList<ExplanationClaimView> Claims,
     [property: JsonPropertyName("validation_failures")] IReadOnlyList<ExplanationBodyFailure> ValidationFailures,
     [property: JsonPropertyName("findings")] IReadOnlyList<ExplanationFindingView> Findings);
 
@@ -98,9 +114,29 @@ public sealed class GetLatestExplanation
             cause = ExplanationCause.Abandoned;
         }
 
-        var body = state == ExplanationState.Completed && explanation.EncryptedBody is not null
+        var completed = state == ExplanationState.Completed;
+        var body = completed && explanation.EncryptedBody is not null
             ? ExplanationBody.FromJson(_encryptor.Decrypt(explanation.EncryptedBody))
             : null;
+
+        // Una explicación tomada de la caché muestra las afirmaciones de la original.
+        var claims = completed
+            ? (await _store.GetClaimsAsync(explanation.ReusedFromId ?? explanation.Id, cancellationToken))
+                .Select(c => new ExplanationClaimView(
+                    c.ClaimIndex,
+                    c.ClaimType,
+                    _encryptor.Decrypt(c.EncryptedText),
+                    c.KbFragmentId,
+                    c.IndicationLabel,
+                    c.Passed,
+                    c.References
+                        .OrderBy(r => r.FindingCode, StringComparer.Ordinal)
+                        .Select(r => new ExplanationClaimReferenceView(
+                            r.FindingCode,
+                            JsonSerializer.Deserialize<int[]>(r.NodeIdsJson) ?? []))
+                        .ToArray()))
+                .ToArray()
+            : [];
 
         return new GetLatestExplanationResult.Found(new ExplanationView(
             explanation.Id,
@@ -115,7 +151,7 @@ public sealed class GetLatestExplanation
             explanation.Model,
             explanation.PromptVersion,
             body?.Summary,
-            body?.Claims ?? [],
+            claims,
             body?.ValidationFailures ?? [],
             findings));
     }

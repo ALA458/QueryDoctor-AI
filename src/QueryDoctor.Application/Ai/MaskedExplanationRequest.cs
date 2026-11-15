@@ -118,12 +118,15 @@ public sealed class MaskedExplanationRequest
 
     /// <summary>
     /// Resumen SHA-256 (hexadecimal en minúsculas) del contexto canónico, para la caché de RF-IA-07 (E3).
-    /// Se calcula sobre el contenido YA enmascarado más la versión del catálogo y de cada regla, sin el
-    /// identificador de correlación: mismo contexto, mismo hash. Por eso se puede guardar en claro.
+    /// Se calcula sobre el contenido YA enmascarado más la versión del catálogo, la de cada regla, la del prompt y el
+    /// perfil de LLM, sin el identificador de correlación: mismo contexto, mismo hash. Por eso se puede guardar en claro.
     /// </summary>
-    public string ComputeContextHash()
+    public string ComputeContextHash(AiServiceProfile profile)
     {
+        ArgumentNullException.ThrowIfNull(profile);
         var canonical = new CanonicalContext(
+            profile.PromptVersion,
+            profile.LlmProfile,
             _additions.CatalogVersion,
             new SortedDictionary<string, string>(
                 Findings
@@ -165,6 +168,8 @@ public sealed class MaskedExplanationRequest
         includeCorrelation ? CorrelationId?.ToString("D", CultureInfo.InvariantCulture) : null);
 
     private sealed record CanonicalContext(
+        [property: JsonPropertyName("prompt_version")] string PromptVersion,
+        [property: JsonPropertyName("llm_profile")] string LlmProfile,
         [property: JsonPropertyName("catalog_version")] string CatalogVersion,
         [property: JsonPropertyName("rule_versions")] IReadOnlyDictionary<string, string> RuleVersions,
         [property: JsonPropertyName("request")] WireRequest Request);

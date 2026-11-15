@@ -81,6 +81,26 @@ public sealed class EfExplanationStore : IExplanationStore, IExplanationSourceRe
         await _db.SaveChangesAsync(cancellationToken);
     }
 
+    public async Task CompleteAsync(Explanation explanation, IReadOnlyList<ExplanationClaim> claims, CancellationToken cancellationToken)
+    {
+        if (_db.Entry(explanation).State == EntityState.Detached)
+        {
+            _db.Explanations.Update(explanation);
+        }
+
+        _db.ExplanationClaims.AddRange(claims);
+
+        // Una sola llamada a SaveChanges: explicación, afirmaciones y referencias quedan juntas o no quedan.
+        await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ExplanationClaim>> GetClaimsAsync(Guid explanationId, CancellationToken cancellationToken) =>
+        await _db.ExplanationClaims.AsNoTracking()
+            .Include(c => c.References)
+            .Where(c => c.ExplanationId == explanationId)
+            .OrderBy(c => c.ClaimIndex)
+            .ToListAsync(cancellationToken);
+
     public async Task SaveAsync(Explanation explanation, CancellationToken cancellationToken)
     {
         if (_db.Entry(explanation).State == EntityState.Detached)

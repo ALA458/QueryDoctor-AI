@@ -140,8 +140,8 @@ public sealed class ExplanationContextBuilderTests
         var source = Source(out var findings);
         var kb = findings.Select(f => f.Rule.Id).Distinct().Select(r => Fragment(r)).ToArray();
 
-        var first = Builder().Build(source, kb, Guid.NewGuid()).Request!.ComputeContextHash();
-        var second = Builder().Build(source, kb.Reverse().ToArray(), Guid.NewGuid()).Request!.ComputeContextHash();
+        var first = Builder().Build(source, kb, Guid.NewGuid()).Request!.ComputeContextHash(ExplainQueryHarness.Profile);
+        var second = Builder().Build(source, kb.Reverse().ToArray(), Guid.NewGuid()).Request!.ComputeContextHash(ExplainQueryHarness.Profile);
 
         Assert.Equal(first, second);
         Assert.Equal(64, first.Length);
@@ -154,7 +154,8 @@ public sealed class ExplanationContextBuilderTests
         var source = Source(out var findings);
         var rule = findings[0].Rule.Id;
         var fragment = Fragment(rule, "Versión 1");
-        var baseline = Builder().Build(source, [fragment]).Request!.ComputeContextHash();
+        var profile = ExplainQueryHarness.Profile;
+        var baseline = Builder().Build(source, [fragment]).Request!.ComputeContextHash(profile);
 
         var changedKb = new KbFragment
         {
@@ -164,13 +165,18 @@ public sealed class ExplanationContextBuilderTests
             Content = "Versión 2",
             SourceCitation = fragment.SourceCitation,
         };
-        var withChangedKb = Builder().Build(source, [changedKb]).Request!.ComputeContextHash();
-        var withOtherMetrics = Builder().Build(source with { LatestScore = null }, [fragment]).Request!.ComputeContextHash();
-        var withOtherSql = Builder().Build(source with { SqlText = "SELECT 1" }, [fragment]).Request!.ComputeContextHash();
+        var withChangedKb = Builder().Build(source, [changedKb]).Request!.ComputeContextHash(profile);
+        var withOtherMetrics = Builder().Build(source with { LatestScore = null }, [fragment]).Request!.ComputeContextHash(profile);
+        var withOtherSql = Builder().Build(source with { SqlText = "SELECT 1" }, [fragment]).Request!.ComputeContextHash(profile);
+        var request = Builder().Build(source, [fragment]).Request!;
 
         Assert.NotEqual(baseline, withChangedKb);
         Assert.NotEqual(baseline, withOtherMetrics);
         Assert.NotEqual(baseline, withOtherSql);
+
+        // RF-IA-07: otro prompt u otro perfil de LLM no reutilizan la explicación.
+        Assert.NotEqual(baseline, request.ComputeContextHash(profile with { PromptVersion = "v2" }));
+        Assert.NotEqual(baseline, request.ComputeContextHash(profile with { LlmProfile = "openrouter_paid" }));
     }
 
     [Fact]
