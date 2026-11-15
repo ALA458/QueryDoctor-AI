@@ -49,6 +49,9 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser, Applicatio
 
     public DbSet<KbCausalRelation> KbCausalRelations => Set<KbCausalRelation>();
 
+    /// <summary>Explicaciones generadas o reutilizadas de caché (S2-05, RF-IA-06/07).</summary>
+    public DbSet<Explanation> Explanations => Set<Explanation>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

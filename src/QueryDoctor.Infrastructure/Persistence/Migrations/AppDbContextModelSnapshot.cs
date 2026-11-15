@@ -143,6 +143,114 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                     b.ToTable("user_tokens", "ops");
                 });
 
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.Explanation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CatalogVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("catalog_version");
+
+                    b.Property<string>("Cause")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("cause");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<Guid>("ConnectionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("connection_id");
+
+                    b.Property<string>("ContextHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("context_hash");
+
+                    b.Property<Guid>("CorrelationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("correlation_id");
+
+                    b.Property<string>("DataPolicy")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("data_policy");
+
+                    b.Property<string>("EncryptedBody")
+                        .HasColumnType("text")
+                        .HasColumnName("encrypted_body");
+
+                    b.Property<string>("FindingCodesJson")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("finding_codes_json");
+
+                    b.Property<string>("LlmProfile")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("llm_profile");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("model");
+
+                    b.Property<string>("PromptVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("prompt_version");
+
+                    b.Property<Guid>("QueryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("query_id");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid?>("ReusedFromId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reused_from_id");
+
+                    b.Property<string>("ServedBy")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("served_by");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("state");
+
+                    b.Property<string>("ValidationStatus")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("validation_status");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId");
+
+                    b.HasIndex("ContextHash");
+
+                    b.HasIndex("ReusedFromId");
+
+                    b.HasIndex("QueryId", "RequestedAt");
+
+                    b.ToTable("explanation", "ai");
+                });
+
             modelBuilder.Entity("QueryDoctor.Domain.Ai.KbCausalRelation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1634,6 +1742,26 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("QueryDoctor.Domain.Ai.Explanation", b =>
+                {
+                    b.HasOne("QueryDoctor.Domain.Core.Connection", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QueryDoctor.Domain.Core.Query", null)
+                        .WithMany()
+                        .HasForeignKey("QueryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QueryDoctor.Domain.Ai.Explanation", null)
+                        .WithMany()
+                        .HasForeignKey("ReusedFromId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("QueryDoctor.Domain.Ai.KbCausalRelation", b =>
