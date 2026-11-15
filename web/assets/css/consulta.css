@@ -157,7 +157,7 @@
   line-height: 1.55;
   overflow-x: auto;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 /* ---------- Series temporales por plan ---------- */
@@ -278,7 +278,7 @@
   margin: 0.15rem 0 0;
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .details-toggle summary {

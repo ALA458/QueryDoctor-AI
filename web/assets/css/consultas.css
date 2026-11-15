@@ -18,7 +18,7 @@
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.45;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .meter { display: flex; align-items: center; gap: 0.6rem; min-width: 9rem; }

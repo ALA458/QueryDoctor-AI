@@ -12,6 +12,9 @@
   Traza de cada explicación en la misma transacción que su estado final. Auditoría de login, conexiones e ingestas
   manuales. Endpoints `GET /trace`, `/audit` y `/…/verify`. `/verify` VERDE: 709 unitarias, 78 de integración y 19
   de arquitectura. **Falta la revisión por ejes en otra sesión.**
+- Ajustes puntuales en la UI: `web/nginx/consulta.html` usa `<output>` para el aviso; los estilos de SQL usan
+  `overflow-wrap: anywhere` en lugar de `word-break: break-word`. La validación npm no está configurada:
+  `web/` no contiene `package.json`.
 - Decisiones T1–T9 y deuda: `docs/ARCHITECTURE_PLAN.md` §S2-06.
 
 ## Cómo probarla
