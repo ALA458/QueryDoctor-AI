@@ -17,6 +17,7 @@ using QueryDoctor.Application.Explanations;
 using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Application.KnowledgeBase;
 using QueryDoctor.Application.Masking;
+using QueryDoctor.Application.Queries;
 using QueryDoctor.Application.Scoring;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Application.Traceability;
@@ -85,6 +86,7 @@ public static class DependencyInjection
             services.AddScoped<IConnectionRepository, EfConnectionRepository>();
             services.AddScoped<IConnectionQueries, EfConnectionQueries>();
             services.AddScoped<IIngestionQueries, EfIngestionQueries>();
+            services.AddScoped<IQuerySourceReader, EfQuerySourceReader>();
             services.AddScoped<IKnowledgeBaseRepository, EfKnowledgeBaseRepository>();
             services.AddScoped<IExplanationValidationContextBuilder, ExplanationValidationContextBuilder>();
             services.AddScoped<IScoreRecalculationStore, EfScoreRecalculationStore>();
@@ -198,6 +200,20 @@ public static class DependencyInjection
         services.AddScoped<IExplanationJobScheduler, HangfireExplanationJobScheduler>();
         services.AddScoped<RequestExplanation>();
         services.AddScoped<GetLatestExplanation>();
+        return services;
+    }
+
+    /// <summary>
+    /// Consultas y detalle seguro con enmascarado de salida (S1-16, S2-09, RF-DASH-01..03).
+    /// Registra los casos de uso de lectura y el enmascarador puro en la Api sin conectarse a bases objetivo ni a la IA.
+    /// </summary>
+    public static IServiceCollection AddQueryViews(this IServiceCollection services)
+    {
+        services.TryAddSingleton<IPlanParser, ShowplanXmlParser>();
+        services.TryAddSingleton<IMasker, LiteralMasker>();
+        services.AddScoped<GetQueries>();
+        services.AddScoped<GetQueryDetail>();
+        services.AddScoped<GetQueryPlanTree>();
         return services;
     }
 

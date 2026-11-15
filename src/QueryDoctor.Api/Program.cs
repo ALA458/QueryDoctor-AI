@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using QueryDoctor.Api.Auth;
 using QueryDoctor.Api.Connections;
 using QueryDoctor.Api.Explanations;
+using QueryDoctor.Api.Queries;
 using QueryDoctor.Api.Traceability;
 using QueryDoctor.Infrastructure;
 using QueryDoctor.Infrastructure.Persistence;
@@ -30,6 +31,8 @@ builder.Services.AddExplanationRequests();
 
 // S2-12: el DBA asigna conexiones a los Desarrolladores (RNF-SEG-12).
 builder.Services.AddConnectionAssignments();
+// S1-16 / S2-09: listado y detalle de consultas con enmascarado seguro de salida.
+builder.Services.AddQueryViews();
 
 // Enumerados como texto en las respuestas (contrato de S1-15), nunca como número.
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -75,6 +78,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapAuthEndpoints();
 app.MapConnectionEndpoints();
 app.MapAssignmentEndpoints();
+app.MapQueryEndpoints();
 app.MapExplanationEndpoints();
 
 // S2-06: traza y auditoría, solo lectura (RF-TRZ-02/03).

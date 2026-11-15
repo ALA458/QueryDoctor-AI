@@ -2,6 +2,8 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Engine.Rules;
+using QueryDoctor.Application.Engine.Rules.Catalog;
+using QueryDoctor.Application.Validation;
 using QueryDoctor.Domain.Ai;
 using QueryDoctor.Domain.Analysis;
 
@@ -20,7 +22,10 @@ public sealed record ExplanationClaimReferenceView(
     [property: JsonPropertyName("finding_code")] string FindingCode,
     [property: JsonPropertyName("node_ids")] IReadOnlyList<int> NodeIds);
 
-/// <summary>Afirmación tipada (RF-IA-02) con la etiqueta de indicio (RF-IA-12) y sus enlaces a evidencia (RF-DASH-05).</summary>
+/// <summary>
+/// Afirmación tipada (RF-IA-02) con etiqueta de indicio (RF-IA-12), enlaces a evidencia (RF-DASH-05)
+/// y avisos normativos de revisión humana y costo de escritura (RF-DASH-06, CA-HU11.1, CA-HU11.3).
+/// </summary>
 public sealed record ExplanationClaimView(
     [property: JsonPropertyName("claim_index")] int ClaimIndex,
     [property: JsonPropertyName("claim_type")] string ClaimType,
@@ -28,6 +33,8 @@ public sealed record ExplanationClaimView(
     [property: JsonPropertyName("kb_fragment_id")] Guid? KbFragmentId,
     [property: JsonPropertyName("indication_label")] string? IndicationLabel,
     [property: JsonPropertyName("passed")] bool Passed,
+    [property: JsonPropertyName("requires_human_review")] bool RequiresHumanReview,
+    [property: JsonPropertyName("write_cost_warning")] bool WriteCostWarning,
     [property: JsonPropertyName("references")] IReadOnlyList<ExplanationClaimReferenceView> References);
 
 /// <summary>
@@ -119,22 +126,37 @@ public sealed class GetLatestExplanation
             ? ExplanationBody.FromJson(_encryptor.Decrypt(explanation.EncryptedBody))
             : null;
 
+        var missingIndexFindingCodes = findings
+            .Where(f => string.Equals(f.RuleId, Reg02MissingIndexRule.RuleId, StringComparison.Ordinal))
+            .Select(f => f.FindingCode)
+            .ToHashSet(StringComparer.Ordinal);
+
         // Una explicación tomada de la caché muestra las afirmaciones de la original.
         var claims = completed
             ? (await _store.GetClaimsAsync(explanation.ReusedFromId ?? explanation.Id, cancellationToken))
-                .Select(c => new ExplanationClaimView(
-                    c.ClaimIndex,
-                    c.ClaimType,
-                    _encryptor.Decrypt(c.EncryptedText),
-                    c.KbFragmentId,
-                    c.IndicationLabel,
-                    c.Passed,
-                    c.References
-                        .OrderBy(r => r.FindingCode, StringComparer.Ordinal)
-                        .Select(r => new ExplanationClaimReferenceView(
-                            r.FindingCode,
-                            JsonSerializer.Deserialize<int[]>(r.NodeIdsJson) ?? []))
-                        .ToArray()))
+                .Select(c =>
+                {
+                    var isRecommendation = ExplanationValidationConstants.TryParseClaimType(c.ClaimType, out var parsedType)
+                        && parsedType == ExplanationClaimType.Recomendacion;
+                    var writeCostWarning = isRecommendation
+                        && c.References.Any(r => missingIndexFindingCodes.Contains(r.FindingCode));
+
+                    return new ExplanationClaimView(
+                        c.ClaimIndex,
+                        c.ClaimType,
+                        _encryptor.Decrypt(c.EncryptedText),
+                        c.KbFragmentId,
+                        c.IndicationLabel,
+                        c.Passed,
+                        isRecommendation,
+                        writeCostWarning,
+                        c.References
+                            .OrderBy(r => r.FindingCode, StringComparer.Ordinal)
+                            .Select(r => new ExplanationClaimReferenceView(
+                                r.FindingCode,
+                                JsonSerializer.Deserialize<int[]>(r.NodeIdsJson) ?? []))
+                            .ToArray());
+                })
                 .ToArray()
             : [];
 
