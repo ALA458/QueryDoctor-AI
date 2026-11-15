@@ -34,19 +34,20 @@ async def test_mock_provider_generates_valid_response(sample_request: ExplainReq
             assert claim.kb_fragment_id.startswith("KB-")
 
 
-def test_base_provider_normalizes_fenced_claim_data(sample_request: ExplainRequest):
+def test_base_provider_accepts_clean_fenced_json(sample_request: ExplainRequest):
+    """Acepta cercado markdown ```json puro cuando el esquema y todos los IDs son válidos."""
     provider = MockProvider(Settings(APP_ENV="dev", LLM_PROFILE="mock"))
     raw_text = "```json\n" + json.dumps(
         {
+            "summary": "Diagnóstico estructurado dentro de bloque json.",
             "claims": [
-                None,
                 {
-                    "claim_type": "UNKNOWN",
-                    "statement": "",
-                    "finding_ids": "invented-finding",
-                    "kb_fragment_id": "unknown-fragment",
-                },
-            ]
+                    "claim_type": "INTERPRETACION",
+                    "statement": "El parámetro sesgado induce estimaciones erróneas.",
+                    "finding_ids": [sample_request.findings[0].finding_id],
+                    "kb_fragment_id": sample_request.kb_fragments[0].fragment_id,
+                }
+            ],
         }
     ) + "\n   ```"
 
@@ -58,49 +59,108 @@ def test_base_provider_normalizes_fenced_claim_data(sample_request: ExplainReque
         start_time=0.0,
     )
 
-    assert response.summary == "Diagnóstico de rendimiento de consulta SQL Server."
+    assert response.summary == "Diagnóstico estructurado dentro de bloque json."
     assert len(response.claims) == 1
     assert response.claims[0].claim_type == ClaimType.INTERPRETACION
-    assert response.claims[0].statement == "Afirmación diagnóstica generada #2"
-    assert response.claims[0].finding_ids == [
-        sample_request.findings[0].finding_id
-    ]
+    assert response.claims[0].finding_ids == [sample_request.findings[0].finding_id]
     assert response.claims[0].kb_fragment_id == sample_request.kb_fragments[0].fragment_id
 
 
-def test_base_provider_uses_general_kb_fragment_when_none_are_available(
+@pytest.mark.parametrize(
+    ("raw_payload", "error_pattern"),
+    [
+        (
+            {
+                "summary": "Resumen válido.",
+                "claims": [
+                    {
+                        "claim_type": "UNKNOWN",
+                        "statement": "Afirmación inválida.",
+                        "finding_ids": ["find-hash-reg01-001"],
+                        "kb_fragment_id": "KB-REG01-01",
+                    }
+                ],
+            },
+            "no permitido",
+        ),
+        (
+            {
+                "summary": "Resumen válido.",
+                "claims": [
+                    {
+                        "claim_type": "OBSERVACION",
+                        "statement": "Hallazgo inventado.",
+                        "finding_ids": ["invented-finding"],
+                    }
+                ],
+            },
+            "finding_id inexistente",
+        ),
+        (
+            {
+                "summary": "Resumen válido.",
+                "claims": [
+                    {
+                        "claim_type": "INTERPRETACION",
+                        "statement": "Fragmento inexistente.",
+                        "finding_ids": ["find-hash-reg01-001"],
+                        "kb_fragment_id": "unknown-fragment",
+                    }
+                ],
+            },
+            "kb_fragment_id inexistente",
+        ),
+        (
+            {
+                "summary": "Resumen válido.",
+                "claims": [
+                    {
+                        "claim_type": "RECOMENDACION",
+                        "statement": "Sin fragmento.",
+                        "finding_ids": ["find-hash-reg01-001"],
+                    }
+                ],
+            },
+            "requiere obligatoriamente 'kb_fragment_id'",
+        ),
+        (
+            {
+                "summary": "",
+                "claims": [
+                    {
+                        "claim_type": "OBSERVACION",
+                        "statement": "Sin resumen.",
+                        "finding_ids": ["find-hash-reg01-001"],
+                    }
+                ],
+            },
+            "summary",
+        ),
+    ],
+)
+def test_base_provider_strictly_rejects_manipulated_or_incomplete_claims(
     sample_request: ExplainRequest,
+    raw_payload: dict,
+    error_pattern: str,
 ):
+    """El parseador estricto no repara silenciosamente tipos, hallazgos ni fragmentos inventados (RNF-SEG-06)."""
     provider = MockProvider(Settings(APP_ENV="dev", LLM_PROFILE="mock"))
-    request_without_kb = sample_request.model_copy(update={"kb_fragments": []})
-    raw_text = json.dumps(
-        {
-            "claims": [
-                {
-                    "claim_type": "RECOMENDACION",
-                    "statement": "Revisar el plan.",
-                    "finding_ids": [sample_request.findings[0].finding_id],
-                }
-            ]
-        }
-    )
 
-    response = provider.parse_and_validate_llm_json(
-        raw_text=raw_text,
-        request=request_without_kb,
-        model_name="test-model",
-        served_by="test-provider",
-        start_time=0.0,
-    )
-
-    assert response.claims[0].kb_fragment_id == "KB-GENERAL-01"
+    with pytest.raises(ValueError, match=error_pattern):
+        provider.parse_and_validate_llm_json(
+            raw_text=json.dumps(raw_payload),
+            request=sample_request,
+            model_name="test-model",
+            served_by="test-provider",
+            start_time=0.0,
+        )
 
 
 @pytest.mark.parametrize(
     ("claims", "error"),
     [
-        ([], "debe contener una lista no vacía"),
-        ([None], "No se pudieron validar afirmaciones válidas"),
+        ([], "lista no vacía de 'claims'"),
+        ([None], "debe ser un objeto JSON válido"),
     ],
 )
 def test_base_provider_rejects_empty_valid_claims(
@@ -112,7 +172,7 @@ def test_base_provider_rejects_empty_valid_claims(
 
     with pytest.raises(ValueError, match=error):
         provider.parse_and_validate_llm_json(
-            raw_text=json.dumps({"claims": claims}),
+            raw_text=json.dumps({"summary": "Resumen válido.", "claims": claims}),
             request=sample_request,
             model_name="test-model",
             served_by="test-provider",

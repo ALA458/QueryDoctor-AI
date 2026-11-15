@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     REQUESTS_PER_MINUTE_LIMIT: int = 60
 
     # Versión de plantilla de prompt (RNF-SEG-06)
-    PROMPT_VERSION: str = "v1.0"
+    PROMPT_VERSION: str = "v1.1"
 
     # Servidor FastAPI
     HOST: str = "0.0.0.0"

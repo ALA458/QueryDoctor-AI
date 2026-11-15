@@ -1,10 +1,10 @@
-"""Clase base abstracta para proveedores de LLM (ADR-10, RNF-FIA-02)."""
+"""Clase base abstracta para proveedores de LLM con validación estricta anti-inyección (ADR-10, RNF-FIA-02, RNF-SEG-06)."""
 
 import json
 import re
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any
 from src.config import Settings
 from src.models.schemas import (
     ClaimOutput,
@@ -14,6 +14,11 @@ from src.models.schemas import (
     ExplainResponse,
 )
 from src.security_lock import get_data_policy
+
+_MARKDOWN_JSON_FENCE_RE = re.compile(
+    r"^\s*```(?:json)?[ \t]*\r?\n(?P<body>.*)\r?\n[ \t]*```\s*$",
+    re.DOTALL | re.IGNORECASE,
+)
 
 
 class BaseLLMProvider(ABC):
@@ -35,10 +40,15 @@ class BaseLLMProvider(ABC):
         served_by: str,
         start_time: float,
     ) -> ExplainResponse:
-        """Limpia la salida del LLM, extrae el JSON y valida el esquema de afirmaciones (RF-IA-02)."""
+        """Valida estrictamente el JSON devuelto por el LLM sin tolerar prosa extra ni coercionar campos inválidos (RF-IA-02, RNF-SEG-06)."""
         data = self._parse_llm_json(raw_text)
-        summary = data.get("summary", "Diagnóstico de rendimiento de consulta SQL Server.")
-        raw_claims = data.get("claims", [])
+
+        raw_summary = data.get("summary")
+        if not isinstance(raw_summary, str) or not raw_summary.strip():
+            raise ValueError("El JSON generado debe contener un campo 'summary' de texto no vacío.")
+        summary = raw_summary.strip()
+
+        raw_claims = data.get("claims")
         if not isinstance(raw_claims, list) or len(raw_claims) == 0:
             raise ValueError("El JSON generado debe contener una lista no vacía de 'claims'.")
 
@@ -72,25 +82,31 @@ class BaseLLMProvider(ABC):
         )
 
     @staticmethod
-    def _parse_llm_json(raw_text: str) -> Any:
+    def _parse_llm_json(raw_text: str) -> dict[str, Any]:
+        if not isinstance(raw_text, str) or not raw_text.strip():
+            raise ValueError("El LLM devolvió una respuesta vacía.")
+
         cleaned = raw_text.strip()
+        fence_match = _MARKDOWN_JSON_FENCE_RE.match(cleaned)
+        if fence_match:
+            cleaned = fence_match.group("body").strip()
 
-        if cleaned.startswith("```"):
-            cleaned = re.sub(r"^```[a-zA-Z0-9_-]*\s*", "", cleaned)
-            if cleaned.endswith("```"):
-                cleaned = cleaned[:-3].rstrip()
-            cleaned = cleaned.strip()
-
-        json_match = re.search(r"\{.*\}", cleaned, re.DOTALL)
-        if json_match:
-            cleaned = json_match.group(0)
+        if not cleaned.startswith("{") or not cleaned.endswith("}"):
+            raise ValueError(
+                f"El LLM incluyó texto fuera del objeto JSON esperado (posible ruptura de formato). Salida cruda: {raw_text[:200]}"
+            )
 
         try:
-            return json.loads(cleaned)
+            parsed = json.loads(cleaned)
         except json.JSONDecodeError as exc:
             raise ValueError(
                 f"El LLM no devolvió un JSON válido: {exc}. Salida cruda: {raw_text[:200]}"
             ) from exc
+
+        if not isinstance(parsed, dict):
+            raise ValueError("La raíz de la respuesta del LLM debe ser un objeto JSON.")
+
+        return parsed
 
     def _build_claims(
         self,
@@ -101,16 +117,17 @@ class BaseLLMProvider(ABC):
     ) -> list[ClaimOutput]:
         claims: list[ClaimOutput] = []
         for idx, item in enumerate(raw_claims):
-            if isinstance(item, dict):
-                claims.append(
-                    self._build_claim(
-                        item,
-                        idx,
-                        request,
-                        valid_finding_ids,
-                        valid_fragment_ids,
-                    )
+            if not isinstance(item, dict):
+                raise ValueError(f"La afirmación #{idx} debe ser un objeto JSON válido.")
+            claims.append(
+                self._build_claim(
+                    item,
+                    idx,
+                    request,
+                    valid_finding_ids,
+                    valid_fragment_ids,
                 )
+            )
         return claims
 
     def _build_claim(
@@ -121,20 +138,25 @@ class BaseLLMProvider(ABC):
         valid_finding_ids: set[str],
         valid_fragment_ids: set[str],
     ) -> ClaimOutput:
-        claim_type_str = item.get("claim_type", "").upper()
-        claim_type = self._normalize_claim_type(claim_type_str)
+        raw_claim_type = item.get("claim_type")
+        if not isinstance(raw_claim_type, str) or not raw_claim_type.strip():
+            raise ValueError(f"La afirmación #{idx} carece de 'claim_type' válido.")
 
-        statement = item.get("statement", "").strip()
-        if not statement:
-            statement = f"Afirmación diagnóstica generada #{idx + 1}"
+        claim_type = self._parse_strict_claim_type(raw_claim_type, idx)
 
-        finding_ids = self._normalize_finding_ids(
-            item.get("finding_ids", []),
-            request,
+        raw_statement = item.get("statement")
+        if not isinstance(raw_statement, str) or not raw_statement.strip():
+            raise ValueError(f"La afirmación #{idx} tiene 'statement' vacío o inválido.")
+        statement = raw_statement.strip()
+
+        finding_ids = self._validate_finding_ids(
+            item.get("finding_ids"),
+            idx,
             valid_finding_ids,
         )
-        kb_fragment_id = self._normalize_kb_fragment_id(
+        kb_fragment_id = self._validate_kb_fragment_id(
             item.get("kb_fragment_id"),
+            idx,
             claim_type,
             request,
             valid_fragment_ids,
@@ -147,50 +169,69 @@ class BaseLLMProvider(ABC):
         )
 
     @staticmethod
-    def _normalize_claim_type(claim_type_str: str) -> ClaimType:
+    def _parse_strict_claim_type(raw_claim_type: str, idx: int) -> ClaimType:
+        normalized = raw_claim_type.strip().upper()
         try:
-            return ClaimType(claim_type_str)
-        except ValueError:
-            if "OBSERV" in claim_type_str:
-                return ClaimType.OBSERVACION
-            if "RECOMEND" in claim_type_str:
-                return ClaimType.RECOMENDACION
-            return ClaimType.INTERPRETACION
+            return ClaimType(normalized)
+        except ValueError as exc:
+            raise ValueError(
+                f"La afirmación #{idx} tiene un 'claim_type' no permitido: '{raw_claim_type}'."
+            ) from exc
 
     @staticmethod
-    def _normalize_finding_ids(
+    def _validate_finding_ids(
         finding_ids: Any,
-        request: ExplainRequest,
+        idx: int,
         valid_finding_ids: set[str],
     ) -> list[str]:
-        if isinstance(finding_ids, str):
-            finding_ids = [finding_ids]
-        filtered_finding_ids = [fid for fid in finding_ids if fid in valid_finding_ids]
-        if not filtered_finding_ids and request.findings:
-            return [request.findings[0].finding_id]
-        return filtered_finding_ids
+        if not isinstance(finding_ids, list) or len(finding_ids) == 0:
+            raise ValueError(
+                f"La afirmación #{idx} debe incluir una lista no vacía en 'finding_ids'."
+            )
+
+        validated: list[str] = []
+        for raw_fid in finding_ids:
+            if not isinstance(raw_fid, str) or not raw_fid.strip():
+                raise ValueError(f"La afirmación #{idx} contiene un finding_id vacío o no textual.")
+            fid = raw_fid.strip()
+            if fid not in valid_finding_ids:
+                raise ValueError(
+                    f"La afirmación #{idx} referencia un finding_id inexistente en el contexto: '{fid}'."
+                )
+            if fid not in validated:
+                validated.append(fid)
+
+        return validated
 
     @staticmethod
-    def _normalize_kb_fragment_id(
+    def _validate_kb_fragment_id(
         kb_fragment_id: Any,
+        idx: int,
         claim_type: ClaimType,
         request: ExplainRequest,
         valid_fragment_ids: set[str],
     ) -> str | None:
-        if kb_fragment_id:
-            kb_fragment_id = kb_fragment_id.strip()
+        if kb_fragment_id is None:
+            normalized_frag = None
+        elif isinstance(kb_fragment_id, str):
+            stripped = kb_fragment_id.strip()
+            normalized_frag = stripped if stripped else None
+        else:
+            raise ValueError(f"El 'kb_fragment_id' en la afirmación #{idx} debe ser cadena o null.")
 
         requires_fragment = claim_type in (
             ClaimType.INTERPRETACION,
             ClaimType.RECOMENDACION,
         )
-        if not requires_fragment:
-            return kb_fragment_id
 
-        if kb_fragment_id and (
-            not valid_fragment_ids or kb_fragment_id in valid_fragment_ids
-        ):
-            return kb_fragment_id
-        if request.kb_fragments:
-            return request.kb_fragments[0].fragment_id
-        return "KB-GENERAL-01"
+        if requires_fragment and normalized_frag is None:
+            raise ValueError(
+                f"La afirmación #{idx} ({claim_type.value}) requiere obligatoriamente 'kb_fragment_id'."
+            )
+
+        if normalized_frag is not None and request.kb_fragments and normalized_frag not in valid_fragment_ids:
+            raise ValueError(
+                f"La afirmación #{idx} referencia un kb_fragment_id inexistente en los fragmentos suministrados: '{normalized_frag}'."
+            )
+
+        return normalized_frag
