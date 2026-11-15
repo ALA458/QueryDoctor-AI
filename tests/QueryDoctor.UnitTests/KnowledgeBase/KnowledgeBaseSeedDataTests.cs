@@ -1,24 +1,62 @@
+using QueryDoctor.Application.Engine.Rules;
 using QueryDoctor.Domain.Ai;
+using QueryDoctor.Domain.Analysis;
 using QueryDoctor.Infrastructure.Persistence.Seeds;
 
 namespace QueryDoctor.UnitTests.KnowledgeBase;
 
 public class KnowledgeBaseSeedDataTests
 {
-    private static readonly string[] RequiredRules = ["REG-01", "REG-02", "REG-03", "REG-04"];
+    private static string[] GetRequiredImplementedAndMustRuleIds()
+    {
+        var implementedRuleIds = VersionedRuleCatalog.DiscoverBuiltInRules()
+            .Select(r => r.Descriptor.RuleId);
+
+        var mustRuleIds = VersionedRuleCatalog.BuiltInDescriptors
+            .Where(d => d.Priority == RulePriority.Must)
+            .Select(d => d.RuleId);
+
+        return implementedRuleIds
+            .Concat(mustRuleIds)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(id => id, StringComparer.Ordinal)
+            .ToArray();
+    }
 
     [Fact]
-    public void SeedFragmentsContainsAllRequiredRules()
+    public void SeedFragmentsCoversEveryImplementedAndMustRuleInCatalog()
     {
+        var requiredRules = GetRequiredImplementedAndMustRuleIds();
+        var catalogRuleIds = VersionedRuleCatalog.BuiltInDescriptors
+            .Select(d => d.RuleId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var fragments = KnowledgeBaseSeedData.GetFragments();
 
-        Assert.Equal(8, fragments.Count);
+        Assert.NotEmpty(requiredRules);
+        Assert.Contains("REG-03", requiredRules);
+        Assert.Contains("REG-11", requiredRules);
 
-        foreach (var rule in RequiredRules)
+        foreach (var rule in requiredRules)
         {
             var ruleFragments = fragments.Where(f => f.RuleId == rule).ToList();
-            Assert.Equal(2, ruleFragments.Count);
+            Assert.True(
+                ruleFragments.Count >= 1,
+                $"La regla implementada o Debe '{rule}' debe tener al menos un fragmento curado en KnowledgeBaseSeedData.");
         }
+
+        foreach (var fragment in fragments)
+        {
+            Assert.True(
+                catalogRuleIds.Contains(fragment.RuleId),
+                $"El fragmento {fragment.Id} referencia una regla inexistente en VersionedRuleCatalog: '{fragment.RuleId}'.");
+        }
+
+        // REG-03 (S2-01 / S2-08) cubre tanto el caso de predicado selectivo (a) como el de volumen y consumo (b).
+        var reg03Fragments = fragments.Where(f => f.RuleId == "REG-03").ToList();
+        Assert.True(reg03Fragments.Count >= 4, "REG-03 debe cubrir las condiciones (a) y (b) con interpretación y recomendación.");
+        Assert.Contains(reg03Fragments, f => f.Id == KnowledgeBaseSeedData.FragmentReg03VolumenInterpretacionId);
+        Assert.Contains(reg03Fragments, f => f.Id == KnowledgeBaseSeedData.FragmentReg03VolumenRecomendacionId);
     }
 
     [Fact]
@@ -45,19 +83,21 @@ public class KnowledgeBaseSeedDataTests
     }
 
     [Fact]
-    public void SeedCausalRelationsCoversInterpretacionAndRecomendacionForEachRule()
+    public void SeedCausalRelationsCoversInterpretacionAndRecomendacionForEveryImplementedAndMustRule()
     {
+        var requiredRules = GetRequiredImplementedAndMustRuleIds();
+        var catalogRuleIds = VersionedRuleCatalog.BuiltInDescriptors
+            .Select(d => d.RuleId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         var relations = KnowledgeBaseSeedData.GetCausalRelations();
         var fragments = KnowledgeBaseSeedData.GetFragments().ToDictionary(f => f.Id);
 
-        Assert.Equal(8, relations.Count);
-
         var relationKeys = new HashSet<string>();
 
-        foreach (var rule in RequiredRules)
+        foreach (var rule in requiredRules)
         {
             var ruleRelations = relations.Where(r => r.RuleId == rule).ToList();
-            Assert.Equal(2, ruleRelations.Count);
 
             Assert.Contains(ruleRelations, r => r.RelationType == CausalRelationType.Interpretacion);
             Assert.Contains(ruleRelations, r => r.RelationType == CausalRelationType.Recomendacion);
@@ -66,7 +106,9 @@ public class KnowledgeBaseSeedDataTests
         foreach (var relation in relations)
         {
             Assert.NotEqual(Guid.Empty, relation.Id);
-            Assert.True(fragments.ContainsKey(relation.FragmentId), $"Fragmento asociado no existe: {relation.FragmentId}");
+            Assert.True(catalogRuleIds.Contains(relation.RuleId), $"Regla inexistente en catálogo para relación: {relation.RuleId}");
+            Assert.True(fragments.TryGetValue(relation.FragmentId, out var fragment), $"Fragmento asociado no existe: {relation.FragmentId}");
+            Assert.Equal(fragment.RuleId, relation.RuleId);
 
             var uniqueKey = $"{relation.RuleId}_{relation.FragmentId}_{relation.RelationType}";
             Assert.True(relationKeys.Add(uniqueKey), $"Relación causal duplicada detectada: {uniqueKey}");

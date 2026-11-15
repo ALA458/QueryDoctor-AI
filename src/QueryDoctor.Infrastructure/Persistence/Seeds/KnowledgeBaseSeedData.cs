@@ -3,7 +3,7 @@ using QueryDoctor.Domain.Ai;
 namespace QueryDoctor.Infrastructure.Persistence.Seeds;
 
 /// <summary>
-/// Catálogo inicial curado de la base de conocimiento para las reglas REG-01 a REG-04 (S1-17, RF-IA-04, RF-IA-03).
+/// Catálogo curado de la base de conocimiento para las reglas implementadas y de prioridad Debe (REG-01 a REG-04 y REG-11; S1-17, S2-08, RF-IA-04, RF-IA-03).
 /// Todas las fuentes corresponden a documentación técnica oficial de Microsoft Learn y arquitectura de SQL Server.
 /// </summary>
 public static class KnowledgeBaseSeedData
@@ -19,9 +19,14 @@ public static class KnowledgeBaseSeedData
 
     public static readonly Guid FragmentReg03InterpretacionId = Guid.Parse("a1010003-0003-0000-0000-000000000001");
     public static readonly Guid FragmentReg03RecomendacionId = Guid.Parse("a1010003-0003-0000-0000-000000000002");
+    public static readonly Guid FragmentReg03VolumenInterpretacionId = Guid.Parse("a1010003-0003-0000-0000-000000000003");
+    public static readonly Guid FragmentReg03VolumenRecomendacionId = Guid.Parse("a1010003-0003-0000-0000-000000000004");
 
     public static readonly Guid FragmentReg04InterpretacionId = Guid.Parse("a1010004-0004-0000-0000-000000000001");
     public static readonly Guid FragmentReg04RecomendacionId = Guid.Parse("a1010004-0004-0000-0000-000000000002");
+
+    public static readonly Guid FragmentReg11InterpretacionId = Guid.Parse("a1010011-0011-0000-0000-000000000001");
+    public static readonly Guid FragmentReg11RecomendacionId = Guid.Parse("a1010011-0011-0000-0000-000000000002");
 
     // Identificadores fijos para relaciones causales
     public static readonly Guid RelationReg01InterpretacionId = Guid.Parse("b1010001-0001-0000-0000-000000000001");
@@ -32,9 +37,14 @@ public static class KnowledgeBaseSeedData
 
     public static readonly Guid RelationReg03InterpretacionId = Guid.Parse("b1010003-0003-0000-0000-000000000001");
     public static readonly Guid RelationReg03RecomendacionId = Guid.Parse("b1010003-0003-0000-0000-000000000002");
+    public static readonly Guid RelationReg03VolumenInterpretacionId = Guid.Parse("b1010003-0003-0000-0000-000000000003");
+    public static readonly Guid RelationReg03VolumenRecomendacionId = Guid.Parse("b1010003-0003-0000-0000-000000000004");
 
     public static readonly Guid RelationReg04InterpretacionId = Guid.Parse("b1010004-0004-0000-0000-000000000001");
     public static readonly Guid RelationReg04RecomendacionId = Guid.Parse("b1010004-0004-0000-0000-000000000002");
+
+    public static readonly Guid RelationReg11InterpretacionId = Guid.Parse("b1010011-0011-0000-0000-000000000001");
+    public static readonly Guid RelationReg11RecomendacionId = Guid.Parse("b1010011-0011-0000-0000-000000000002");
 
     public static IReadOnlyList<KbFragment> GetFragments() =>
     [
@@ -109,6 +119,28 @@ public static class KnowledgeBaseSeedData
             SourceCitation = "Sección 'Uso de índices no agrupados para optimizar consultas con predicados selectivos'.",
             CreatedAt = FixedSeedDate
         },
+        new KbFragment
+        {
+            Id = FragmentReg03VolumenInterpretacionId,
+            RuleId = "REG-03",
+            Title = "Sobrecarga de E/S y buffer pool en recorridos de alto volumen y consumo",
+            Content = "Cuando un operador Table Scan, Clustered Index Scan o Index Scan recorre un volumen elevado de filas en una consulta con alta participación de consumo dentro de la ventana de Query Store, el motor lee secuencialmente gran cantidad de páginas de datos hacia el buffer pool incluso sin predicado residual selectivo. Este acceso amplio incrementa las lecturas lógicas, presiona la caché de páginas para otras consultas y amplifica el tiempo de CPU y duración acumulada según la frecuencia de ejecución.",
+            SourceTitle = "Microsoft Learn: Guía de arquitectura de procesamiento de consultas",
+            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/query-processing-architecture-guide",
+            SourceCitation = "Sección 'Operadores lógicos y físicos de Showplan: Recorrido de tabla y Recorrido de índice agrupado'.",
+            CreatedAt = FixedSeedDate
+        },
+        new KbFragment
+        {
+            Id = FragmentReg03VolumenRecomendacionId,
+            RuleId = "REG-03",
+            Title = "Índices no agrupados estrechos, cobertura y proyección mínima de columnas",
+            Content = "Para mitigar recorridos completos de alto volumen donde no existe un filtro puntual único, proyecte únicamente las columnas necesarias evitando SELECT * y evalúe un índice no agrupado cubriente más estrecho que el índice agrupado base para reducir el número de páginas leídas por ejecución. Cuando la consulta deba leer la mayoría de la tabla, analice compresión de páginas o particionamiento por rango para acotar las particiones examinadas y disminuir la presión sobre memoria y E/S.",
+            SourceTitle = "Microsoft Learn: Guía de arquitectura y diseño de índices de SQL Server",
+            SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/sql-server-index-design-guide",
+            SourceCitation = "Sección 'Directrices generales para el diseño de índices' y 'Ancho del índice'.",
+            CreatedAt = FixedSeedDate
+        },
 
         // REG-04: Key Lookup contextual
         new KbFragment
@@ -131,6 +163,30 @@ public static class KnowledgeBaseSeedData
             SourceTitle = "Microsoft Learn: Crear índices con columnas incluidas",
             SourceUrl = "https://learn.microsoft.com/es-es/sql/relational-databases/indexes/create-indexes-with-included-columns",
             SourceCitation = "Sección 'Directrices de diseño para columnas incluidas'.",
+            CreatedAt = FixedSeedDate
+        },
+
+        // REG-11: Plan no analizable (RF-MOT-16)
+        new KbFragment
+        {
+            Id = FragmentReg11InterpretacionId,
+            RuleId = "REG-11",
+            Title = "Límites de representación XML de Showplan y planes truncados o no recuperables",
+            Content = "En SQL Server, las vistas sys.query_store_plan y sys.dm_exec_query_plan_stats exponen el Showplan en formato XML (o texto XML en Query Store), sujeto al límite estructural de 128 niveles de anidamiento del tipo xml y a posibles truncamientos o ausencia de plan compilado en caché. Cuando el documento recibido es nulo, queda incompleto o presenta una estructura XML no válida o no soportada, el analizador no puede construir el árbol de operadores de forma segura y registra el hallazgo informativo REG-11 sin interrumpir el lote.",
+            SourceTitle = "Microsoft Learn: sys.dm_exec_query_plan_stats (Transact-SQL)",
+            SourceUrl = "https://learn.microsoft.com/sql/relational-databases/system-dynamic-management-views/sys-dm-exec-query-plan-stats-transact-sql",
+            SourceCitation = "Sección 'Observaciones' (límite de niveles de anidamiento del tipo de datos xml en Showplan).",
+            CreatedAt = FixedSeedDate
+        },
+        new KbFragment
+        {
+            Id = FragmentReg11RecomendacionId,
+            RuleId = "REG-11",
+            Title = "Inspección de query_plan en Query Store y simplificación de planes profundamente anidados",
+            Content = "Ante un hallazgo REG-11, utilice las métricas agregadas de ejecución de sys.query_store_runtime_stats para priorizar la consulta aunque el XML no haya sido analizable y consulte sys.query_store_plan en modo de solo lectura para verificar si el plan está vacío, truncado o supera el anidamiento XML permitido. Si el plan supera los 128 niveles por subconsultas, CTE encadenadas o expresiones complejas, refactorice la consulta en pasos más simples o tablas temporales para recuperar un Showplan XML analizable.",
+            SourceTitle = "Microsoft Learn: sys.query_store_plan (Transact-SQL)",
+            SourceUrl = "https://learn.microsoft.com/sql/relational-databases/system-catalog-views/sys-query-store-plan-transact-sql",
+            SourceCitation = "Descripción de la columna 'query_plan' y compatibilidad de representación Showplan XML.",
             CreatedAt = FixedSeedDate
         }
     ];
@@ -184,6 +240,20 @@ public static class KnowledgeBaseSeedData
             FragmentId = FragmentReg03RecomendacionId,
             RelationType = CausalRelationType.Recomendacion
         },
+        new KbCausalRelation
+        {
+            Id = RelationReg03VolumenInterpretacionId,
+            RuleId = "REG-03",
+            FragmentId = FragmentReg03VolumenInterpretacionId,
+            RelationType = CausalRelationType.Interpretacion
+        },
+        new KbCausalRelation
+        {
+            Id = RelationReg03VolumenRecomendacionId,
+            RuleId = "REG-03",
+            FragmentId = FragmentReg03VolumenRecomendacionId,
+            RelationType = CausalRelationType.Recomendacion
+        },
 
         // REG-04
         new KbCausalRelation
@@ -198,6 +268,22 @@ public static class KnowledgeBaseSeedData
             Id = RelationReg04RecomendacionId,
             RuleId = "REG-04",
             FragmentId = FragmentReg04RecomendacionId,
+            RelationType = CausalRelationType.Recomendacion
+        },
+
+        // REG-11
+        new KbCausalRelation
+        {
+            Id = RelationReg11InterpretacionId,
+            RuleId = "REG-11",
+            FragmentId = FragmentReg11InterpretacionId,
+            RelationType = CausalRelationType.Interpretacion
+        },
+        new KbCausalRelation
+        {
+            Id = RelationReg11RecomendacionId,
+            RuleId = "REG-11",
+            FragmentId = FragmentReg11RecomendacionId,
             RelationType = CausalRelationType.Recomendacion
         }
     ];
