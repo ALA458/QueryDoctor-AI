@@ -101,7 +101,7 @@ public class ProbeConnectionTests
         var outcome = await UseCase().ExecuteAsync(connection.Id);
 
         Assert.Equal(ConnectionStatus.Active, outcome.Status);
-        Assert.Equal(SupportLevel.Tested, Assert.Single(_repository.Profiles).SupportLevel);
+        Assert.Equal(SupportLevel.CompatibleUntested, Assert.Single(_repository.Profiles).SupportLevel);
     }
 
     [Fact]
