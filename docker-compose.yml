@@ -157,6 +157,11 @@ services:
       LLM_PROFILE: ${LLM_PROFILE:-openrouter_free}
       ALLOW_DATA_SHARING_PROVIDER: ${ALLOW_DATA_SHARING_PROVIDER:-true}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL_FREE: ${OPENROUTER_MODEL_FREE:-google/gemma-4-26b-a4b-it:free}
+      OPENROUTER_MODEL_PAID: ${OPENROUTER_MODEL_PAID:-google/gemma-2-27b-it}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      MAX_TOKENS_PER_REQUEST: ${MAX_TOKENS_PER_REQUEST:-8192}
     networks:
       - backend
       - egress-ai
