@@ -67,14 +67,17 @@ public sealed class EfTraceabilityQueries : ITraceabilityQueries
             query = query.Where(e => e.ExplanationId == explanationId);
         }
 
+        // Npgsql solo escribe timestamptz con offset 0: un filtro en hora local (-05:00) daba 500 (preauditoría).
         if (filter.From is { } from)
         {
-            query = query.Where(e => e.RecordedAt >= from);
+            var fromUtc = from.ToUniversalTime();
+            query = query.Where(e => e.RecordedAt >= fromUtc);
         }
 
         if (filter.To is { } to)
         {
-            query = query.Where(e => e.RecordedAt <= to);
+            var toUtc = to.ToUniversalTime();
+            query = query.Where(e => e.RecordedAt <= toUtc);
         }
 
         return await query.OrderByDescending(e => e.Seq).Take(filter.Take).ToListAsync(cancellationToken);
@@ -89,14 +92,17 @@ public sealed class EfTraceabilityQueries : ITraceabilityQueries
             query = query.Where(e => e.EventType == type);
         }
 
+        // Npgsql solo escribe timestamptz con offset 0: un filtro en hora local (-05:00) daba 500 (preauditoría).
         if (filter.From is { } from)
         {
-            query = query.Where(e => e.RecordedAt >= from);
+            var fromUtc = from.ToUniversalTime();
+            query = query.Where(e => e.RecordedAt >= fromUtc);
         }
 
         if (filter.To is { } to)
         {
-            query = query.Where(e => e.RecordedAt <= to);
+            var toUtc = to.ToUniversalTime();
+            query = query.Where(e => e.RecordedAt <= toUtc);
         }
 
         return await query.OrderByDescending(e => e.Seq).Take(filter.Take).ToListAsync(cancellationToken);

@@ -96,6 +96,24 @@ public sealed class TraceabilityEndpointsTests(PostgresFixture postgres) : IDisp
     }
 
     [Fact]
+    public async Task UnRangoConLaHoraDeColombiaFuncionaIgualQueEnUtc()
+    {
+        // Preauditoría: Npgsql solo escribe timestamptz con offset 0; un filtro en -05:00 no debe dar 500.
+        var (_, explanation) = await SeedTracedExplanationAsync();
+        using var client = await _api.ClientAsync(RoleNames.Dba);
+        var colombia = TimeSpan.FromHours(-5);
+        var from = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddHours(-1).ToOffset(colombia).ToString("O"));
+        var to = Uri.EscapeDataString(DateTimeOffset.UtcNow.AddHours(1).ToOffset(colombia).ToString("O"));
+
+        using var trace = await client.GetAsync($"/trace?explanationId={explanation}&from={from}&to={to}");
+        using var audit = await client.GetAsync($"/audit?from={from}&to={to}");
+
+        Assert.Equal(HttpStatusCode.OK, trace.StatusCode);
+        Assert.Single((await trace.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray());
+        Assert.Equal(HttpStatusCode.OK, audit.StatusCode);
+    }
+
+    [Fact]
     public async Task LaAuditoriaSeFiltraPorTipo()
     {
         using var client = await _api.ClientAsync(RoleNames.Dba);
