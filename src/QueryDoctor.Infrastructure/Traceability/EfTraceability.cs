@@ -31,6 +31,7 @@ public sealed class EfAuditLog : IAuditLog
                 UserName = draft.UserName is { Length: > 256 } name ? name[..256] : draft.UserName,
                 SubjectType = draft.SubjectType,
                 SubjectId = draft.SubjectId,
+                RelatedUserId = draft.RelatedUserId,
                 Outcome = draft.Outcome,
             },
             _clock.GetUtcNow(),

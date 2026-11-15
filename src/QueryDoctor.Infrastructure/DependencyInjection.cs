@@ -103,6 +103,14 @@ public static class DependencyInjection
         return services;
     }
 
+    /// <summary>Gestión de asignaciones de conexiones para la Api (S2-12, RNF-SEG-12). Solo la usa el DBA.</summary>
+    public static IServiceCollection AddConnectionAssignments(this IServiceCollection services)
+    {
+        services.AddScoped<IConnectionAssignmentStore, EfConnectionAssignmentStore>();
+        services.AddScoped<ManageConnectionAssignments>();
+        return services;
+    }
+
     /// <summary>
     /// Acceso completo de los procesos de la plataforma (S2-12, RNF-SEG-12). Solo lo llama el host del Worker; la Api
     /// nunca: allí el acceso sale del usuario de la solicitud y, sin usuario, es cero filas.

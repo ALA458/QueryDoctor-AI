@@ -28,6 +28,9 @@ builder.Services.AddIngestionRequests();
 // S2-05: la Api solo guarda la solicitud de explicación y encola explain; nunca llama a la IA (invariante 2).
 builder.Services.AddExplanationRequests();
 
+// S2-12: el DBA asigna conexiones a los Desarrolladores (RNF-SEG-12).
+builder.Services.AddConnectionAssignments();
+
 // Enumerados como texto en las respuestas (contrato de S1-15), nunca como número.
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -71,6 +74,7 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapAuthEndpoints();
 app.MapConnectionEndpoints();
+app.MapAssignmentEndpoints();
 app.MapExplanationEndpoints();
 
 // S2-06: traza y auditoría, solo lectura (RF-TRZ-02/03).

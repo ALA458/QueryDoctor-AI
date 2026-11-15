@@ -57,10 +57,11 @@ internal sealed record AuditEventView(
     [property: JsonPropertyName("user_name")] string? UserName,
     [property: JsonPropertyName("subject_type")] string? SubjectType,
     [property: JsonPropertyName("subject_id")] Guid? SubjectId,
+    [property: JsonPropertyName("related_user_id")] Guid? RelatedUserId,
     [property: JsonPropertyName("outcome")] string Outcome)
 {
     public static AuditEventView From(AuditEvent e) =>
-        new(e.Seq, e.RecordedAt, e.EventType.ToString(), e.UserId, e.UserName, e.SubjectType, e.SubjectId, e.Outcome);
+        new(e.Seq, e.RecordedAt, e.EventType.ToString(), e.UserId, e.UserName, e.SubjectType, e.SubjectId, e.RelatedUserId, e.Outcome);
 }
 
 /// <summary>Resultado de verificar una cadena.</summary>

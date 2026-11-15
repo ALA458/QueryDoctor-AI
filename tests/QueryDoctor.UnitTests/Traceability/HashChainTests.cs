@@ -129,6 +129,41 @@ public sealed class HashChainTests
     }
 
     [Fact]
+    public void UnEventoSinUsuarioRelacionadoConservaElHashAnteriorAS212()
+    {
+        // S2-12 (D5): related_user_id solo entra al hash si tiene valor. Este hash se calculó con el algoritmo de S2-06
+        // (main en 8346a02): si cambia, las cadenas ya escritas dejarían de verificar.
+        var entry = new AuditEvent
+        {
+            Seq = 7,
+            RecordedAt = HashChain.Normalize(Base),
+            EventType = AuditEventType.ConnectionRegistered,
+            UserId = Guid.Parse("11111111-2222-3333-4444-555555555555"),
+            UserName = "dba",
+            SubjectType = "connection",
+            SubjectId = Guid.Parse("66666666-7777-8888-9999-000000000000"),
+            Outcome = "ok",
+        };
+
+        Assert.Equal("b6867bf183f8b7f7e0261581920540d326ec2c76b89bebb1331ba7d16fdd6c54", HashChain.Compute(HashChain.Genesis, entry));
+    }
+
+    [Fact]
+    public void ElUsuarioRelacionadoEntraAlHashCuandoTieneValor()
+    {
+        // S2-12 (D5): cambiar a quién se asignó una conexión rompe la cadena.
+        var entry = new AuditEvent { Seq = 1, RecordedAt = HashChain.Normalize(Base), EventType = AuditEventType.ConnectionAssigned, Outcome = "ok" };
+        var without = HashChain.Compute(HashChain.Genesis, entry);
+
+        entry.RelatedUserId = Guid.NewGuid();
+        var with = HashChain.Compute(HashChain.Genesis, entry);
+        entry.RelatedUserId = Guid.NewGuid();
+
+        Assert.NotEqual(without, with);
+        Assert.NotEqual(with, HashChain.Compute(HashChain.Genesis, entry));
+    }
+
+    [Fact]
     public void LaAuditoriaSeEncadenaYSeVerificaIgual()
     {
         var first = new AuditEvent { Seq = 1, RecordedAt = HashChain.Normalize(Base), EventType = AuditEventType.LoginSucceeded, UserName = "dba", Outcome = "ok", PrevHash = HashChain.Genesis };
