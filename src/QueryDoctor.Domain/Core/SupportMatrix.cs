@@ -32,12 +32,13 @@ public sealed record SupportAssessment(
     ProbeFailureCause? FailureCause);
 
 /// <summary>
-/// Matriz de soporte por plataforma y versión: Cuadro 4.16 del SRS v1.1 (idéntico a la Adenda §9).
+/// Matriz de soporte por plataforma y versión: Cuadro 4.16 del SRS v1.1 definitivo (S1-19).
 /// Función pura: mismo motor, mismo resultado; sin E/S.
 /// </summary>
 /// <remarks>
-/// Deuda (D4): Azure SQL Database y SQL Server 2025 (17.x) quedan como Probado porque así lo dice la matriz
-/// ("Probado" y "2022 o superior"), pero aún no se han corrido pruebas de aceptación en esas plataformas.
+/// Conforme a RNF-COM-01, únicamente SQL Server 2022 (16.x) queda como Probado; SQL Server 2016, 2017, 2019,
+/// 2025+ y Azure SQL Database quedan como Compatible sin pruebas hasta ejecutar sus pruebas de aceptación (S3-06);
+/// Azure SQL Managed Instance queda como No soportado en el MVP (regla de alcance S1-19).
 /// </remarks>
 public static class SupportMatrix
 {
@@ -85,12 +86,12 @@ public static class SupportMatrix
         // Azure SQL Database reporta 12.x en ProductVersion: no se le aplica el corte de versión de SQL Server.
         if (platform == DetectedPlatform.AzureSqlDatabase)
         {
-            return new SupportAssessment(platform, major, SupportLevel.Tested, null);
+            return new SupportAssessment(platform, major, SupportLevel.CompatibleUntested, null);
         }
 
         if (platform == DetectedPlatform.AzureSqlManagedInstance)
         {
-            return new SupportAssessment(platform, major, SupportLevel.CompatibleUntested, null);
+            return new SupportAssessment(platform, major, SupportLevel.NotSupported, ProbeFailureCause.UnsupportedVersion);
         }
 
         if (major is null)
@@ -101,8 +102,8 @@ public static class SupportMatrix
         var level = major switch
         {
             < MinimumMajorVersion => SupportLevel.NotSupported,
-            13 or 14 => SupportLevel.CompatibleUntested, // 2016 (DA-12) y 2017 (D4)
-            _ => SupportLevel.Tested,                    // 2019, 2022 o superior
+            16 => SupportLevel.Tested,               // SQL Server 2022: único probado en el laboratorio
+            _ => SupportLevel.CompatibleUntested,    // 2016 (DA-12), 2017, 2019 y 2025+ (pendientes de S3-06)
         };
 
         return new SupportAssessment(
