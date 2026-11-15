@@ -264,14 +264,16 @@ public sealed class ExplanationEndpointsTests(PostgresFixture postgres) : IDispo
     }
 
     [Fact]
-    public async Task UnDesarrolladorTodaviaNoPuedePedirExplicaciones()
+    public async Task UnDesarrolladorNoPideExplicacionesDeUnaConexionNoAsignada()
     {
-        // Denegación por defecto (RNF-SEG-12): el acceso por conexión asignada llega en S2-12.
+        // RNF-SEG-12 (S2-12): la consulta de una conexión no asignada no existe para él (404) y no se guarda nada.
         var queryId = await SeedQueryAsync(findings: 1);
         using var client = await _api.ClientAsync(RoleNames.Developer);
 
         using var response = await client.PostAsync($"/queries/{queryId}/explanations", null);
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        await using var db = postgres.CreateContext();
+        Assert.False(db.Explanations.Any(e => e.QueryId == queryId));
     }
 }
