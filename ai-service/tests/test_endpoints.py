@@ -41,7 +41,7 @@ async def test_info_endpoint(mock_settings):
             assert data["app_name"] == "QueryDoctor-AI-Service"
             assert data["llm_profile"] == "mock"
             assert data["data_policy"] == "mock_deterministic"
-            assert data["prompt_version"] == "v1.0"
+            assert data["prompt_version"] == "v1.1"
     finally:
         app.dependency_overrides.clear()
 

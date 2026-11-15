@@ -9,15 +9,18 @@ def test_system_prompt_contains_security_directives():
     assert "RNF-SEG-06" in SYSTEM_PROMPT_V1
     assert "<<<UNTRUSTED_SQL_TEXT>>>" in SYSTEM_PROMPT_V1
     assert "<<<UNTRUSTED_FINDING_DATA>>>" in SYSTEM_PROMPT_V1
+    assert "<<<UNTRUSTED_OBJECT_AND_PLAN_VALUES>>>" in SYSTEM_PROMPT_V1
+    assert "<<<UNTRUSTED_METRICS_DATA>>>" in SYSTEM_PROMPT_V1
     assert "IGNÓRALO COMPLETAMENTE" in SYSTEM_PROMPT_V1
     assert "OBSERVACION" in SYSTEM_PROMPT_V1
     assert "INTERPRETACION" in SYSTEM_PROMPT_V1
     assert "RECOMENDACION" in SYSTEM_PROMPT_V1
+    assert "<uuid-del-fragmento-curado>" in SYSTEM_PROMPT_V1
 
 
 def test_build_prompt_delimiters(sample_request: ExplainRequest):
-    """Verifica que el texto SQL y los hallazgos estén estrictamente delimitados."""
-    sys_prompt, user_prompt = build_prompt_v1(sample_request)
+    """Verifica que el texto SQL, hallazgos, objetos y métricas estén estrictamente delimitados."""
+    _, user_prompt = build_prompt_v1(sample_request)
 
     # Delimitadores de SQL
     assert "<<<UNTRUSTED_SQL_TEXT>>>" in user_prompt
@@ -28,6 +31,15 @@ def test_build_prompt_delimiters(sample_request: ExplainRequest):
     assert "<<<UNTRUSTED_FINDING_DATA>>>" in user_prompt
     assert "find-hash-reg01-001" in user_prompt
     assert "<<<END_UNTRUSTED_FINDING_DATA>>>" in user_prompt
+
+    # Delimitadores de objetos y valores del plan
+    assert "<<<UNTRUSTED_OBJECT_AND_PLAN_VALUES>>>" in user_prompt
+    assert "Index Seek" in user_prompt
+    assert "<<<END_UNTRUSTED_OBJECT_AND_PLAN_VALUES>>>" in user_prompt
+
+    # Delimitadores de métricas
+    assert "<<<UNTRUSTED_METRICS_DATA>>>" in user_prompt
+    assert "<<<END_UNTRUSTED_METRICS_DATA>>>" in user_prompt
 
     # Base de conocimiento curada
     assert "KB-REG01-01" in user_prompt
