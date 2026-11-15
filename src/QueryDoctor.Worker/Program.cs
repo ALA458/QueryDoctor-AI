@@ -17,6 +17,9 @@ builder.Services.AddIngestion(builder.Configuration);
 // S2-04: el contexto hacia la IA se arma y enmascara en el Worker (invariante 5). Sin configuración: no se apaga.
 builder.Services.AddLiteralMasking();
 
+// S2-05: trabajo explain (único que habla con el servicio de IA, invariante 2), con degradación si la IA falla.
+builder.Services.AddExplanations(builder.Configuration);
+
 // Invariante 3: la excepción de TLS del laboratorio (docker-compose.lab.yml) no arranca fuera de Development.
 LabCertificateGuard.EnsureAllowed(builder.Configuration, builder.Environment.EnvironmentName);
 
@@ -27,7 +30,7 @@ if (!string.IsNullOrWhiteSpace(postgresConn))
     builder.Services.AddHangfireServer(options =>
     {
         options.ServerName = "QueryDoctor.Worker";
-        options.Queues = JobQueues.AllInPriorityOrder.Where(q => q != JobQueues.Probe).ToArray();
+        options.Queues = JobQueues.AllInPriorityOrder.Where(q => q != JobQueues.Probe && q != JobQueues.Explain).ToArray();
         options.WorkerCount = Math.Max(2, Environment.ProcessorCount * 2);
     });
 
@@ -41,6 +44,17 @@ if (!string.IsNullOrWhiteSpace(postgresConn))
             options.WorkerCount = 2;
         },
         DependencyInjection.CreateProbeQueueStorage(postgresConn));
+
+    // S2-05, E2, CA-HU09.3: la cola explain también sondea cada 1 s, para que una explicación en caché se vea en
+    // ≤ 2 s. Dos trabajadores: cada explicación puede esperar al LLM hasta el tiempo límite.
+    builder.Services.AddHangfireServer(
+        (_, options) =>
+        {
+            options.ServerName = "QueryDoctor.Worker.Explain";
+            options.Queues = [JobQueues.Explain];
+            options.WorkerCount = 2;
+        },
+        DependencyInjection.CreateExplainQueueStorage(postgresConn));
 }
 
 var host = builder.Build();

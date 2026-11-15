@@ -8,10 +8,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using QueryDoctor.Application.Ai;
 using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Connections;
 using QueryDoctor.Application.Engine.Parsing;
 using QueryDoctor.Application.Engine.Rules;
+using QueryDoctor.Application.Explanations;
 using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Application.KnowledgeBase;
 using QueryDoctor.Application.Masking;
@@ -19,7 +21,9 @@ using QueryDoctor.Application.Scoring;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Application.Validation;
 using QueryDoctor.Domain.Analysis;
+using QueryDoctor.Infrastructure.Ai;
 using QueryDoctor.Infrastructure.Connections;
+using QueryDoctor.Infrastructure.Explanations;
 using QueryDoctor.Infrastructure.Ingestion;
 using QueryDoctor.Infrastructure.Persistence;
 using QueryDoctor.Infrastructure.Scoring;
@@ -154,6 +158,46 @@ public static class DependencyInjection
         services.AddSingleton<IMasker, LiteralMasker>();
         return services;
     }
+
+    /// <summary>
+    /// Trabajo explain (S2-05): SOLO para el Worker, que es el único que habla con el servicio de IA (invariante 2).
+    /// Necesita <see cref="AddLiteralMasking"/> y PostgreSQL; sin cadena de conexión no se registra.
+    /// </summary>
+    public static IServiceCollection AddExplanations(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        if (string.IsNullOrWhiteSpace(GetPostgresConnectionString(configuration)))
+        {
+            return services;
+        }
+
+        services.Configure<AiServiceOptions>(configuration.GetSection(AiServiceOptions.SectionName));
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<AiServiceOptions>>().Value;
+            options.Validate();
+            return options;
+        });
+
+        services.AddSingleton<IAiExplanationClient>(sp => new HttpAiExplanationClient(
+            HttpAiExplanationClient.CreateHttpClient(),
+            sp.GetRequiredService<AiServiceOptions>()));
+        services.AddSingleton<ExplanationContextBuilder>();
+        services.TryAddScoped<EfExplanationStore>();
+        services.TryAddScoped<IExplanationStore>(sp => sp.GetRequiredService<EfExplanationStore>());
+        services.AddScoped<IExplanationSourceReader>(sp => sp.GetRequiredService<EfExplanationStore>());
+        services.AddScoped<ExplainQuery>();
+        services.AddScoped<ExplainQueryJob>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// E2, CA-HU09.3: una explicación en caché debe verse en ≤ 2 s, y con el sondeo de 15 s el trabajo esperaría
+    /// más que eso antes de empezar. La cola explain tiene su propio servidor con el mismo sondeo de 1 s que probe.
+    /// </summary>
+    public static JobStorage CreateExplainQueueStorage(string connectionString) => CreateProbeQueueStorage(connectionString);
 
     /// <summary>
     /// Acceso a bases objetivo: SOLO para el Worker (invariante 2, §10). Gateway, CapabilityProbe y el trabajo
