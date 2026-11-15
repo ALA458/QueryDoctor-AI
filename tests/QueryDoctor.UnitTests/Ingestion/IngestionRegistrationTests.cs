@@ -1,9 +1,11 @@
 using System.Security.Cryptography;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Infrastructure;
 using QueryDoctor.Infrastructure.Ingestion;
+using QueryDoctor.UnitTests.Security;
 
 namespace QueryDoctor.UnitTests.Ingestion;
 
@@ -32,6 +34,7 @@ public class IngestionRegistrationTests
         using var provider = new ServiceCollection()
             .AddLogging()
             .AddInfrastructure(configuration)
+            .AddSystemAccessScope()
             .AddTargetTelemetry(configuration)
             .AddIngestion(configuration)
             .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
@@ -43,12 +46,30 @@ public class IngestionRegistrationTests
     }
 
     [Fact]
+    public void SinContextoDeAccesoDeclaradoElWorkerNoArmaLaIngesta()
+    {
+        // S2-12: AddInfrastructure no registra ningún acceso por defecto. Un host que olvide declarar el suyo no
+        // arranca, en lugar de leer con un acceso que nadie eligió.
+        var configuration = Configuration();
+        var services = new ServiceCollection()
+            .AddLogging()
+            .AddInfrastructure(configuration)
+            .AddTargetTelemetry(configuration)
+            .AddIngestion(configuration);
+
+        var error = Assert.Throws<AggregateException>(() =>
+            services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true }));
+        Assert.Contains(nameof(IAccessScope), error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void UnTopNInvalidoImpideArmarLaIngesta()
     {
         var configuration = Configuration(new() { ["Ingestion:TopN"] = "0" });
         using var provider = new ServiceCollection()
             .AddLogging()
             .AddInfrastructure(configuration)
+            .AddSystemAccessScope()
             .AddTargetTelemetry(configuration)
             .AddIngestion(configuration)
             .BuildServiceProvider();
@@ -63,6 +84,7 @@ public class IngestionRegistrationTests
         using var provider = new ServiceCollection()
             .AddLogging()
             .AddInfrastructure(configuration)
+            .AddScoped<IAccessScope>(_ => TestAccessScope.None)
             .AddIngestionRequests()
             .BuildServiceProvider();
 

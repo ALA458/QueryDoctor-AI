@@ -168,11 +168,16 @@ public sealed class ExplanationContextBuilderTests
         var withChangedKb = Builder().Build(source, [changedKb]).Request!.ComputeContextHash(profile);
         var withOtherMetrics = Builder().Build(source with { LatestScore = null }, [fragment]).Request!.ComputeContextHash(profile);
         var withOtherSql = Builder().Build(source with { SqlText = "SELECT 1" }, [fragment]).Request!.ComputeContextHash(profile);
+        var withOtherQuery = Builder().Build(source with { QueryId = Guid.NewGuid() }, [fragment]).Request!.ComputeContextHash(profile);
         var request = Builder().Build(source, [fragment]).Request!;
 
         Assert.NotEqual(baseline, withChangedKb);
         Assert.NotEqual(baseline, withOtherMetrics);
         Assert.NotEqual(baseline, withOtherSql);
+
+        // S2-12 (D4): el id de la consulta entra al hash y cada consulta es de una sola conexión, así que la caché nunca
+        // reutiliza una explicación de otra conexión (un Desarrollador no ve afirmaciones nacidas fuera de lo asignado).
+        Assert.NotEqual(baseline, withOtherQuery);
 
         // RF-IA-07: otro prompt u otro perfil de LLM no reutilizan la explicación.
         Assert.NotEqual(baseline, request.ComputeContextHash(profile with { PromptVersion = "v2" }));

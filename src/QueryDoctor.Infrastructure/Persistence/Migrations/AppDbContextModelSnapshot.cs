@@ -1280,6 +1280,10 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("recorded_at");
 
+                    b.Property<Guid?>("RelatedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("related_user_id");
+
                     b.Property<Guid?>("SubjectId")
                         .HasColumnType("uuid")
                         .HasColumnName("subject_id");

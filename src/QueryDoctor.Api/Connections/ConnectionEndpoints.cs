@@ -25,22 +25,24 @@ internal sealed record RegisterConnectionRequest(
 
 /// <summary>
 /// /connections (S1-09; RF-CFG-01 a 04, RF-CFG-07; CA-HU01.1–01.3, CA-HU02.1) y su ingesta manual (S1-11; RF-ING-06,
-/// RF-ING-08). Solo DBA (RNF-SEG-12) y CSRF por
-/// mismo origen (UseSameOriginForms). La Api guarda y encola; el sondeo corre en el Worker (invariante 2).
+/// RF-ING-08). Escribir es solo DBA; leer, DBA y Desarrollador con el filtro por conexión asignada (RNF-SEG-12, S2-12).
+/// CSRF por mismo origen (UseSameOriginForms). La Api guarda y encola; el sondeo corre en el Worker (invariante 2).
 /// </summary>
 internal static class ConnectionEndpoints
 {
     public static IEndpointRouteBuilder MapConnectionEndpoints(this IEndpointRouteBuilder app)
     {
-        // El acceso de Desarrollador a sus conexiones asignadas llega en S2-12 (ConnectionMember, filtro en la consulta).
-        var group = app.MapGroup("/connections").RequireAuthorization(AuthConstants.DbaOnlyPolicy);
+        // S2-12 (RNF-SEG-12): leer es de DBA y Desarrollador; el filtro por conexión de la capa de datos deja al
+        // Desarrollador solo lo asignado y responde 404 por lo demás. Registrar e ingerir siguen siendo solo DBA
+        // (CA-HU01.6): las dos políticas se exigen a la vez.
+        var group = app.MapGroup("/connections").RequireAuthorization(AuthConstants.ConnectionReaderPolicy);
 
-        group.MapPost("/", RegisterAsync);
+        group.MapPost("/", RegisterAsync).RequireAuthorization(AuthConstants.DbaOnlyPolicy);
         group.MapGet("/", ListAsync);
         group.MapGet("/{id:guid}", GetAsync).WithName(GetConnectionRoute);
 
         // S1-11: ingesta manual (RF-ING-06, CA-HU03.1) y sus ejecuciones con la causa (RF-ING-08, CA-HU02.2).
-        group.MapPost("/{id:guid}/ingestions", RequestIngestionAsync);
+        group.MapPost("/{id:guid}/ingestions", RequestIngestionAsync).RequireAuthorization(AuthConstants.DbaOnlyPolicy);
         group.MapGet("/{id:guid}/ingestions", ListIngestionsAsync);
 
         return app;

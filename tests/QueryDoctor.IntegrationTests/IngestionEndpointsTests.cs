@@ -120,8 +120,9 @@ public sealed class IngestionEndpointsTests(PostgresFixture postgres) : IDisposa
     }
 
     [Fact]
-    public async Task SinSesionEs401YUnDesarrolladorRecibe403()
+    public async Task SinSesionEs401YUnDesarrolladorNoIngiereNiVeLoNoAsignado()
     {
+        // RNF-SEG-12: iniciar ingestas es solo DBA (403). Leer las de una conexión no asignada da 404 (S2-12).
         var id = await SeedConnectionAsync(ConnectionStatus.Active);
         using var anonymous = await _api.ClientAsync(null);
         using var developer = await _api.ClientAsync(RoleNames.Developer);
@@ -132,7 +133,7 @@ public sealed class IngestionEndpointsTests(PostgresFixture postgres) : IDisposa
 
         Assert.Equal(HttpStatusCode.Unauthorized, a.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, b.StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, c.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, c.StatusCode);
         Assert.Equal(0, await IngestJobsAsync(id));
     }
 

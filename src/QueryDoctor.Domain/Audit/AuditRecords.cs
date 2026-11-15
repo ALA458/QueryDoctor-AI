@@ -70,6 +70,12 @@ public enum AuditEventType
 
     /// <summary>Sin emisor todavía: el borrado de datos llega con S2-13.</summary>
     DataDeleted = 10,
+
+    /// <summary>Un DBA asignó una conexión a un Desarrollador (S2-12, RNF-SEG-12).</summary>
+    ConnectionAssigned = 11,
+
+    /// <summary>Un DBA quitó la asignación de una conexión a un Desarrollador (S2-12).</summary>
+    ConnectionUnassigned = 12,
 }
 
 /// <summary>
@@ -94,6 +100,12 @@ public sealed class AuditEvent
     public string? SubjectType { get; set; }
 
     public Guid? SubjectId { get; set; }
+
+    /// <summary>
+    /// Segundo objeto del evento, cuando lo hay: el Desarrollador al que se asigna o quita una conexión (S2-12). Entra al
+    /// hash solo si tiene valor.
+    /// </summary>
+    public Guid? RelatedUserId { get; set; }
 
     /// <summary>Resultado corto (<c>ok</c>, <c>rejected</c>, <c>locked</c>…). Código, nunca un mensaje libre.</summary>
     public string Outcome { get; set; } = string.Empty;

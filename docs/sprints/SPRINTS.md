@@ -107,7 +107,7 @@
 | S2-09 | Detalle de consulta: SQL, series de duración/CPU/lecturas por plan, hallazgos con evidencia, score con banda y desglose | UI | Debe | RF-DASH-02, 03; RF-SCO-06; HU-07, HU-08 | CA-HU07.1–07.2 y CA-HU08.1 demostrados con la consulta sembrada | Daniel | L | Por hacer | S2-02 | Series como tabla en vez de gráfico |
 | S2-10 | Visor jerárquico del plan con nodos de hallazgos resaltados | UI | Debe | RF-DASH-04, HU-13 | CA-HU13.1–13.2 | Daniel | M | Por hacer | S1-12 | Árbol de texto indentado, sin vista gráfica (RF-DASH-07 es Debería) |
 | S2-11 | Vista de explicación: afirmaciones con enlaces a evidencia, estado TRAZADA/NO_VERIFICADA, avisos persistentes, render solo texto | UI | Debe | RF-DASH-05, 06; RF-IA-10; RNF-SEG-07 | CA-HU10.1–10.3, CA-HU11.1–11.3 | Daniel | M | Por hacer | S2-03, S2-05 | No recortable (núcleo de la demo) |
-| S2-12 | RBAC: rol Desarrollador y asignación de conexiones, filtrado en la capa de datos | Seguridad | Debe | RNF-SEG-12 | Un desarrollador no ve conexiones no asignadas ni por API directa | Álvaro | M | Por hacer | S1-06 | No recortable (núcleo de la demo) |
+| S2-12 | RBAC: rol Desarrollador y asignación de conexiones, filtrado en la capa de datos | Seguridad | Debe | RNF-SEG-12 | Un desarrollador no ve conexiones no asignadas ni por API directa | Álvaro | M | Hecho (PR por abrir) | S1-06 | No recortable (núcleo de la demo). Sin recorte. Crear usuarios Desarrollador queda fuera (D6) |
 
 ## Sprint 3 (tentativo)
 

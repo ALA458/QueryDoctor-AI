@@ -78,6 +78,11 @@ internal static class AuthServiceCollectionExtensions
             .AddPolicy(AuthConstants.DbaOnlyPolicy, policy => policy
                 .RequireAuthenticatedUser()
                 .RequireRole(RoleNames.Dba)
+                .RequireAssertion(context => !HasPendingPasswordChange(context)))
+            // S2-12: un usuario sin rol, o con un rol desconocido, no entra (denegación por defecto).
+            .AddPolicy(AuthConstants.ConnectionReaderPolicy, policy => policy
+                .RequireAuthenticatedUser()
+                .RequireRole(RoleNames.Dba, RoleNames.Developer)
                 .RequireAssertion(context => !HasPendingPasswordChange(context)));
 
         return services;

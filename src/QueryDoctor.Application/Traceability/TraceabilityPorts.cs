@@ -11,7 +11,8 @@ public sealed record AuditEventDraft(
     string? UserName,
     string Outcome,
     string? SubjectType = null,
-    Guid? SubjectId = null)
+    Guid? SubjectId = null,
+    Guid? RelatedUserId = null)
 {
     public const string OutcomeOk = "ok";
     public const string OutcomeRejected = "rejected";

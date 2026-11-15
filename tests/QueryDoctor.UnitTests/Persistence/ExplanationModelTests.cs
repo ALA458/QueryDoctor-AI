@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Infrastructure.Persistence;
 
 namespace QueryDoctor.UnitTests.Persistence;
@@ -18,7 +19,7 @@ public sealed class ExplanationModelTests : IDisposable
             .UseNpgsql("Host=localhost;Database=model_test", npgsql => npgsql.SetPostgresVersion(16, 0))
             .Options;
 
-        _db = new AppDbContext((DbContextOptions<AppDbContext>)options);
+        _db = new AppDbContext((DbContextOptions<AppDbContext>)options, SystemAccessScope.Instance);
         _script = _db.Database.GenerateCreateScript().Replace("\"", string.Empty, StringComparison.Ordinal);
     }
 

@@ -5,8 +5,9 @@ namespace QueryDoctor.Api.Explanations;
 
 /// <summary>
 /// Explicaciones de una consulta (S2-05, CU-05). La Api solo guarda la solicitud y encola <c>explain</c>; el contexto,
-/// el enmascarado y la llamada a la IA ocurren en el Worker (invariante 2). Solo DBA por ahora: el acceso de
-/// Desarrollador a sus conexiones llega en S2-12.
+/// el enmascarado y la llamada a la IA ocurren en el Worker (invariante 2). DBA y Desarrollador: CU-05 pone al
+/// Desarrollador como actor principal de pedirla (S2-12, D1). Una consulta de una conexión no asignada da 404, porque el
+/// filtro por conexión la oculta antes de llegar aquí (RNF-SEG-12).
 /// </summary>
 internal static class ExplanationEndpoints
 {
@@ -14,7 +15,7 @@ internal static class ExplanationEndpoints
 
     public static IEndpointRouteBuilder MapExplanationEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/queries/{queryId:guid}/explanations").RequireAuthorization(AuthConstants.DbaOnlyPolicy);
+        var group = app.MapGroup("/queries/{queryId:guid}/explanations").RequireAuthorization(AuthConstants.ConnectionReaderPolicy);
 
         group.MapPost("/", RequestAsync);
         group.MapGet($"/{LatestRoute}", GetLatestAsync);

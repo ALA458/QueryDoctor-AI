@@ -62,7 +62,7 @@ public static class HashChain
     public static string Compute(string prevHash, AuditEvent entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
-        return Compute(prevHash, new SortedDictionary<string, string?>(StringComparer.Ordinal)
+        var fields = new SortedDictionary<string, string?>(StringComparer.Ordinal)
         {
             ["event_type"] = entry.EventType.ToString(),
             ["outcome"] = entry.Outcome,
@@ -72,7 +72,15 @@ public static class HashChain
             ["subject_type"] = entry.SubjectType,
             ["user_id"] = entry.UserId is { } user ? Id(user) : null,
             ["user_name"] = entry.UserName,
-        });
+        };
+
+        // S2-12 (D5): solo si tiene valor, para que las entradas escritas antes de la columna conserven su hash.
+        if (entry.RelatedUserId is { } related)
+        {
+            fields["related_user_id"] = Id(related);
+        }
+
+        return Compute(prevHash, fields);
     }
 
     private static string Compute(string prevHash, SortedDictionary<string, string?> fields)

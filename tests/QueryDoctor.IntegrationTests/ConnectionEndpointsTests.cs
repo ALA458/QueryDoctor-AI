@@ -31,19 +31,23 @@ public sealed class ApiFactory(PostgresFixture postgres) : WebApplicationFactory
     /// <summary>Cliente HTTPS (la cookie de sesión es Secure) con sesión del usuario indicado, o sin sesión.</summary>
     public async Task<HttpClient> ClientAsync(string? role, bool mustChangePassword = false)
     {
-        var client = CreateClient(new WebApplicationFactoryClientOptions
-        {
-            BaseAddress = new Uri(Origin),
-            AllowAutoRedirect = false,
-        });
-        client.DefaultRequestHeaders.Add("Origin", Origin);
-
         if (role is null)
         {
-            return client;
+            return AnonymousClient();
         }
 
+        return (await SessionAsync([role], mustChangePassword)).Client;
+    }
+
+    /// <summary>
+    /// Sesión de un usuario nuevo con los roles indicados (puede no tener ninguno) y su id, para sembrar asignaciones
+    /// (S2-12).
+    /// </summary>
+    public async Task<(HttpClient Client, Guid UserId)> SessionAsync(string[] roles, bool mustChangePassword = false)
+    {
+        var client = AnonymousClient();
         var userName = $"u{Guid.NewGuid():N}";
+        Guid userId;
         using (var scope = Services.CreateScope())
         {
             var users = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -56,7 +60,12 @@ public sealed class ApiFactory(PostgresFixture postgres) : WebApplicationFactory
                 CreatedAt = DateTimeOffset.UtcNow,
             };
             Assert.True((await users.CreateAsync(user, UserPassword)).Succeeded);
-            Assert.True((await users.AddToRoleAsync(user, role)).Succeeded);
+            foreach (var role in roles)
+            {
+                Assert.True((await users.AddToRoleAsync(user, role)).Succeeded);
+            }
+
+            userId = user.Id;
         }
 
         using var login = await client.PostAsync("/auth/login", new FormUrlEncodedContent(new Dictionary<string, string>
@@ -65,6 +74,17 @@ public sealed class ApiFactory(PostgresFixture postgres) : WebApplicationFactory
             ["password"] = UserPassword,
         }));
         Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        return (client, userId);
+    }
+
+    private HttpClient AnonymousClient()
+    {
+        var client = CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri(Origin),
+            AllowAutoRedirect = false,
+        });
+        client.DefaultRequestHeaders.Add("Origin", Origin);
         return client;
     }
 }
@@ -107,15 +127,16 @@ public sealed class ConnectionEndpointsTests(PostgresFixture postgres) : IDispos
     }
 
     [Fact]
-    public async Task UnDesarrolladorRecibe403()
+    public async Task UnDesarrolladorNoRegistraConexionesYSinAsignacionesNoVeNinguna()
     {
-        // CA-HU01.6: un Desarrollador no registra conexiones.
+        // CA-HU01.6: un Desarrollador no registra conexiones. S2-12: puede listar, pero solo ve lo asignado (nada aquí).
         using var client = await _api.ClientAsync(RoleNames.Developer);
 
         using var list = await client.GetAsync("/connections");
         using var post = await client.PostAsJsonAsync("/connections", Body(UniqueServer()));
 
-        Assert.Equal(HttpStatusCode.Forbidden, list.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, list.StatusCode);
+        Assert.Equal(0, (await list.Content.ReadFromJsonAsync<JsonElement>()).GetArrayLength());
         Assert.Equal(HttpStatusCode.Forbidden, post.StatusCode);
     }
 

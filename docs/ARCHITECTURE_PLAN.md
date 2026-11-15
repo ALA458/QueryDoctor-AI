@@ -53,7 +53,7 @@ sin E/S**. NetArchTest (S1-03) debe vigilar:
 | TraceLog / AuditLog (solo adición, encadenados) | RF-TRZ-01..05 | — | S2-06 (Álvaro) |
 | SecretProtector (sobre AES-256-GCM) | RNF-SEG-04/14 | `IFieldEncryptor` | S1-05 (Maykol) |
 | Hangfire (cliente en Api, servidor en Worker) | ADR-04, DA-03 | `BackgroundJob`, `RecurringJob` | S1-10 (Maykol) |
-| Identity, políticas `DbaOnly` / `ConnectionMember` | RNF-SEG-11..13 | — | S1-06, S2-12 |
+| Identity, políticas `DbaOnly` / `ConnectionReader` + filtro por conexión (`IAccessScope`) | RNF-SEG-11..13 | `IAccessScope` | S1-06, S2-12 |
 | ai: retriever, prompt_registry, llm_client, output_schema (Pydantic) | RF-IA-04/06/08/09, RNF-SEG-06/08 | `LLMProvider.generate(request, schema)` | S1-17/18, S2-07 (Maykol) |
 | SPA (6 vistas, §5.4) | RF-DASH-*, RNF-SEG-07 | OpenAPI | S1-15/16, S2-09..11 (Daniel) |
 
@@ -279,6 +279,49 @@ Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA (DA-
 - Si la auditoría de un registro de conexión o de una ingesta falla, la acción ya ocurrió y la respuesta es 500.
 - El nombre escrito en un login fallido se guarda: si alguien escribe su contraseña en el campo de usuario, queda en la auditoría.
 - La verificación recorre toda la cadena; con millones de filas conviene un punto de control.
+
+## Decisiones de implementación de S2-12 (RBAC del Desarrollador)
+Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA (DA-14 sigue abierta).
+
+| ID | Decisión |
+|---|---|
+| D1 | El Desarrollador **pide y lee** explicaciones de sus consultas: CU-05 lo pone como actor principal y RNF-SEG-12 no reserva esa acción al DBA (el SRS manda sobre el "solo lee" inicial) |
+| D2 | El Desarrollador lee `GET /connections/{id}/ingestions` de lo asignado (flujo 2a de CU-04: "sin datos ingeridos") |
+| D3 | Sin filtro, a propósito: `ops.user_connection` (es la fuente del scope) y `audit.trace_entry` (`ChainWriter` lee la última `seq` de toda la cadena, también desde la Api). Las dos solo las ve el DBA |
+| D4 | La caché de explicaciones no cruza conexiones **por construcción**: el `QueryId` entra al hash de contexto y cada consulta es de una sola conexión. Sin cambio de código; lo fija una prueba |
+| D5 | `audit.audit_event.related_user_id` (migración `AuditoriaUsuarioRelacionado`). Entra al hash **solo si tiene valor**, así las cadenas ya escritas siguen verificando (valor dorado en `HashChainTests`) |
+| D6 | Crear usuarios Desarrollador queda **fuera** de S2-12 (es Identity, de S1-06). Solo se agregó `GET /users?role=Desarrollador` para elegir a quién asignar |
+| D7 | Con los dos roles gana DBA. Sin rol, con un rol desconocido o con cambio de contraseña pendiente: 403 y acceso `None` |
+
+**Mecánica que conviene conocer:**
+- `AppDbContext` exige un `IAccessScope` (`None`, `Developer`, `Dba`, `System`) y aplica el filtro con nombre
+  `ConnectionAccess` a 13 entidades: `connection` (por su `id`), las 10 con `connection_id` y `claim` y
+  `claim_reference` a través de su explicación.
+  `AddInfrastructure` **no** registra ningún acceso: la Api usa `AddRequestAccessScope` y el Worker `AddSystemAccessScope`.
+  Un host que lo olvide no arranca.
+- En la Api, `AccessScopeMiddleware` (después de `UseAuthorization`) lee las asignaciones de la base **en cada
+  solicitud** de un Desarrollador. No hay caché ni claims en la cookie. El DBA no hace ninguna consulta extra.
+- El acceso vive en la capa de datos, no en el endpoint: una conexión no asignada no se encuentra y el endpoint
+  responde el 404 que ya tenía para "no existe". Las rutas de escritura agregan `DbaOnly` encima de `ConnectionReader`.
+- `IgnoreQueryFilters` está prohibido en todo `src/` (`AccessScopeArchitectureTests`, revisa el IL). El acceso Sistema
+  ya ve todo, así que no hace falta en ningún lado.
+- `ConnectionAccessFilterCoverageTests` recorre el modelo de EF: una entidad nueva con `ConnectionId`, o hija de una
+  filtrada, sin filtro deja la prueba en rojo.
+- `ExecuteSql*` **no** pasa por el filtro. Hoy solo lo usan el Worker (ingesta), el bloqueo de cadena y el
+  `INSERT … ON CONFLICT` de las asignaciones (DBA). `FromSql` sobre un `DbSet` sí lo pasa: EF aplica el filtro encima
+  (el único uso es la detección de duplicados del alta, solo DBA).
+- Asignar y quitar escriben el cambio y su evento de auditoría en **una** transacción (`EfConnectionAssignmentStore`):
+  si la auditoría falla no queda ninguno, y el reintento deja los dos (`AssignmentAuditAtomicityTests`).
+- La política `ConnectionReader` corta primero (403); el acceso `None` del middleware es la segunda barrera y se prueba
+  en aislado (`AccessScopeMiddlewareTests`).
+- `docs/arquitectura/ARQUITECTURA_v0.1.md` §autorización todavía llama `ConnectionMember` a la política que el código
+  llama `ConnectionReader`: error de nombre del documento de arquitectura, reportado y sin corregir aquí.
+
+**Deuda de S2-12:**
+- No hay alta de usuarios Desarrollador (D6): para la demo hay que sembrarlos a mano. Corresponde a Identity (S1-06).
+- RLS en PostgreSQL como segunda barrera que cubra también el SQL directo. Necesita el rol de aplicación de T4.
+- El listado de conexiones del Desarrollador hace una consulta más por solicitud (sus asignaciones). Medirlo en S3-07.
+- Una asignación a un usuario que después pierde el rol Desarrollador queda en la tabla, inerte.
 
 ## Riesgos que afectan al código (§14.1)
 - **RA-03:** si ScriptDom no puede tokenizar el SQL, se envía solo el contexto de hallazgos,
