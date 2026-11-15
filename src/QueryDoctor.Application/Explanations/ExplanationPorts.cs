@@ -36,14 +36,21 @@ public interface IExplanationStore
     Task AddAsync(Explanation explanation, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Guarda la explicación completada junto con sus afirmaciones y referencias en una sola transacción
-    /// (<c>ai.claim</c>, <c>ai.claim_reference</c>, §7).
+    /// Guarda la explicación completada, sus afirmaciones y referencias (<c>ai.claim</c>, <c>ai.claim_reference</c>,
+    /// §7) y su entrada de traza (RF-TRZ-01, S2-06) en una sola transacción.
     /// </summary>
     Task CompleteAsync(Explanation explanation, IReadOnlyList<ExplanationClaim> claims, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Guarda un estado final sin afirmaciones (caché, IA no disponible, no generada, abandonada) junto con su entrada
+    /// de traza, en una sola transacción (S2-06, T2 y T3).
+    /// </summary>
+    Task FinishAsync(Explanation explanation, CancellationToken cancellationToken);
 
     /// <summary>Afirmaciones de una explicación con sus referencias, en orden.</summary>
     Task<IReadOnlyList<ExplanationClaim>> GetClaimsAsync(Guid explanationId, CancellationToken cancellationToken);
 
+    /// <summary>Guarda un estado intermedio (en curso). No escribe traza.</summary>
     Task SaveAsync(Explanation explanation, CancellationToken cancellationToken);
 }
 

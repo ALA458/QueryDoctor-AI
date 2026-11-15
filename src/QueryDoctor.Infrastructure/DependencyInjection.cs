@@ -19,6 +19,7 @@ using QueryDoctor.Application.KnowledgeBase;
 using QueryDoctor.Application.Masking;
 using QueryDoctor.Application.Scoring;
 using QueryDoctor.Application.Telemetry;
+using QueryDoctor.Application.Traceability;
 using QueryDoctor.Application.Validation;
 using QueryDoctor.Domain.Analysis;
 using QueryDoctor.Infrastructure.Ai;
@@ -29,6 +30,7 @@ using QueryDoctor.Infrastructure.Persistence;
 using QueryDoctor.Infrastructure.Scoring;
 using QueryDoctor.Infrastructure.Security;
 using QueryDoctor.Infrastructure.Telemetry;
+using QueryDoctor.Infrastructure.Traceability;
 
 namespace QueryDoctor.Infrastructure;
 
@@ -88,6 +90,10 @@ public static class DependencyInjection
             services.AddScoped<IScoreRecalculationStore, EfScoreRecalculationStore>();
             services.AddScoped<RecalculateConnectionScores>();
             services.AddScoped<RecalculateScoresJob>();
+
+            // S2-06: traza y auditoría de solo adición, encadenadas (RF-TRZ-01..05). Las usan la Api y el Worker.
+            services.AddScoped<IAuditLog, EfAuditLog>();
+            services.AddScoped<ITraceabilityQueries, EfTraceabilityQueries>();
         }
 
         return services;

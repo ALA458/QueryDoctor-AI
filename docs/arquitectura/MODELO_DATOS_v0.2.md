@@ -344,7 +344,7 @@ Sembrado en la migración con el conjunto de umbrales por defecto del Cuadro 4.5
 |---|---|---|
 | analysis | health_score | S2-02 (`rule_catalog`, `threshold_set`, `analysis_run` y `finding` ya existen desde S1-13) |
 | ai | ~~explanation, claim, claim_reference~~ creadas en S2-05 (migraciones `ExplicacionesIa` y `AfirmacionesExplicacion`); kb_fragment y kb_causal_relation existen desde S1-17 | S1-17, S2-05 |
-| audit | trace_entry, audit_event, statement_log (solo adición, `prev_hash`) | S2-06; statement_log: S1-08 usa hoy un escritor en memoria |
+| audit | ~~trace_entry, audit_event~~ creadas en S2-06 (migración `TrazaYAuditoria`, trigger de solo adición, `prev_hash`/`entry_hash`, sin FK); statement_log sigue pendiente | S2-06; statement_log: S1-08 usa hoy un escritor en memoria |
 
 ---
 

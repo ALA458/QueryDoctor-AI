@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using QueryDoctor.Domain.Ai;
 using QueryDoctor.Domain.Analysis;
+using QueryDoctor.Domain.Audit;
 using QueryDoctor.Domain.Core;
 using QueryDoctor.Domain.Ops;
 
@@ -57,6 +58,12 @@ public sealed class AppDbContext : IdentityDbContext<ApplicationUser, Applicatio
 
     /// <summary>Referencias de cada afirmación a hallazgos y nodos del plan (§7, RF-DASH-05).</summary>
     public DbSet<ExplanationClaimReference> ExplanationClaimReferences => Set<ExplanationClaimReference>();
+
+    /// <summary>Registro de trazabilidad de solo adición, encadenado (S2-06, RF-TRZ-01/02).</summary>
+    public DbSet<TraceEntry> TraceEntries => Set<TraceEntry>();
+
+    /// <summary>Log de auditoría de solo adición, encadenado (S2-06, RF-TRZ-05).</summary>
+    public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

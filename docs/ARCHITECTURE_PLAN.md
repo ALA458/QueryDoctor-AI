@@ -252,6 +252,34 @@ El código sigue estas decisiones. El documento de arquitectura aún no las refl
 | §11 | ADR-05, 06 y 11 "Propuesta" | Aceptadas según el plan de sprints | — | Equipo: corregir el documento |
 | RNF-RND-03 | ≤ 30 s p95 | 60 s × 3 por defecto (RNF-FIA-02) | Las dos metas del SRS chocan entre sí | Tutor (DA-06) |
 
+## Decisiones de implementación de S2-06 (traza y auditoría)
+Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA (DA-14 sigue abierta).
+
+| ID | Decisión |
+|---|---|
+| T1 | El encadenado por hash **no se recortó** al Sprint 3: el "Hecho cuando" lo exige y recortarlo necesitaba al tutor |
+| T2 | El estado final de una explicación, sus afirmaciones y su entrada de traza se guardan en una sola transacción (`IExplanationStore.FinishAsync` / `CompleteAsync`) |
+| T3 | Todo estado final deja una entrada: completada, desde caché, IA no disponible, no generada y abandonada. Quedar en cola o en curso no deja ninguna |
+| T4 | En la base: un trigger rechaza UPDATE, DELETE y TRUNCATE, y la cadena de hash detecta lo que se haga saltándolo. **Deuda:** un rol de aplicación sin UPDATE/DELETE (la app es dueña del esquema; toca el compose de S1-02) |
+| T5 | Eventos: login exitoso, fallido (usuario inexistente sin id), bloqueo, logout, cambio de contraseña, registro y re-registro de conexión e ingesta manual. `ThresholdsChanged` y `DataDeleted` existen, sin emisor |
+| T6 | `AuthEndpoints` (S1-06, de Daniel): solo se agregó una llamada de auditoría en cada salida |
+| T7 | En el login, un fallo de la auditoría se registra (sin datos) y no impide entrar. En conexiones e ingestas la escritura es estricta y va después de la acción |
+| T8 | `/trace` y `/audit` solo para DBA; un rol Auditor depende de DA-14 |
+| T9 | `statement_log` (RF-TRZ-04, S1-08) no se tocó; podría reutilizar esta cadena |
+
+**Mecánica que conviene conocer:**
+- `entry_hash = SHA-256(prev_hash + "
+" + JSON canónico)`, con génesis de 64 ceros. La `seq` la asigna `ChainWriter` (última + 1) bajo `pg_advisory_xact_lock`, una clave por cadena y siempre dentro de una transacción. Las fechas se recortan a microsegundos antes de hashear.
+- Las tablas `audit.*` no tienen FK: la traza sobrevive a la purga de S2-13. Solo guardan ids, códigos, versiones y fechas.
+- `GET /trace/verify` y `/audit/verify` recorren la cadena por lotes y devuelven la primera `seq` rota con su motivo (`hash_mismatch` o `broken_link`).
+- Los filtros `from`/`to` se convierten a UTC (Npgsql no acepta otro offset en `timestamptz`).
+
+**Deuda de S2-06:**
+- Rol de base de datos sin UPDATE/DELETE (T4).
+- Si la auditoría de un registro de conexión o de una ingesta falla, la acción ya ocurrió y la respuesta es 500.
+- El nombre escrito en un login fallido se guarda: si alguien escribe su contraseña en el campo de usuario, queda en la auditoría.
+- La verificación recorre toda la cadena; con millones de filas conviene un punto de control.
+
 ## Riesgos que afectan al código (§14.1)
 - **RA-03:** si ScriptDom no puede tokenizar el SQL, se envía solo el contexto de hallazgos,
   **sin** texto SQL. Nunca regex como respaldo.

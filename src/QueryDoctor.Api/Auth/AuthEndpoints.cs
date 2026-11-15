@@ -1,6 +1,9 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
+using QueryDoctor.Api.Auditing;
 using QueryDoctor.Application.Common.Security;
+using QueryDoctor.Application.Traceability;
+using QueryDoctor.Domain.Audit;
 using QueryDoctor.Infrastructure.Persistence;
 
 namespace QueryDoctor.Api.Auth;
@@ -27,8 +30,20 @@ internal static class AuthEndpoints
     private static async Task<IResult> LoginAsync(
         HttpRequest request,
         UserManager<ApplicationUser> users,
-        SignInManager<ApplicationUser> signIn)
+        SignInManager<ApplicationUser> signIn,
+        IAuditLog audit,
+        ILoggerFactory loggers)
     {
+        // S2-06 (RF-TRZ-05): cada salida deja su evento. Nunca se registra la contraseña; un fallo de la auditoría no
+        // impide entrar (T7).
+        var logger = loggers.CreateLogger(typeof(AuditTrail));
+        Task Audit(AuditEventType type, ApplicationUser? who, string? typedName, string outcome) =>
+            AuditTrail.RecordTolerantAsync(
+                audit,
+                new AuditEventDraft(type, who?.Id, who?.UserName ?? (string.IsNullOrEmpty(typedName) ? null : typedName), outcome),
+                logger,
+                request.HttpContext.RequestAborted);
+
         // Sin cuerpo de formulario se trata como formulario vacío: más abajo cae en el mensaje de error normal.
         IFormCollection form = request.HasFormContentType ? await request.ReadFormAsync() : FormCollection.Empty;
         // FRONT_PHP.md usa el campo "email"; la pantalla propia usa "usuario". Se aceptan ambos.
@@ -38,12 +53,14 @@ internal static class AuthEndpoints
 
         if (userName.Length == 0 || password.Length == 0)
         {
+            await Audit(AuditEventType.LoginFailed, null, userName, AuditEventDraft.OutcomeRejected);
             return Redirect(AuthConstants.LoginPage, "error", "1", returnUrl);
         }
 
         var user = await users.FindByNameAsync(userName) ?? await users.FindByEmailAsync(userName);
         if (user is null)
         {
+            await Audit(AuditEventType.LoginFailed, null, userName, AuditEventDraft.OutcomeUnknownUser);
             return Redirect(AuthConstants.LoginPage, "error", "1", returnUrl);
         }
 
@@ -51,13 +68,17 @@ internal static class AuthEndpoints
         var result = await signIn.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
         if (result.IsLockedOut)
         {
+            await Audit(AuditEventType.LoginLockedOut, user, userName, AuditEventDraft.OutcomeLocked);
             return Redirect(AuthConstants.LoginPage, "error", "locked", returnUrl);
         }
 
         if (!result.Succeeded)
         {
+            await Audit(AuditEventType.LoginFailed, user, userName, AuditEventDraft.OutcomeRejected);
             return Redirect(AuthConstants.LoginPage, "error", "1", returnUrl);
         }
+
+        await Audit(AuditEventType.LoginSucceeded, user, userName, AuditEventDraft.OutcomeOk);
 
         if (user.MustChangePassword)
         {
@@ -76,9 +97,16 @@ internal static class AuthEndpoints
         HttpRequest request,
         ClaimsPrincipal principal,
         UserManager<ApplicationUser> users,
-        SignInManager<ApplicationUser> signIn)
+        SignInManager<ApplicationUser> signIn,
+        IAuditLog audit,
+        ILoggerFactory loggers)
     {
         var user = await users.GetUserAsync(principal);
+        await AuditTrail.RecordTolerantAsync(
+            audit,
+            new AuditEventDraft(AuditEventType.Logout, user?.Id, user?.UserName, AuditEventDraft.OutcomeOk),
+            loggers.CreateLogger(typeof(AuditTrail)),
+            request.HttpContext.RequestAborted);
         if (user is not null)
         {
             // Cambiar el sello invalida la cookie en el servidor, no solo en el navegador (RNF-SEG-13).
@@ -93,7 +121,9 @@ internal static class AuthEndpoints
         HttpRequest request,
         ClaimsPrincipal principal,
         UserManager<ApplicationUser> users,
-        SignInManager<ApplicationUser> signIn)
+        SignInManager<ApplicationUser> signIn,
+        IAuditLog audit,
+        ILoggerFactory loggers)
     {
         // Sin cuerpo de formulario se trata como formulario vacío: más abajo cae en el mensaje de error normal.
         IFormCollection form = request.HasFormContentType ? await request.ReadFormAsync() : FormCollection.Empty;
@@ -127,6 +157,11 @@ internal static class AuthEndpoints
 
         user.MustChangePassword = false;
         await users.UpdateAsync(user);
+        await AuditTrail.RecordTolerantAsync(
+            audit,
+            new AuditEventDraft(AuditEventType.PasswordChanged, user.Id, user.UserName, AuditEventDraft.OutcomeOk),
+            loggers.CreateLogger(typeof(AuditTrail)),
+            request.HttpContext.RequestAborted);
 
         // La sesión anterior queda invalidada (cambió el sello): se vuelve a entrar con la contraseña nueva.
         await signIn.SignOutAsync();

@@ -299,7 +299,9 @@ public sealed class ExplainQuery
         explanation.State = state;
         explanation.Cause = cause;
         explanation.CompletedAt = _clock.GetUtcNow();
-        await _store.SaveAsync(explanation, cancellationToken);
+
+        // S2-06: todo estado final deja su entrada de traza en la misma transacción (RF-TRZ-01, T3).
+        await _store.FinishAsync(explanation, cancellationToken);
     }
 
     private static ExplainQueryOutcome Outcome(Explanation explanation, bool fromCache, int findingsSent, MaskingMetrics? masking) => new(
