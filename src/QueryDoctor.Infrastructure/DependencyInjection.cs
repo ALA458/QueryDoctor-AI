@@ -160,6 +160,20 @@ public static class DependencyInjection
     }
 
     /// <summary>
+    /// Solicitud y consulta de explicaciones (S2-05): para la Api. Solo guarda y encola explain con el id; no registra
+    /// el cliente de IA ni el enmascarador (invariante 2).
+    /// </summary>
+    public static IServiceCollection AddExplanationRequests(this IServiceCollection services)
+    {
+        services.TryAddScoped<EfExplanationStore>();
+        services.TryAddScoped<IExplanationStore>(sp => sp.GetRequiredService<EfExplanationStore>());
+        services.AddScoped<IExplanationJobScheduler, HangfireExplanationJobScheduler>();
+        services.AddScoped<RequestExplanation>();
+        services.AddScoped<GetLatestExplanation>();
+        return services;
+    }
+
+    /// <summary>
     /// Trabajo explain (S2-05): SOLO para el Worker, que es el único que habla con el servicio de IA (invariante 2).
     /// Necesita <see cref="AddLiteralMasking"/> y PostgreSQL; sin cadena de conexión no se registra.
     /// </summary>
