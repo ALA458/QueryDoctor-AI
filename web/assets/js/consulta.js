@@ -505,6 +505,7 @@
       }
 
       card.id = "finding-card-" + (f.findingCode || f.id);
+      card.tabIndex = -1;
       card.appendChild(dl);
 
       if (f.nodes && f.nodes.length) {
@@ -980,6 +981,162 @@
     return section;
   }
 
+  // ---------- Render: Explicación con IA y trazabilidad (S2-11) ----------
+  var explanationState = {
+    token: 0,
+    pollTimerId: null,
+    requestInFlight: false,
+    lastPayload: null,
+    bodyEl: null,
+    detail: null,
+    highlightedFindingCode: null
+  };
+
+  function cancelExplanationPolling() {
+    if (explanationState.pollTimerId !== null) {
+      window.clearTimeout(explanationState.pollTimerId);
+      explanationState.pollTimerId = null;
+    }
+  }
+
+  function focusFindingCard(findingCode) {
+    if (!findingCode) { return; }
+    if (explanationState.highlightedFindingCode) {
+      var prev = document.getElementById("finding-card-" + explanationState.highlightedFindingCode);
+      if (prev) { prev.classList.remove("is-target-highlight"); }
+    }
+    var card = document.getElementById("finding-card-" + findingCode);
+    if (!card) { return; }
+    explanationState.highlightedFindingCode = findingCode;
+    card.classList.add("is-target-highlight");
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+    card.focus({ preventScroll: true });
+  }
+
+  function paintExplanation(payload) {
+    explanationState.lastPayload = payload;
+    var viewModule = window.QueryDoctorExplanationView;
+    if (!viewModule || !explanationState.bodyEl) { return; }
+    var detail = explanationState.detail || {};
+    var plans = detail.plans || [];
+    var findings = detail.findings || [];
+    viewModule.renderExplanationState(
+      explanationState.bodyEl,
+      payload,
+      {
+        formatDateTime: formatDateTime,
+        detailFindings: findings,
+        findingsCount: findings.length,
+        defaultPlanId: plans.length === 1 ? plans[0].planId : null,
+        requestInFlight: explanationState.requestInFlight
+      },
+      {
+        onRequest: function () { requestExplanation(explanationState.token); },
+        onReload: function () { fetchLatestExplanation(explanationState.token); },
+        onFocusFinding: focusFindingCard,
+        onFocusNode: focusNodeInPlanViewer
+      }
+    );
+  }
+
+  function fetchLatestExplanation(token) {
+    var detail = explanationState.detail;
+    if (!detail || token !== explanationState.token) { return Promise.resolve(); }
+    cancelExplanationPolling();
+
+    return fetch("/api/queries/" + encodeURIComponent(detail.id) + "/explanations/latest", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    }).then(function (response) {
+      if (token !== explanationState.token) { return null; }
+      if (response.status === 401) { goToLogin(); return null; }
+      if (response.status === 403) { paintExplanation({ kind: "forbidden" }); return null; }
+      if (response.status === 404) { paintExplanation({ kind: "not_requested" }); return null; }
+      if (!response.ok) { throw new Error("explanation-latest " + response.status); }
+      return response.json();
+    }).then(function (view) {
+      if (!view || token !== explanationState.token) { return; }
+      paintExplanation({ kind: "view", view: view });
+      if (view.status === "PENDIENTE" || view.status === "EN_CURSO") {
+        explanationState.pollTimerId = window.setTimeout(function () {
+          fetchLatestExplanation(token);
+        }, 2500);
+      }
+    }).catch(function () {
+      if (token !== explanationState.token) { return; }
+      paintExplanation({
+        kind: "error",
+        message: "No pudimos consultar el estado de la explicación de IA. Puedes reintentar sin perder los hallazgos del motor."
+      });
+    });
+  }
+
+  function requestExplanation(token) {
+    var detail = explanationState.detail;
+    if (!detail || token !== explanationState.token || explanationState.requestInFlight) { return Promise.resolve(); }
+
+    explanationState.requestInFlight = true;
+    paintExplanation(explanationState.lastPayload || { kind: "not_requested" });
+
+    return fetch("/api/queries/" + encodeURIComponent(detail.id) + "/explanations", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    }).then(function (response) {
+      if (token !== explanationState.token) { return null; }
+      explanationState.requestInFlight = false;
+      if (response.status === 401) { goToLogin(); return null; }
+      if (response.status === 403) { paintExplanation({ kind: "forbidden" }); return null; }
+      if (response.status === 200) {
+        return response.json().then(function (body) {
+          if (token !== explanationState.token) { return; }
+          paintExplanation({
+            kind: "view",
+            view: {
+              status: (body && body.status) || "SIN_HALLAZGOS",
+              notice: body && body.notice
+            }
+          });
+        });
+      }
+      if (response.status === 202 || response.status === 409) {
+        return fetchLatestExplanation(token);
+      }
+      throw new Error("explanation-post " + response.status);
+    }).catch(function () {
+      if (token !== explanationState.token) { return; }
+      explanationState.requestInFlight = false;
+      paintExplanation({
+        kind: "error",
+        message: "No pudimos enviar la solicitud de explicación de IA. Inténtalo de nuevo en unos instantes."
+      });
+    });
+  }
+
+  function renderExplanationPanel(detail) {
+    cancelExplanationPolling();
+    explanationState.token += 1;
+    var token = explanationState.token;
+    explanationState.requestInFlight = false;
+    explanationState.detail = detail;
+    explanationState.highlightedFindingCode = null;
+
+    var section = el("section", "panel");
+    section.id = "explanation-panel";
+    var head = el("div", "panel-head");
+    head.appendChild(el("h2", null, "Explicación asistida por IA"));
+    head.appendChild(el("p", "panel-note", "Cada afirmación se contrasta contra la evidencia del motor antes de mostrarse."));
+    section.appendChild(head);
+
+    var body = el("div", "exp-body");
+    explanationState.bodyEl = body;
+    section.appendChild(body);
+
+    paintExplanation({ kind: "loading" });
+    fetchLatestExplanation(token);
+    return section;
+  }
+
   function renderDetail(detail) {
     $("q-context").textContent = (detail.server || "") + " / " + (detail.databaseName || "");
     var metaText = "Query Store ID: " + detail.queryStoreQueryId +
@@ -991,6 +1148,7 @@
     root.replaceChildren();
     var stack = el("div", "detail-stack");
     stack.appendChild(renderScorePanel(detail.score));
+    stack.appendChild(renderExplanationPanel(detail));
     stack.appendChild(renderSqlPanel(detail));
     stack.appendChild(renderSeriesPanel(detail));
     stack.appendChild(renderPlanTreePanel(detail));
@@ -1004,6 +1162,7 @@
   }
 
   function loadDetail() {
+    cancelExplanationPolling();
     hideNotice();
     var queryId = getQueryIdFromUrl();
     if (!queryId) {

@@ -249,6 +249,92 @@ public sealed class ExplanationEndpointsTests(PostgresFixture postgres) : IDispo
         var reference = claim.GetProperty("references")[0];
         Assert.Equal("F-0000", reference.GetProperty("finding_code").GetString());
         Assert.Equal([3, 7], reference.GetProperty("node_ids").EnumerateArray().Select(n => n.GetInt32()));
+        Assert.False(claim.GetProperty("requires_human_review").GetBoolean());
+        Assert.False(claim.GetProperty("write_cost_warning").GetBoolean());
+    }
+
+    [Fact]
+    public async Task RecomendacionDeIndiceFaltanteIncluyeRevisionHumanaYCostoDeEscritura()
+    {
+        var queryId = await SeedQueryAsync(findings: 1);
+        var missingIndexFindingCode = "F-IDX-01";
+        await using (var db = postgres.CreateContext())
+        {
+            var existing = db.Findings.First(f => f.QueryId == queryId);
+            db.Findings.Add(new Finding
+            {
+                Id = Guid.NewGuid(),
+                AnalysisRunId = existing.AnalysisRunId,
+                ConnectionId = existing.ConnectionId,
+                QueryId = queryId,
+                PlanId = existing.PlanId,
+                FindingCode = missingIndexFindingCode,
+                RuleId = "REG-02",
+                RuleVersion = "1.0.0",
+                CatalogVersion = "test",
+                SchemaVersion = "1.0.0",
+                Severity = FindingSeverity.Media,
+                EvidenceClass = EvidenceClass.Estimada,
+                EncryptedEvidenceJson = "no-se-descifra-en-la-api",
+                AnalyzedAt = DateTimeOffset.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var encryptor = _api.Services.GetRequiredService<IFieldEncryptor>();
+        var body = new ExplanationBody(
+            "TRAZADA",
+            "Trazada a evidencia del motor; no equivale a un diagnóstico confirmado",
+            "Resumen de índice",
+            []);
+        var explanation = await AddExplanationAsync(queryId, e =>
+        {
+            e.State = ExplanationState.Completed;
+            e.ValidationStatus = "TRAZADA";
+            e.EncryptedBody = encryptor.Encrypt(body.ToJson());
+            e.ContextHash = new string('b', 64);
+            e.CompletedAt = DateTimeOffset.UtcNow;
+        });
+
+        await using (var db = postgres.CreateContext())
+        {
+            var recReg02Id = Guid.NewGuid();
+            var recReg01Id = Guid.NewGuid();
+            db.ExplanationClaims.AddRange(
+            [
+                new ExplanationClaim
+                {
+                    Id = recReg02Id,
+                    ExplanationId = explanation.Id,
+                    ClaimIndex = 0,
+                    ClaimType = "RECOMENDACION",
+                    EncryptedText = encryptor.Encrypt("Evaluar creación de índice sugerido tras validar carga de escritura."),
+                    Passed = true,
+                    References = [new ExplanationClaimReference { Id = Guid.NewGuid(), ClaimId = recReg02Id, FindingCode = missingIndexFindingCode, NodeIdsJson = "[1]" }],
+                },
+                new ExplanationClaim
+                {
+                    Id = recReg01Id,
+                    ExplanationId = explanation.Id,
+                    ClaimIndex = 1,
+                    ClaimType = "RECOMENDACION",
+                    EncryptedText = encryptor.Encrypt("Alinear el tipo de parámetro."),
+                    Passed = true,
+                    References = [new ExplanationClaimReference { Id = Guid.NewGuid(), ClaimId = recReg01Id, FindingCode = "F-0000", NodeIdsJson = "[2]" }],
+                },
+            ]);
+            await db.SaveChangesAsync();
+        }
+
+        using var client = await _api.ClientAsync(RoleNames.Dba);
+        var view = await client.GetFromJsonAsync<JsonElement>($"/queries/{queryId}/explanations/latest");
+
+        var claims = view.GetProperty("claims");
+        Assert.Equal(2, claims.GetArrayLength());
+        Assert.True(claims[0].GetProperty("requires_human_review").GetBoolean());
+        Assert.True(claims[0].GetProperty("write_cost_warning").GetBoolean());
+        Assert.True(claims[1].GetProperty("requires_human_review").GetBoolean());
+        Assert.False(claims[1].GetProperty("write_cost_warning").GetBoolean());
     }
 
     [Fact]
