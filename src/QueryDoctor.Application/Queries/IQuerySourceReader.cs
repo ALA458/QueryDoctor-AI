@@ -65,6 +65,21 @@ public sealed record QueryDetailSource(
     IReadOnlyList<HealthScore> ScoreHistory);
 
 /// <summary>
+/// Fuente descifrada temporal en memoria del Showplan XML de un plan y sus hallazgos asociados (S2-10).
+/// </summary>
+public sealed record QueryPlanTreeSource(
+    Guid QueryId,
+    Guid PlanId,
+    long QueryStorePlanId,
+    string? QueryPlanHash,
+    string? EngineVersion,
+    PlanAnalysisStatus AnalysisStatus,
+    string? NotAnalyzableCause,
+    DateTimeOffset IngestedAt,
+    string? DecryptedPlanXml,
+    IReadOnlyList<QueryFindingSource> Findings);
+
+/// <summary>
 /// Puerto de solo lectura para obtener datos crudos descifrados de consultas, series y puntajes desde persistencia.
 /// </summary>
 public interface IQuerySourceReader
@@ -77,5 +92,10 @@ public interface IQuerySourceReader
     Task<QueryDetailSource?> GetDetailAsync(
         Guid queryId,
         TimeSpan windowDuration,
+        CancellationToken cancellationToken = default);
+
+    Task<QueryPlanTreeSource?> GetPlanTreeAsync(
+        Guid queryId,
+        Guid planId,
         CancellationToken cancellationToken = default);
 }

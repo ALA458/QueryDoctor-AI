@@ -52,3 +52,11 @@ Devuelve el detalle completo de la consulta para `/consulta?id={id}`:
 - `series[]`: series temporales por `(intervalId, intervalStart, intervalEnd, planId)` con `executionCount`, `avgDurationMs`, `avgCpuTimeMs`, `avgLogicalIoReads`, `avgPhysicalIoReads`, `avgRowCount`.
 - `findings[]`: hallazgos de la última ejecución por regla/plan con `evidence` enmascarada (o `evidenceMasked=false` + `evidenceMaskingFailure` ante fallo cerrado), `nodes[]` y `context`.
 - `score`: puntaje 0–100, `rankInWindow`, `totalQueriesInWindow`, `band`, `bandLabel`, `scaleDirection`, `usageDisclaimer`, pesos/componentes (`impactComponent`, `severityComponent`, `alphaUsed`, `cpuShare`, `durationShare`, `logicalReadsShare`, `weightedConsumptionPct`, `totalExecutions`), `contributingFindings[]` e `history[]`.
+
+## `GET /queries/{id}/plans/{planId}` (S2-10)
+
+Devuelve el visor jerárquico seguro del plan seleccionado para el panel de árbol en `/consulta?id={id}` (`RF-DASH-04`, `HU-13`):
+- Primero enmascara el `EncryptedPlanXml` con `IMasker` (`PlanXmlMasker`, `RNF-SEG-05`, fallo cerrado) y luego parsea el XML ya enmascarado con `IPlanParser` (`ShowplanXmlParser`).
+- Metadatos y estados seguros: `queryId`, `planId`, `queryStorePlanId`, `queryPlanHash`, `engineVersion`, `schemaVersion`, `analysisStatus`, `notAnalyzableCause`, `planExpired`, `planMaskingFailure`, `parseFailureReason`, `totalOperators`, `highlightedOperatorsCount`.
+- `statements[]`: sentencias (`statementType`, `statementText` enmascarado, `statementSubTreeCost`, `statementEstRows`, `warnings[]`, `missingIndexes[]`, `parameters[]`, `memoryGrant`) con su árbol de operadores en **lista plana ordenada en preorden** (`operators[]`).
+- `operators[]`: `nodeId`, `parentNodeId`, `depth`, `hasChildren`, `isLastSibling`, `physicalOp`, `logicalOp`, costos (`estimatedTotalSubtreeCost`, `costSharePct`, `estimateIo`, `estimateCpu`), filas (`estimateRows`, `estimatedRowsRead`, `tableCardinality`), `targetObject`, `predicateScalarString` (enmascarado), `implicitConversions[]`, `warnings[]`, `findings[]`, `hasFindings` y `maxFindingSeverity`.

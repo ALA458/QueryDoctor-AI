@@ -75,6 +75,16 @@ public sealed class QueryEndpointsTests(PostgresFixture postgres) : IDisposable
             IngestedAt = now,
         };
 
+        var plan1Xml =
+            "<ShowPlanXML xmlns=\"http://schemas.microsoft.com/sqlserver/2004/07/showplan\" Version=\"1.564\" Build=\"16.0.1000.6\">" +
+            "<BatchSequence><Batch><Statements>" +
+            "<StmtSimple StatementId=\"1\" StatementType=\"SELECT\" StatementSubTreeCost=\"3.2\" StatementEstRows=\"100\" StatementText=\"SELECT Id FROM dbo.Pedidos WHERE Documento = '10203040'\">" +
+            "<QueryPlan><RelOp NodeId=\"4\" PhysicalOp=\"Clustered Index Scan\" LogicalOp=\"Clustered Index Scan\" EstimateRows=\"5000\" EstimateIO=\"2.8\" EstimateCPU=\"0.4\" AvgRowSize=\"32\" EstimatedTotalSubtreeCost=\"3.2\" Parallel=\"0\" EstimateRebinds=\"0\" EstimateRewinds=\"0\">" +
+            "<Warnings><PlanAffectingConvert ConvertIssue=\"Cardinality Estimate\" Expression=\"CONVERT(varchar(20), Documento) = '10203040'\" /></Warnings>" +
+            "<IndexScan><Object Database=\"[VentasProd]\" Schema=\"[dbo]\" Table=\"[Pedidos]\" Index=\"[PK_Pedidos]\" />" +
+            "<Predicate><ScalarOperator ScalarString=\"Documento = '10203040'\" /></Predicate></IndexScan>" +
+            "</RelOp></QueryPlan></StmtSimple></Statements></Batch></BatchSequence></ShowPlanXML>";
+
         var plan1 = new Plan
         {
             Id = Guid.NewGuid(),
@@ -82,6 +92,7 @@ public sealed class QueryEndpointsTests(PostgresFixture postgres) : IDisposable
             QueryId = q1.Id,
             QueryStorePlanId = 701,
             QueryPlanHash = "0xP701",
+            EncryptedPlanXml = encryptor.Encrypt(plan1Xml),
             EngineVersion = "16.0.1000.6",
             AnalysisStatus = PlanAnalysisStatus.Analyzable,
             IngestedAt = now.AddMinutes(-10),
@@ -365,5 +376,31 @@ public sealed class QueryEndpointsTests(PostgresFixture postgres) : IDisposable
         Assert.False(string.IsNullOrWhiteSpace(score.GetProperty("usageDisclaimer").GetString()));
         Assert.Equal(1, score.GetProperty("contributingFindings").GetArrayLength());
         Assert.Equal(2, score.GetProperty("history").GetArrayLength());
+
+        // S2-10: árbol jerárquico del plan con enmascarado de predicados y nodo asociado a hallazgo resaltado.
+        var planId1 = detail.GetProperty("plans")[0].GetProperty("planId").GetGuid();
+        var planTree = await client.GetFromJsonAsync<JsonElement>($"/queries/{q1Id}/plans/{planId1}");
+        Assert.False(planTree.GetProperty("planExpired").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, planTree.GetProperty("planMaskingFailure").ValueKind);
+        Assert.Equal(1, planTree.GetProperty("totalOperators").GetInt32());
+        Assert.Equal(1, planTree.GetProperty("highlightedOperatorsCount").GetInt32());
+
+        var op = planTree.GetProperty("statements")[0].GetProperty("operators")[0];
+        Assert.Equal(4, op.GetProperty("nodeId").GetInt32());
+        Assert.Equal("Clustered Index Scan", op.GetProperty("physicalOp").GetString());
+        Assert.True(op.GetProperty("hasFindings").GetBoolean());
+        Assert.Equal("ALTA", op.GetProperty("maxFindingSeverity").GetString());
+        Assert.DoesNotContain("10203040", op.GetProperty("predicateScalarString").GetString() ?? string.Empty, StringComparison.Ordinal);
+        Assert.Equal(1, op.GetProperty("warnings").GetArrayLength());
+
+        // Plan inexistente o de otra consulta -> 404.
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/queries/{q2Id}/plans/{planId1}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/queries/{q1Id}/plans/{Guid.NewGuid()}")).StatusCode);
+
+        // Permisos en endpoint de plan.
+        using var anon = _api.CreateClient();
+        using var dev = await _api.ClientAsync(RoleNames.Developer);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await anon.GetAsync($"/queries/{q1Id}/plans/{planId1}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await dev.GetAsync($"/queries/{q1Id}/plans/{planId1}")).StatusCode);
     }
 }
