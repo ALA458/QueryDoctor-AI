@@ -53,6 +53,21 @@ public enum ExplanationCause
 }
 
 /// <summary>
+/// Largo máximo de las columnas que reciben texto del servicio de IA. La salida del modelo no tiene límites propios,
+/// así que se recorta al guardar: un valor largo no debe hacer fallar el guardado (preauditoría P1 de S2-05).
+/// </summary>
+public static class ExplanationColumnLimits
+{
+    public const int ClaimCode = 32;
+    public const int ShortCode = 64;
+    public const int LongText = 200;
+
+    /// <summary>Recorta <paramref name="value"/> a <paramref name="maxLength"/> caracteres.</summary>
+    public static string? Fit(string? value, int maxLength) =>
+        value is null || value.Length <= maxLength ? value : value[..maxLength];
+}
+
+/// <summary>
 /// Explicación de una consulta (tabla <c>ai.explanation</c>, S2-05, §7). El resumen va en <see cref="EncryptedBody"/> y
 /// las afirmaciones en <see cref="ExplanationClaim"/>, ambos cifrados (RNF-SEG-14). Las demás columnas son
 /// identificadores, códigos y el hash del contexto enmascarado, que alimentan la caché (RF-IA-07) y la trazabilidad

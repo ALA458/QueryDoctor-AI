@@ -15,9 +15,9 @@ public sealed class ExplanationClaimConfiguration : IEntityTypeConfiguration<Exp
         builder.ToTable("claim", "ai");
         builder.HasKey(c => c.Id);
 
-        builder.Property(c => c.ClaimType).HasMaxLength(32).IsRequired();
+        builder.Property(c => c.ClaimType).HasMaxLength(ExplanationColumnLimits.ClaimCode).IsRequired();
         builder.Property(c => c.EncryptedText).HasColumnType("text").IsRequired();
-        builder.Property(c => c.IndicationLabel).HasMaxLength(32);
+        builder.Property(c => c.IndicationLabel).HasMaxLength(ExplanationColumnLimits.ClaimCode);
 
         builder.HasIndex(c => new { c.ExplanationId, c.ClaimIndex }).IsUnique();
 
@@ -41,7 +41,7 @@ public sealed class ExplanationClaimReferenceConfiguration : IEntityTypeConfigur
         builder.ToTable("claim_reference", "ai");
         builder.HasKey(r => r.Id);
 
-        builder.Property(r => r.FindingCode).HasMaxLength(64).IsRequired();
+        builder.Property(r => r.FindingCode).HasMaxLength(ExplanationColumnLimits.ShortCode).IsRequired();
         builder.Property(r => r.NodeIdsJson).HasColumnType("text").IsRequired();
 
         builder.HasIndex(r => r.ClaimId);

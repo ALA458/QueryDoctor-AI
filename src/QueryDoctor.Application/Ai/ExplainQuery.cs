@@ -170,11 +170,12 @@ public sealed class ExplainQuery
         }
 
         explanation.ValidationStatus = result.StatusCode;
-        explanation.LlmProfile = result.Metadata?.LlmProfile;
-        explanation.Model = result.Metadata?.Model;
-        explanation.PromptVersion = result.Metadata?.PromptVersion;
-        explanation.ServedBy = result.Metadata?.ServedBy;
-        explanation.DataPolicy = result.Metadata?.DataPolicy;
+        // P1: la metadata del modelo no tiene largo máximo; se recorta a la columna para que guardar no falle.
+        explanation.LlmProfile = ExplanationColumnLimits.Fit(result.Metadata?.LlmProfile, ExplanationColumnLimits.ShortCode);
+        explanation.Model = ExplanationColumnLimits.Fit(result.Metadata?.Model, ExplanationColumnLimits.LongText);
+        explanation.PromptVersion = ExplanationColumnLimits.Fit(result.Metadata?.PromptVersion, ExplanationColumnLimits.ShortCode);
+        explanation.ServedBy = ExplanationColumnLimits.Fit(result.Metadata?.ServedBy, ExplanationColumnLimits.LongText);
+        explanation.DataPolicy = ExplanationColumnLimits.Fit(result.Metadata?.DataPolicy, ExplanationColumnLimits.ShortCode);
         explanation.EncryptedBody = _encryptor.Encrypt(ToBody(result).ToJson());
 
         // El hash que se guarda refleja el prompt y el perfil que de verdad generaron la respuesta; si el servicio no
@@ -210,10 +211,10 @@ public sealed class ExplainQuery
                     Id = claimId,
                     ExplanationId = explanationId,
                     ClaimIndex = c.ClaimIndex,
-                    ClaimType = c.ClaimTypeCode,
+                    ClaimType = ExplanationColumnLimits.Fit(c.ClaimTypeCode, ExplanationColumnLimits.ClaimCode)!,
                     EncryptedText = _encryptor.Encrypt(c.Statement),
                     KbFragmentId = c.KbFragmentId,
-                    IndicationLabel = c.IndicationLabel,
+                    IndicationLabel = ExplanationColumnLimits.Fit(c.IndicationLabel, ExplanationColumnLimits.ClaimCode),
                     Passed = c.Passed,
                     References = c.FindingIds
                         .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -221,7 +222,8 @@ public sealed class ExplainQuery
                         {
                             Id = Guid.NewGuid(),
                             ClaimId = claimId,
-                            FindingCode = findingId,
+                            // Un id citado por el modelo puede ser arbitrario (P1); los ids reales del motor son cortos.
+                            FindingCode = ExplanationColumnLimits.Fit(findingId, ExplanationColumnLimits.ShortCode)!,
                             NodeIdsJson = JsonSerializer.Serialize(
                                 nodesByFinding.TryGetValue(findingId, out var nodes) ? nodes : [],
                                 ContractJson),

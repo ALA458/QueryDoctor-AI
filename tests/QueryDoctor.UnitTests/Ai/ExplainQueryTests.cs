@@ -177,6 +177,36 @@ public sealed class ExplainQueryTests
     }
 
     [Fact]
+    public async Task TextosLargosDelModeloSeRecortanALaColumnaYLaExplicacionNoFalla()
+    {
+        // Preauditoría P1: ni Pydantic ni el validador limitan el largo; antes un id de 300 caracteres hacía fallar
+        // el INSERT y la explicación quedaba "IA no disponible" en vez de NO_VERIFICADA.
+        var queryId = _harness.SeedQuery();
+        var explanation = _harness.Request(queryId);
+        var longId = new string('X', 300);
+        var longText = new string('m', 500);
+        var client = new ScriptedAiExplanationClient(request => System.Text.Json.JsonSerializer.Serialize(new
+        {
+            query_id = request.QueryId.ToString("D"),
+            summary = "Resumen.",
+            claims = new[] { new { claim_type = "OBSERVACION", statement = "Afirmación.", finding_ids = new[] { longId } } },
+            metadata = new { llm_profile = longText, model = longText, prompt_version = longText, served_by = longText, data_policy = longText, execution_time_seconds = 0.1 },
+        }));
+
+        await _harness.Create(client).ExecuteAsync(explanation.Id, CancellationToken.None);
+
+        Assert.Equal(ExplanationState.Completed, explanation.State);
+        Assert.Equal(ExplanationValidationConstants.StatusNoVerificadaCode, explanation.ValidationStatus);
+        Assert.Equal(ExplanationColumnLimits.ShortCode, explanation.LlmProfile!.Length);
+        Assert.Equal(ExplanationColumnLimits.ShortCode, explanation.PromptVersion!.Length);
+        Assert.Equal(ExplanationColumnLimits.ShortCode, explanation.DataPolicy!.Length);
+        Assert.Equal(ExplanationColumnLimits.LongText, explanation.Model!.Length);
+        Assert.Equal(ExplanationColumnLimits.LongText, explanation.ServedBy!.Length);
+        var reference = Assert.Single(Assert.Single(_harness.Store.Claims).References);
+        Assert.Equal(ExplanationColumnLimits.ShortCode, reference.FindingCode.Length);
+    }
+
+    [Fact]
     public async Task ConOtroPromptNoSeReutilizaLaExplicacion()
     {
         // RF-IA-07: el prompt y el perfil de LLM forman parte del contexto.

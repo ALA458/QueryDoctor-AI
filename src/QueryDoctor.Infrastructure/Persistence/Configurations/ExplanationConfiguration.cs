@@ -22,11 +22,11 @@ public sealed class ExplanationConfiguration : IEntityTypeConfiguration<Explanat
         builder.Property(e => e.ContextHash).HasMaxLength(64);
         builder.Property(e => e.FindingCodesJson).HasColumnType("text").IsRequired();
         builder.Property(e => e.CatalogVersion).HasMaxLength(64);
-        builder.Property(e => e.LlmProfile).HasMaxLength(64);
-        builder.Property(e => e.Model).HasMaxLength(200);
-        builder.Property(e => e.PromptVersion).HasMaxLength(64);
-        builder.Property(e => e.ServedBy).HasMaxLength(200);
-        builder.Property(e => e.DataPolicy).HasMaxLength(64);
+        builder.Property(e => e.LlmProfile).HasMaxLength(ExplanationColumnLimits.ShortCode);
+        builder.Property(e => e.Model).HasMaxLength(ExplanationColumnLimits.LongText);
+        builder.Property(e => e.PromptVersion).HasMaxLength(ExplanationColumnLimits.ShortCode);
+        builder.Property(e => e.ServedBy).HasMaxLength(ExplanationColumnLimits.LongText);
+        builder.Property(e => e.DataPolicy).HasMaxLength(ExplanationColumnLimits.ShortCode);
         builder.Property(e => e.EncryptedBody).HasColumnType("text");
 
         // Última explicación de una consulta (GET …/latest) y solicitud en curso (409, E10).
