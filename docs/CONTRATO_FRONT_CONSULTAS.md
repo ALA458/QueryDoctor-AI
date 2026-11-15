@@ -12,7 +12,7 @@ Parámetros (todos opcionales):
 | `connectionId` | id de una conexión (de `GET /connections`) |
 | `window` | `24h` \| `7d` \| `30d` (por defecto `24h`) |
 | `severity` | `High` \| `Medium` \| `Low` (filtra consultas con al menos un hallazgo de esa severidad) |
-| `sort` | `consumption` (porcentaje de consumo sobre el total de la ventana, descendente). El score llega en S2-02 |
+| `sort` | `consumption` (porcentaje de consumo sobre el total de la ventana, descendente) \| `score` (Query Health Score 0–100 ascendente, priorizando las más críticas) |
 
 Respuesta `200`: lista (puede ser `[]`), ya ordenada y filtrada por la API (RNF-SEG-12: el filtro de permisos va en la consulta).
 
@@ -33,9 +33,22 @@ Respuesta `200`: lista (puede ser `[]`), ya ordenada y filtrada por la API (RNF-
 ]
 ```
 
-- `sqlPreview`: texto ya **enmascarado** por la API (LiteralMasker, S2-04) y recortado; la pantalla solo lo pinta.
+- `sqlPreview`: texto ya **enmascarado** por la API (`LiteralMasker`, S2-04) y recortado; la pantalla solo lo pinta.
 - `consumptionPct`: número de 0 a 100.
-- `findings[].severity`: `High` | `Medium` | `Low` (también se aceptan `Alta`/`Media`/`Baja`).
-- `findings[].summary`: texto corto de la evidencia, sin HTML.
+- `score`: puntaje Query Health Score 0–100 (nullable si no se ha calculado aún en la ventana).
+- `band`: referencia provisional de banda (`Crítica` | `Atención` | `Saludable`), nullable si `score` es `null`.
+- `findings[].severity`: `High` | `Medium` | `Low` | `Info` (también se aceptan `Alta`/`Media`/`Baja`).
+- `findings[].summary`: texto corto de la evidencia enmascarada, sin HTML.
 - Sin `findings` o `[]` se muestra "Sin hallazgos".
-- Pendiente para S2-09: `GET /queries/{id}` con el detalle; esta pantalla aún no enlaza a él.
+- En `/consultas`, cada fila enlaza a `/consulta?id={id}&window={window}` (S2-09).
+
+## `GET /queries/{id}` (S2-09)
+
+Query param opcional: `window=24h|7d|30d` (default `24h`).
+
+Devuelve el detalle completo de la consulta para `/consulta?id={id}`:
+- Metadatos (`id`, `connectionId`, `queryStoreQueryId`, `server`, `databaseName`, `platform`, `queryHash`, `originContext`, `window`, `windowStart`, `windowEnd`, `sqlText`, `sqlExpired`, `sqlMaskingFailure`).
+- `plans[]`: resumen por `planId` (`queryStorePlanId`, `queryPlanHash`, `engineVersion`, `analysisStatus`, `notAnalyzableCause`, `ingestedAt`).
+- `series[]`: series temporales por `(intervalId, intervalStart, intervalEnd, planId)` con `executionCount`, `avgDurationMs`, `avgCpuTimeMs`, `avgLogicalIoReads`, `avgPhysicalIoReads`, `avgRowCount`.
+- `findings[]`: hallazgos de la última ejecución por regla/plan con `evidence` enmascarada (o `evidenceMasked=false` + `evidenceMaskingFailure` ante fallo cerrado), `nodes[]` y `context`.
+- `score`: puntaje 0–100, `rankInWindow`, `totalQueriesInWindow`, `band`, `bandLabel`, `scaleDirection`, `usageDisclaimer`, pesos/componentes (`impactComponent`, `severityComponent`, `alphaUsed`, `cpuShare`, `durationShare`, `logicalReadsShare`, `weightedConsumptionPct`, `totalExecutions`), `contributingFindings[]` e `history[]`.

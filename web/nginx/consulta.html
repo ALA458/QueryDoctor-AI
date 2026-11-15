@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="same-origin">
+  <title>Detalle de consulta · Query Doctor AI</title>
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/auth.css">
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="/assets/css/consulta.css">
+  <script src="/assets/js/consulta.js" defer></script>
+</head>
+<body data-page="query-detail">
+  <div class="app">
+    <aside class="side">
+      <div>
+        <div class="brand">
+          <svg class="brand-mark" viewBox="0 0 34 34" fill="none" aria-hidden="true">
+            <circle class="ring" cx="17" cy="17" r="15.5" stroke-width="1.5"/>
+            <path class="beat" d="M4 18h7l3-7 5 14 3-9 2 2h8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div>Query Doctor AI<small>Proyecto de Ingeniería I · UTB</small></div>
+        </div>
+        <nav class="nav" aria-label="Principal">
+          <a class="nav-item" href="/">Conexiones</a>
+          <a class="nav-item is-active" href="/consultas" aria-current="page">Consultas</a>
+        </nav>
+      </div>
+      <div class="side-foot">
+        <div class="who"><strong id="who-user">—</strong><span id="who-role"></span></div>
+        <form method="post" action="/api/auth/logout"><button class="link-btn" type="submit">Cerrar sesión</button></form>
+      </div>
+    </aside>
+
+    <main class="main" id="main" hidden>
+      <nav class="breadcrumb" aria-label="Ruta de navegación">
+        <a href="/consultas">← Volver al listado de consultas</a>
+      </nav>
+
+      <header class="page-head">
+        <div>
+          <p class="eyebrow" id="q-context">Diagnóstico de consulta</p>
+          <h1>Detalle de consulta</h1>
+          <p class="sub" id="q-meta">Cargando información de la consulta...</p>
+        </div>
+        <div class="window-box">
+          <label for="f-window">Ventana</label>
+          <div class="control">
+            <select id="f-window">
+              <option value="24h">Últimas 24 horas</option>
+              <option value="7d">Últimos 7 días</option>
+              <option value="30d">Últimos 30 días</option>
+            </select>
+          </div>
+        </div>
+      </header>
+
+      <output id="notice" class="notice" aria-live="polite"></output>
+      <div id="detail-root" aria-live="polite"></div>
+    </main>
+  </div>
+</body>
+</html>

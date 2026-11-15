@@ -18,7 +18,7 @@
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.45;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .meter { display: flex; align-items: center; gap: 0.6rem; min-width: 9rem; }
@@ -30,6 +30,25 @@
 .finding { display: flex; flex-direction: column; gap: 0.2rem; }
 .finding .secondary { font-family: var(--font-body); font-size: 0.8125rem; color: var(--color-text-muted); max-width: 40ch; }
 .no-findings { color: var(--color-text-muted); font-size: 0.875rem; }
+
+.q-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius);
+  padding: 0.15rem 0.25rem;
+  margin: -0.15rem -0.25rem;
+  transition: background-color 0.12s ease;
+}
+
+.q-link:hover .q-sql,
+.q-link:focus-visible .q-sql {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.q-score-cell { display: flex; align-items: center; gap: 0.45rem; white-space: nowrap; }
+.q-score-val { font-family: var(--font-mono); font-weight: 700; font-size: 0.875rem; }
 
 @media (max-width: 880px) {
   .filters { grid-template-columns: 1fr 1fr; }
