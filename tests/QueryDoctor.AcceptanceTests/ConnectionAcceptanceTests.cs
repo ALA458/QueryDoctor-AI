@@ -1,4 +1,3 @@
-using QueryDoctor.Domain.Ops;
 using QueryDoctor.LabTests;
 using Xunit.Abstractions;
 
@@ -20,10 +19,7 @@ public sealed class ConnectionAcceptanceTests(AcceptanceFixture platform, ITestO
     [Trait("Criterio", "CA-HU15.1")]
     public async Task ElDbaRegistraQdLabYElWorkerLaDejaActivaConSuPerfil()
     {
-        var (dba, _) = await platform.Api.SessionAsync(RoleNames.Dba);
-
-        var id = await Platform.RegisterAsync(dba, AcceptanceFixture.Server, LabEnvironment.Database, LabEnvironment.Reader, Platform.LabPassword);
-        var detail = await Platform.ProbedConnectionAsync(dba, id);
+        var detail = (await platform.QdLabAsync()).Probed;
 
         Assert.True(detail.GetProperty("status").GetString() == "Active", $"Se esperaba Active: {detail}");
         var capabilities = detail.GetProperty("capabilities");

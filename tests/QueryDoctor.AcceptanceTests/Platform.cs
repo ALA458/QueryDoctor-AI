@@ -38,6 +38,55 @@ internal static class Platform
             detail => detail.GetProperty("status").GetString() != "Pending",
             $"el sondeo de {id}");
 
+    /// <summary>
+    /// Pide una ingesta manual (<c>POST /connections/{id}/ingestions</c>) y espera a que el Worker termine la ejecución
+    /// nueva (ingesta + análisis + score van en el mismo trabajo). Devuelve esa ejecución de <c>GET …/ingestions</c>.
+    /// </summary>
+    public static async Task<JsonElement> IngestAsync(HttpClient dba, Guid id)
+    {
+        var before = (await GetJsonAsync(dba, $"/connections/{id}/ingestions")).GetArrayLength();
+
+        using (var response = await dba.PostAsync($"/connections/{id}/ingestions", null))
+        {
+            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        }
+
+        var runs = await UntilAsync(
+            () => GetJsonAsync(dba, $"/connections/{id}/ingestions"),
+            list => list.GetArrayLength() > before && list[0].GetProperty("status").GetString() != "Running",
+            $"la ingesta de {id}");
+        var run = runs[0];
+
+        if (run.GetProperty("status").GetString() == "Succeeded")
+        {
+            // La ejecución queda Succeeded al confirmar el upsert, pero el análisis y el score corren después en el mismo
+            // trabajo (IngestConnection → RecalculateConnectionScores). Se espera la señal que vería la SPA: un score
+            // calculado después del fin de la ingesta. Ver el riesgo anotado en S3-06.
+            var finishedAt = run.GetProperty("finishedAt").GetDateTimeOffset();
+            await UntilAsync(
+                () => LatestScoreAsync(dba, id),
+                calculatedAt => calculatedAt >= finishedAt,
+                $"el análisis y el score de {id}");
+        }
+
+        return run;
+    }
+
+    /// <summary>Fecha del score más reciente de la conexión, leída del detalle de su primera consulta.</summary>
+    private static async Task<DateTimeOffset?> LatestScoreAsync(HttpClient client, Guid connectionId)
+    {
+        var queries = await GetJsonAsync(client, $"/queries?connectionId={connectionId}&window=30d");
+        if (queries.GetArrayLength() == 0)
+        {
+            return null;
+        }
+
+        var detail = await GetJsonAsync(client, $"/queries/{queries[0].GetProperty("id").GetGuid()}?window=30d");
+        return detail.GetProperty("score") is { ValueKind: JsonValueKind.Object } score
+            ? score.GetProperty("calculatedAt").GetDateTimeOffset()
+            : null;
+    }
+
     public static async Task<JsonElement> GetJsonAsync(HttpClient client, string path)
     {
         using var response = await client.GetAsync(path);

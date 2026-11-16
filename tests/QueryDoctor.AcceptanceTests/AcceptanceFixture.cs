@@ -52,6 +52,38 @@ public sealed class AcceptanceFixture : IAsyncLifetime, IDisposable
         (InMemoryStatementLogWriter)(_worker ?? throw new InvalidOperationException(LabEnvironment.SkipReason))
             .Services.GetRequiredService<IStatementLogWriter>();
 
+    private readonly SemaphoreSlim _qdLabGate = new(1, 1);
+    private LabConnection? _qdLab;
+
+    /// <summary>
+    /// QD_Lab registrada por un DBA, sondeada e ingerida una vez por la Api, para todas las pruebas de la colección:
+    /// la unicidad (servidor, base) no deja registrarla dos veces, y repetir la ingesta solo alarga la corrida.
+    /// </summary>
+    internal async Task<LabConnection> QdLabAsync()
+    {
+        await _qdLabGate.WaitAsync();
+        try
+        {
+            if (_qdLab is null)
+            {
+                var queryStoreBefore = await LabSql.QueryStoreConfigurationAsync(LabEnvironment.Database);
+                var (dba, _) = await Api.SessionAsync(QueryDoctor.Domain.Ops.RoleNames.Dba);
+                var id = await Platform.RegisterAsync(dba, Server, LabEnvironment.Database, LabEnvironment.Reader, Platform.LabPassword);
+                var probed = await Platform.ProbedConnectionAsync(dba, id);
+                Assert.True(probed.GetProperty("status").GetString() == "Active", $"QD_Lab no quedó Active: {probed}");
+
+                var run = await Platform.IngestAsync(dba, id);
+                _qdLab = new LabConnection(dba, id, probed, run, queryStoreBefore);
+            }
+
+            return _qdLab;
+        }
+        finally
+        {
+            _qdLabGate.Release();
+        }
+    }
+
     public async Task InitializeAsync()
     {
         if (!LabEnvironment.IsEnabled)
@@ -96,6 +128,7 @@ public sealed class AcceptanceFixture : IAsyncLifetime, IDisposable
         }
 
         Ai.Dispose();
+        _qdLabGate.Dispose();
     }
 
     /// <summary>xUnit llama primero a <see cref="DisposeAsync"/>; esto solo libera lo que hubiera quedado.</summary>
@@ -104,6 +137,7 @@ public sealed class AcceptanceFixture : IAsyncLifetime, IDisposable
         _worker?.Dispose();
         _api?.Dispose();
         Ai.Dispose();
+        _qdLabGate.Dispose();
     }
 
     private IHost BuildWorker()
@@ -144,6 +178,15 @@ public sealed class AcceptanceFixture : IAsyncLifetime, IDisposable
         return builder.Build();
     }
 }
+
+/// <summary>QD_Lab ya ingerida: la sesión del DBA que la registró, su id, el detalle del sondeo y la primera ingesta.</summary>
+/// <param name="QueryStoreBefore">Configuración de Query Store leída antes de que la plataforma la tocara (CA-HU02.3).</param>
+internal sealed record LabConnection(
+    HttpClient Dba,
+    Guid Id,
+    System.Text.Json.JsonElement Probed,
+    System.Text.Json.JsonElement FirstIngestion,
+    IReadOnlyDictionary<string, string> QueryStoreBefore);
 
 [CollectionDefinition(Name)]
 public sealed class AcceptanceGroup : ICollectionFixture<AcceptanceFixture>
