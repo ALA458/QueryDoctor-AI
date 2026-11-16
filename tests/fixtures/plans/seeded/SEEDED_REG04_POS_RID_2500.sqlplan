@@ -1,0 +1,31 @@
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.564" Build="16.0.4315.2">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementText="SELECT AuditId, Detail FROM dbo.HeapAudit WHERE CorrelationKey = @k" StatementId="1" StatementType="SELECT" StatementSubTreeCost="2.9" StatementEstRows="2500">
+          <QueryPlan>
+            <RelOp NodeId="0" PhysicalOp="Nested Loops" LogicalOp="Inner Join" EstimateRows="2500" EstimateIO="0" EstimateCPU="0.02" AvgRowSize="48" EstimatedTotalSubtreeCost="2.9" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+              <OutputList />
+              <NestedLoops Optimized="0">
+                <RelOp NodeId="1" PhysicalOp="Index Seek" LogicalOp="Index Seek" EstimateRows="2500" EstimatedRowsRead="2500" EstimateIO="0.03" EstimateCPU="0.004" AvgRowSize="16" EstimatedTotalSubtreeCost="0.034" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+                  <OutputList />
+                  <IndexScan Ordered="1" Storage="RowStore">
+                    <Object Database="[QD_Lab]" Schema="[dbo]" Table="[HeapAudit]" Index="[IX_HeapAudit_CorrelationKey]" IndexKind="NonClustered" Storage="RowStore" />
+                  </IndexScan>
+                </RelOp>
+                <RelOp NodeId="4" PhysicalOp="RID Lookup" LogicalOp="RID Lookup" EstimateRows="1" EstimateIO="2.1" EstimateCPU="0.7" AvgRowSize="40" EstimatedTotalSubtreeCost="2.8" Parallel="0" EstimateRebinds="2499" EstimateRewinds="0">
+                  <OutputList>
+                    <ColumnReference Database="[QD_Lab]" Schema="[dbo]" Table="[HeapAudit]" Column="Detail" />
+                  </OutputList>
+                  <IndexScan Lookup="1" Ordered="0" Storage="RowStore">
+                    <Object Database="[QD_Lab]" Schema="[dbo]" Table="[HeapAudit]" IndexKind="Heap" Storage="RowStore" />
+                  </IndexScan>
+                </RelOp>
+              </NestedLoops>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>

@@ -1,0 +1,674 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Corpus anotado de referencia para evaluacion reproducible del motor deterministico (S2-14, RF-EVA-01, DA-11): escenarios sembrados QD_Lab + carga TPC-H (Q01..Q22 + NEG01..NEG04).",
+  "cases": [
+    {
+      "case_id": "ESC01_QS_1",
+      "corpus": "seeded",
+      "split": "calibration",
+      "plan_path": "plans/ESC01.qs.1.sqlplan",
+      "description": "QD_Lab ESC01: conversion implicita varchar vs nvarchar (Seek Plan) sobre IX_Orders_CustomerCode + Index Scan completo.",
+      "context": {
+        "query_store_query_id": 101,
+        "query_store_plan_id": 15,
+        "query_execution_count": 300,
+        "query_consumption_pct": 5.0,
+        "avg_rows_returned": 20.0
+      },
+      "expected_findings": [
+        {
+          "rule_id": "REG-01",
+          "expected_nodes": [3],
+          "rationale": "PlanAffectingConvert (Seek Plan) en dbo.Orders.CustomerCode sobre nodo #3."
+        },
+        {
+          "rule_id": "REG-03",
+          "expected_nodes": [3],
+          "rationale": "Index Scan con predicado en nodo #3 leyendo 1 000 000 filas para devolver 20 (razon 50 000 > 10)."
+        }
+      ]
+    },
+    {
+      "case_id": "ESC02_QS_1",
+      "corpus": "seeded",
+      "split": "calibration",
+      "plan_path": "plans/ESC02.qs.1.sqlplan",
+      "description": "QD_Lab ESC02: Key Lookup en nodo #3 con solo 20 ejecuciones estimadas (por debajo del umbral por defecto 1 000).",
+      "context": {
+        "query_store_query_id": 102,
+        "query_store_plan_id": 16,
+        "query_execution_count": 80,
+        "query_consumption_pct": 5.0,
+        "avg_rows_returned": 20.0
+      },
+      "expected_findings": []
+    },
+    {
+      "case_id": "ESC03_QS_1",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/ESC03.qs.1.sqlplan",
+      "description": "QD_Lab ESC03: Clustered Index Scan en dbo.Orders (1M filas) + MissingIndex Impact=99.277.",
+      "context": {
+        "query_store_query_id": 103,
+        "query_store_plan_id": 17,
+        "query_execution_count": 40,
+        "query_consumption_pct": 5.0,
+        "avg_rows_returned": 5000.0
+      },
+      "expected_findings": [
+        {
+          "rule_id": "REG-02",
+          "rationale": "MissingIndexes para dbo.Orders (Region, Amount)."
+        },
+        {
+          "rule_id": "REG-03",
+          "expected_nodes": [1],
+          "rationale": "Clustered Index Scan leyendo 1 000 000 filas con predicado sobre Region/Amount."
+        }
+      ]
+    },
+    {
+      "case_id": "ESC04_QS_1",
+      "corpus": "seeded",
+      "split": "calibration",
+      "plan_path": "plans/ESC04.qs.1.sqlplan",
+      "description": "QD_Lab ESC04 Dispatcher PSP sin RelOp (caso negativo valido).",
+      "context": {
+        "query_store_query_id": 104,
+        "query_store_plan_id": 18,
+        "query_execution_count": 10,
+        "query_consumption_pct": 1.5,
+        "avg_rows_returned": 1.0
+      },
+      "expected_findings": []
+    },
+    {
+      "case_id": "ESC04_QS_2",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/ESC04.qs.2.sqlplan",
+      "description": "QD_Lab ESC04 variante selectiva PSP: Index Seek + Key Lookup con 1 ejecucion estimada.",
+      "context": {
+        "query_store_query_id": 104,
+        "query_store_plan_id": 19,
+        "query_execution_count": 5,
+        "query_consumption_pct": 1.2,
+        "avg_rows_returned": 1.0
+      },
+      "expected_findings": []
+    },
+    {
+      "case_id": "ESC04_QS_3",
+      "corpus": "seeded",
+      "split": "calibration",
+      "plan_path": "plans/ESC04.qs.3.sqlplan",
+      "description": "QD_Lab ESC04 variante masiva PSP: Clustered Index Scan 990k filas + MissingIndex.",
+      "context": {
+        "query_store_query_id": 104,
+        "query_store_plan_id": 20,
+        "query_execution_count": 5,
+        "query_consumption_pct": 8.0,
+        "avg_rows_returned": 990000.0
+      },
+      "expected_findings": [
+        {
+          "rule_id": "REG-02",
+          "rationale": "MissingIndexes para SkewKey en variante masiva PSP."
+        },
+        {
+          "rule_id": "REG-03",
+          "expected_nodes": [1],
+          "rationale": "Clustered Index Scan de 990 000 filas estimadas con consumo 8.0 % >= 1 %."
+        }
+      ]
+    },
+    {
+      "case_id": "ESC04B_QS_1",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/ESC04B.qs.1.sqlplan",
+      "description": "QD_Lab ESC04B parameter sniffing (Lookup est=1; sin reglas de compilacion REG-01..04).",
+      "context": {
+        "query_store_query_id": 105,
+        "query_store_plan_id": 25,
+        "query_execution_count": 2,
+        "query_consumption_pct": 4.0,
+        "avg_rows_returned": 495000.5
+      },
+      "expected_findings": []
+    },
+    {
+      "case_id": "ESC05_QS_1",
+      "corpus": "seeded",
+      "split": "calibration",
+      "plan_path": "plans/ESC05.qs.1.sqlplan",
+      "description": "QD_Lab ESC05: Clustered Index Scan completo de 1 000 000 filas sin predicado para Sort.",
+      "context": {
+        "query_store_query_id": 106,
+        "query_store_plan_id": 26,
+        "query_execution_count": 4,
+        "query_consumption_pct": 12.0,
+        "avg_rows_returned": 1000000.0
+      },
+      "expected_findings": [
+        {
+          "rule_id": "REG-03",
+          "expected_nodes": [2],
+          "rationale": "Clustered Index Scan de 1 000 000 filas con consumo >= 1 %."
+        }
+      ]
+    },
+    {
+      "case_id": "ESC06_QS_1",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/ESC06.qs.1.sqlplan",
+      "description": "QD_Lab ESC06: plan profundamente anidado (> 128 niveles) sobre dbo.Tiny (3 filas, negativo).",
+      "context": {
+        "query_store_query_id": 107,
+        "query_store_plan_id": 27,
+        "query_execution_count": 10,
+        "query_consumption_pct": 2.0,
+        "avg_rows_returned": 3.0
+      },
+      "expected_findings": []
+    },
+    {
+      "case_id": "SEEDED_REG01_CARD_EST",
+      "corpus": "seeded",
+      "split": "calibration",
+      "plan_path": "plans/seeded/SEEDED_REG01_CARD_EST.sqlplan",
+      "description": "Positivo sembrado REG-01 (Cardinality Estimate) sobre Index Seek sin otros hallazgos.",
+      "context": {
+        "query_store_query_id": 1001,
+        "query_store_plan_id": 1001,
+        "query_execution_count": 50,
+        "query_consumption_pct": 2.0,
+        "avg_rows_returned": 10.0
+      },
+      "expected_findings": [
+        {
+          "rule_id": "REG-01",
+          "expected_nodes": [1],
+          "rationale": "PlanAffectingConvert ConvertIssue=Cardinality Estimate en nodo #1."
+        }
+      ]
+    },
+    {
+      "case_id": "SEEDED_REG01_SEEK_PLAN",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/seeded/SEEDED_REG01_SEEK_PLAN.sqlplan",
+      "description": "Positivo sembrado REG-01 (Seek Plan) sobre Index Scan de bajo volumen (500/120, sin REG-03).",
+      "context": {
+        "query_store_query_id": 1002,
+        "query_store_plan_id": 1002,
+        "query_execution_count": 50,
+        "query_consumption_pct": 2.0,
+        "avg_rows_returned": 120.0
+      },
+      "expected_findings": [
+        {
+          "rule_id": "REG-01",
+          "expected_nodes": [2],
+          "rationale": "PlanAffectingConvert ConvertIssue=Seek Plan en nodo #2."
+        }
+      ]
+    },
+    {
+      "case_id": "SEEDED_REG02_MID_IMPACT",
+      "corpus": "seeded",
+      "split": "calibration",
+      "plan_path": "plans/seeded/SEEDED_REG02_MID_IMPACT.sqlplan",
+      "description": "Positivo sembrado REG-02 (MissingIndexes Impact=48.5) sobre Index Seek.",
+      "context": {
+        "query_store_query_id": 1003,
+        "query_store_plan_id": 1003,
+        "query_execution_count": 20,
+        "query_consumption_pct": 2.0,
+        "avg_rows_returned": 15.0
+      },
+      "expected_findings": [
+        {
+          "rule_id": "REG-02",
+          "rationale": "MissingIndexes en dbo.Orders (CustomerId, Region)."
+        }
+      ]
+    },
+    {
+      "case_id": "SEEDED_REG03_NEG_SMALL_NOPRED",
+      "corpus": "seeded",
+      "split": "calibration",
+      "plan_path": "plans/seeded/SEEDED_REG03_NEG_SMALL_NOPRED.sqlplan",
+      "description": "Negativo sembrado REG-03: Table Scan sin predicado sobre catalogo de 120 filas.",
+      "context": {
+        "query_store_query_id": 1004,
+        "query_store_plan_id": 1004,
+        "query_execution_count": 100,
+        "query_consumption_pct": 5.0,
+        "avg_rows_returned": 120.0
+      },
+      "expected_findings": []
+    },
+    {
+      "case_id": "SEEDED_REG03_POS_VOLUME",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/seeded/SEEDED_REG03_POS_VOLUME.sqlplan",
+      "description": "Positivo sembrado REG-03: Table Scan de 25 000 filas con consumo 4.0 % >= 1 %.",
+      "context": {
+        "query_store_query_id": 1005,
+        "query_store_plan_id": 1005,
+        "query_execution_count": 10,
+        "query_consumption_pct": 4.0,
+        "avg_rows_returned": 25000.0
+      },
+      "expected_findings": [
+        {
+          "rule_id": "REG-03",
+          "expected_nodes": [1],
+          "rationale": "Table Scan >= 10 000 filas y consumo >= 1 %."
+        }
+      ]
+    },
+    {
+      "case_id": "SEEDED_REG04_POS_1500",
+      "corpus": "seeded",
+      "split": "calibration",
+      "plan_path": "plans/seeded/SEEDED_REG04_POS_1500.sqlplan",
+      "description": "Positivo sembrado REG-04: Key Lookup con 1 500 ejecuciones estimadas y consumo 3.8 %.",
+      "context": {
+        "query_store_query_id": 1006,
+        "query_store_plan_id": 1006,
+        "query_execution_count": 80,
+        "query_consumption_pct": 3.8,
+        "avg_rows_returned": 1500.0
+      },
+      "expected_findings": [
+        {
+          "rule_id": "REG-04",
+          "expected_nodes": [3],
+          "rationale": "Key Lookup en nodo #3 (1 500 >= 1 000 ejecuciones y consumo >= 1 %)."
+        }
+      ]
+    },
+    {
+      "case_id": "SEEDED_REG04_POS_RID_2500",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/seeded/SEEDED_REG04_POS_RID_2500.sqlplan",
+      "description": "Positivo sembrado REG-04: RID Lookup sobre Heap con 2 500 ejecuciones estimadas y consumo 4.2 %.",
+      "context": {
+        "query_store_query_id": 1007,
+        "query_store_plan_id": 1007,
+        "query_execution_count": 60,
+        "query_consumption_pct": 4.2,
+        "avg_rows_returned": 2500.0
+      },
+      "expected_findings": [
+        {
+          "rule_id": "REG-04",
+          "expected_nodes": [4],
+          "rationale": "RID Lookup en nodo #4 (2 500 >= 1 000 ejecuciones y consumo >= 1 %)."
+        }
+      ]
+    },
+    {
+      "case_id": "SEEDED_REG04_NEG_LOW_CONS",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/seeded/SEEDED_REG04_POS_1500.sqlplan",
+      "description": "Negativo sembrado REG-04: 1 500 Key Lookups pero consumo 0.4 % (< 1.0 % minimo).",
+      "context": {
+        "query_store_query_id": 1008,
+        "query_store_plan_id": 1008,
+        "query_execution_count": 2,
+        "query_consumption_pct": 0.4,
+        "avg_rows_returned": 1500.0
+      },
+      "expected_findings": []
+    },
+    {
+      "case_id": "SEEDED_REG11_MALFORMED",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/seeded/SEEDED_REG11_MALFORMED.sqlplan",
+      "description": "Prueba de tolerancia REG-11: Showplan XML truncado/malformado.",
+      "expected_analysis_status": "NotAnalyzable",
+      "expected_findings": []
+    },
+    {
+      "case_id": "TPCH_Q01",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_Q01.qs.1.sqlplan",
+      "description": "TPC-H Q01: Pricing Summary Report sobre LINEITEM (600k filas).",
+      "context": { "query_store_query_id": 24, "query_store_plan_id": 27, "query_execution_count": 1, "query_consumption_pct": 6.2383, "avg_rows_returned": 3.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_SHIPDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [5], "rationale": "Clustered Index Scan LINEITEM 600k filas (#5)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q02",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q02.qs.1.sqlplan",
+      "description": "TPC-H Q02: Minimum Cost Supplier.",
+      "context": { "query_store_query_id": 25, "query_store_plan_id": 28, "query_execution_count": 1, "query_consumption_pct": 2.7585, "avg_rows_returned": 100.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex PARTSUPP (PS_SUPPKEY)." },
+        { "rule_id": "REG-02", "rationale": "MissingIndex PART (P_SIZE)." },
+        { "rule_id": "REG-03", "expected_nodes": [10], "rationale": "Clustered Index Scan PART 20k filas (#10)." },
+        { "rule_id": "REG-03", "expected_nodes": [17], "rationale": "Clustered Index Scan PARTSUPP 80k filas (#17)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q03",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_Q03.qs.1.sqlplan",
+      "description": "TPC-H Q03: Shipping Priority (CUSTOMER, ORDERS, LINEITEM).",
+      "context": { "query_store_query_id": 26, "query_store_plan_id": 29, "query_execution_count": 1, "query_consumption_pct": 4.5405, "avg_rows_returned": 10.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_SHIPDATE)." },
+        { "rule_id": "REG-02", "rationale": "MissingIndex ORDERS (O_ORDERDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [10], "rationale": "Clustered Index Scan ORDERS 150k filas (#10)." },
+        { "rule_id": "REG-03", "expected_nodes": [13], "rationale": "Clustered Index Scan LINEITEM 600k filas (#13)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q04",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q04.qs.1.sqlplan",
+      "description": "TPC-H Q04: Order Priority Checking.",
+      "context": { "query_store_query_id": 27, "query_store_plan_id": 30, "query_execution_count": 1, "query_consumption_pct": 2.5613, "avg_rows_returned": 5.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex ORDERS (O_ORDERDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [9], "rationale": "Clustered Index Scan ORDERS 150k filas (#9)." },
+        { "rule_id": "REG-03", "expected_nodes": [11], "rationale": "Clustered Index Scan LINEITEM 600k filas (#11)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q05",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_Q05.qs.1.sqlplan",
+      "description": "TPC-H Q05: Local Supplier Volume (incluye scans sobre REGION 5 filas y NATION 25 filas).",
+      "context": { "query_store_query_id": 28, "query_store_plan_id": 31, "query_execution_count": 1, "query_consumption_pct": 10.8883, "avg_rows_returned": 0.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex ORDERS (O_ORDERDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [13], "rationale": "Clustered Index Scan CUSTOMER 15k filas (#13)." },
+        { "rule_id": "REG-03", "expected_nodes": [16], "rationale": "Clustered Index Scan ORDERS 150k filas (#16)." },
+        { "rule_id": "REG-03", "expected_nodes": [19], "rationale": "Clustered Index Scan LINEITEM 600k filas (#19)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q06",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q06.qs.1.sqlplan",
+      "description": "TPC-H Q06: Forecasting Revenue Change sobre LINEITEM.",
+      "context": { "query_store_query_id": 29, "query_store_plan_id": 32, "query_execution_count": 1, "query_consumption_pct": 1.4489, "avg_rows_returned": 1.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_SHIPDATE, L_DISCOUNT, L_QUANTITY)." },
+        { "rule_id": "REG-03", "expected_nodes": [6], "rationale": "Clustered Index Scan LINEITEM 600k filas (#6)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q07",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_Q07.qs.1.sqlplan",
+      "description": "TPC-H Q07: Volume Shipping (scans grandes en CUSTOMER, ORDERS, LINEITEM; NATION=25 filas no es costoso).",
+      "context": { "query_store_query_id": 30, "query_store_plan_id": 33, "query_execution_count": 1, "query_consumption_pct": 7.3981, "avg_rows_returned": 0.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_SHIPDATE)." },
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_SUPPKEY, L_SHIPDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [10], "rationale": "Clustered Index Scan CUSTOMER 15k filas (#10)." },
+        { "rule_id": "REG-03", "expected_nodes": [12], "rationale": "Index Scan ORDERS 150k filas (#12)." },
+        { "rule_id": "REG-03", "expected_nodes": [27], "rationale": "Clustered Index Scan LINEITEM 600k filas (#27)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q08",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q08.qs.1.sqlplan",
+      "description": "TPC-H Q08: National Market Share.",
+      "context": { "query_store_query_id": 31, "query_store_plan_id": 34, "query_execution_count": 1, "query_consumption_pct": 8.9169, "avg_rows_returned": 2.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_PARTKEY)." },
+        { "rule_id": "REG-02", "rationale": "MissingIndex ORDERS (O_ORDERDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [15], "rationale": "Clustered Index Scan CUSTOMER 15k filas (#15)." },
+        { "rule_id": "REG-03", "expected_nodes": [19], "rationale": "Clustered Index Scan ORDERS 150k filas (#19)." },
+        { "rule_id": "REG-03", "expected_nodes": [21], "rationale": "Clustered Index Scan PART 20k filas (#21)." },
+        { "rule_id": "REG-03", "expected_nodes": [24], "rationale": "Clustered Index Scan LINEITEM 600k filas (#24)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q09",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_Q09.qs.1.sqlplan",
+      "description": "TPC-H Q09: Product Type Profit Measure.",
+      "context": { "query_store_query_id": 32, "query_store_plan_id": 35, "query_execution_count": 1, "query_consumption_pct": 7.906, "avg_rows_returned": 0.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_PARTKEY, L_SUPPKEY)." },
+        { "rule_id": "REG-03", "expected_nodes": [15], "rationale": "Clustered Index Scan PART 20k filas (#15)." },
+        { "rule_id": "REG-03", "expected_nodes": [17], "rationale": "Clustered Index Scan PARTSUPP 80k filas (#17)." },
+        { "rule_id": "REG-03", "expected_nodes": [23], "rationale": "Clustered Index Scan LINEITEM 600k filas (#23)." },
+        { "rule_id": "REG-03", "expected_nodes": [26], "rationale": "Clustered Index Scan ORDERS 150k filas (#26)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q10",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q10.qs.1.sqlplan",
+      "description": "TPC-H Q10: Returned Item Reporting.",
+      "context": { "query_store_query_id": 33, "query_store_plan_id": 36, "query_execution_count": 1, "query_consumption_pct": 2.845, "avg_rows_returned": 20.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_RETURNFLAG)." },
+        { "rule_id": "REG-02", "rationale": "MissingIndex ORDERS (O_ORDERDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [11], "rationale": "Clustered Index Scan ORDERS 150k filas (#11)." },
+        { "rule_id": "REG-03", "expected_nodes": [14], "rationale": "Clustered Index Scan LINEITEM 600k filas (#14)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q11",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_Q11.qs.1.sqlplan",
+      "description": "TPC-H Q11: Important Stock Identification (dos grupos MissingIndex duplicados sobre PARTSUPP deduplicados en 1; NATION=25 filas no es costoso).",
+      "context": { "query_store_query_id": 34, "query_store_plan_id": 37, "query_execution_count": 1, "query_consumption_pct": 2.6406, "avg_rows_returned": 381.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex PARTSUPP (PS_SUPPKEY), deduplicado por firma." },
+        { "rule_id": "REG-03", "expected_nodes": [9], "rationale": "Clustered Index Scan PARTSUPP 80k filas (#9)." },
+        { "rule_id": "REG-03", "expected_nodes": [17], "rationale": "Clustered Index Scan PARTSUPP 80k filas (#17)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q12",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q12.qs.1.sqlplan",
+      "description": "TPC-H Q12: Shipping Modes and Order Priority.",
+      "context": { "query_store_query_id": 35, "query_store_plan_id": 38, "query_execution_count": 1, "query_consumption_pct": 2.4209, "avg_rows_returned": 2.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_SHIPMODE, L_RECEIPTDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [7], "rationale": "Clustered Index Scan LINEITEM 600k filas (#7)." },
+        { "rule_id": "REG-03", "expected_nodes": [10], "rationale": "Clustered Index Scan ORDERS 150k filas (#10)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q13",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_Q13.qs.1.sqlplan",
+      "description": "TPC-H Q13: Customer Distribution (LEFT JOIN sin MissingIndexes).",
+      "context": { "query_store_query_id": 36, "query_store_plan_id": 39, "query_execution_count": 1, "query_consumption_pct": 3.9602, "avg_rows_returned": 2.0 },
+      "expected_findings": [
+        { "rule_id": "REG-03", "expected_nodes": [5], "rationale": "Index Scan CUSTOMER 15k filas (#5)." },
+        { "rule_id": "REG-03", "expected_nodes": [8], "rationale": "Clustered Index Scan ORDERS 150k filas (#8)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q14",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q14.qs.1.sqlplan",
+      "description": "TPC-H Q14: Promotion Effect.",
+      "context": { "query_store_query_id": 37, "query_store_plan_id": 40, "query_execution_count": 1, "query_consumption_pct": 3.2616, "avg_rows_returned": 1.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_SHIPDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [10], "rationale": "Clustered Index Scan LINEITEM 600k filas (#10)." },
+        { "rule_id": "REG-03", "expected_nodes": [12], "rationale": "Clustered Index Scan PART 20k filas (#12)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q15",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_Q15.qs.1.sqlplan",
+      "description": "TPC-H Q15: Top Supplier.",
+      "context": { "query_store_query_id": 38, "query_store_plan_id": 41, "query_execution_count": 1, "query_consumption_pct": 2.1785, "avg_rows_returned": 1.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_SHIPDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [11], "rationale": "Clustered Index Scan LINEITEM 600k filas (#11)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q16",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q16.qs.1.sqlplan",
+      "description": "TPC-H Q16: Parts/Supplier Relationship (SUPPLIER=1k filas, PART=20k, PARTSUPP=80k).",
+      "context": { "query_store_query_id": 39, "query_store_plan_id": 42, "query_execution_count": 1, "query_consumption_pct": 2.3502, "avg_rows_returned": 42.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex PART (P_BRAND, P_TYPE, P_SIZE)." },
+        { "rule_id": "REG-03", "expected_nodes": [7], "rationale": "Clustered Index Scan PART 20k filas (#7)." },
+        { "rule_id": "REG-03", "expected_nodes": [8], "rationale": "Clustered Index Scan PARTSUPP 80k filas (#8)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q17",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_Q17.qs.1.sqlplan",
+      "description": "TPC-H Q17: Small-Quantity-Order Revenue (consumo 0.3283 % pero razon de predicado > 10).",
+      "context": { "query_store_query_id": 40, "query_store_plan_id": 43, "query_execution_count": 1, "query_consumption_pct": 0.3283, "avg_rows_returned": 1.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_PARTKEY)." },
+        { "rule_id": "REG-03", "expected_nodes": [9], "rationale": "Clustered Index Scan PART 20k filas con razon 20 000 > 10 (#9)." },
+        { "rule_id": "REG-03", "expected_nodes": [11], "rationale": "Clustered Index Scan LINEITEM 600k filas con razon 10 000 > 10 (#11)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q18",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q18.qs.1.sqlplan",
+      "description": "TPC-H Q18: Large Volume Customer.",
+      "context": { "query_store_query_id": 41, "query_store_plan_id": 44, "query_execution_count": 1, "query_consumption_pct": 7.3258, "avg_rows_returned": 100.0 },
+      "expected_findings": [
+        { "rule_id": "REG-03", "expected_nodes": [7], "rationale": "Clustered Index Scan ORDERS 150k filas (#7)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q19",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_Q19.qs.1.sqlplan",
+      "description": "TPC-H Q19: Discounted Revenue.",
+      "context": { "query_store_query_id": 42, "query_store_plan_id": 45, "query_execution_count": 1, "query_consumption_pct": 2.0972, "avg_rows_returned": 1.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_SHIPINSTRUCT, L_QUANTITY, L_SHIPMODE)." },
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_PARTKEY, L_SHIPINSTRUCT, L_QUANTITY, L_SHIPMODE)." },
+        { "rule_id": "REG-03", "expected_nodes": [9], "rationale": "Clustered Index Scan PART 20k filas (#9)." },
+        { "rule_id": "REG-03", "expected_nodes": [12], "rationale": "Clustered Index Scan LINEITEM 600k filas (#12)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q20",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q20.qs.1.sqlplan",
+      "description": "TPC-H Q20: Potential Part Promotion (NATION=25 filas no es costoso).",
+      "context": { "query_store_query_id": 43, "query_store_plan_id": 46, "query_execution_count": 1, "query_consumption_pct": 8.1836, "avg_rows_returned": 0.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_SHIPDATE)." },
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_PARTKEY, L_SUPPKEY, L_SHIPDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [12], "rationale": "Clustered Index Scan PART 20k filas (#12)." },
+        { "rule_id": "REG-03", "expected_nodes": [13], "rationale": "Clustered Index Scan PARTSUPP 80k filas (#13)." },
+        { "rule_id": "REG-03", "expected_nodes": [14], "rationale": "Clustered Index Scan LINEITEM 600k filas (#14)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q21",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_Q21.qs.1.sqlplan",
+      "description": "TPC-H Q21: Suppliers Who Kept Orders Waiting (NATION=25 filas no es costoso).",
+      "context": { "query_store_query_id": 44, "query_store_plan_id": 47, "query_execution_count": 1, "query_consumption_pct": 7.6495, "avg_rows_returned": 0.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex LINEITEM (L_RECEIPTDATE, L_COMMITDATE)." },
+        { "rule_id": "REG-03", "expected_nodes": [17], "rationale": "Clustered Index Scan LINEITEM 600k filas (#17)." },
+        { "rule_id": "REG-03", "expected_nodes": [19], "rationale": "Clustered Index Scan ORDERS 150k filas (#19)." },
+        { "rule_id": "REG-03", "expected_nodes": [24], "rationale": "Clustered Index Scan LINEITEM 600k filas (#24)." },
+        { "rule_id": "REG-03", "expected_nodes": [30], "rationale": "Clustered Index Scan LINEITEM 600k filas (#30)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q22",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q22.qs.1.sqlplan",
+      "description": "TPC-H Q22: Global Sales Opportunity (dos grupos MissingIndex duplicados sobre CUSTOMER deduplicados en 1).",
+      "context": { "query_store_query_id": 45, "query_store_plan_id": 48, "query_execution_count": 1, "query_consumption_pct": 2.0718, "avg_rows_returned": 0.0 },
+      "expected_findings": [
+        { "rule_id": "REG-02", "rationale": "MissingIndex CUSTOMER (C_ACCTBAL), deduplicado por firma." },
+        { "rule_id": "REG-03", "expected_nodes": [9], "rationale": "Clustered Index Scan CUSTOMER 15k filas (#9)." },
+        { "rule_id": "REG-03", "expected_nodes": [11], "rationale": "Clustered Index Scan CUSTOMER 15k filas (#11)." }
+      ]
+    },
+    {
+      "case_id": "TPCH_NEG01",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_NEG01.qs.1.sqlplan",
+      "description": "TPC-H control negativo NEG01: lectura completa de REGION (5 filas, sin predicado).",
+      "context": { "query_store_query_id": 46, "query_store_plan_id": 49, "query_execution_count": 1, "query_consumption_pct": 0.0044, "avg_rows_returned": 5.0 },
+      "expected_findings": []
+    },
+    {
+      "case_id": "TPCH_NEG02",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_NEG02.qs.1.sqlplan",
+      "description": "TPC-H control negativo NEG02: lectura completa de NATION (25 filas, sin predicado).",
+      "context": { "query_store_query_id": 47, "query_store_plan_id": 50, "query_execution_count": 1, "query_consumption_pct": 0.0044, "avg_rows_returned": 25.0 },
+      "expected_findings": []
+    },
+    {
+      "case_id": "TPCH_NEG03",
+      "corpus": "tpch",
+      "split": "calibration",
+      "plan_path": "plans/tpch/TPCH_NEG03.qs.1.sqlplan",
+      "description": "TPC-H control negativo NEG03: Clustered Index Seek puntual sobre PK_ORDERS.",
+      "context": { "query_store_query_id": 48, "query_store_plan_id": 51, "query_execution_count": 1, "query_consumption_pct": 0.008, "avg_rows_returned": 1.0 },
+      "expected_findings": []
+    },
+    {
+      "case_id": "TPCH_NEG04",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_NEG04.qs.1.sqlplan",
+      "description": "TPC-H control negativo NEG04: Index Seek puntual sobre IX_LINEITEM_L_ORDERKEY.",
+      "context": { "query_store_query_id": 49, "query_store_plan_id": 52, "query_execution_count": 1, "query_consumption_pct": 0.0133, "avg_rows_returned": 4.0 },
+      "expected_findings": []
+    }
+  ]
+}

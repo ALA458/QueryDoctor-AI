@@ -1,0 +1,31 @@
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.564" Build="16.0.4315.2">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementText="SELECT OrderId, Amount FROM dbo.Orders WHERE CustomerId = @id AND Region = @r" StatementId="1" StatementType="SELECT" StatementSubTreeCost="0.82" StatementEstRows="15">
+          <QueryPlan>
+            <MissingIndexes>
+              <MissingIndexGroup Impact="48.5">
+                <MissingIndex Database="[QD_Lab]" Schema="[dbo]" Table="[Orders]">
+                  <ColumnGroup Usage="EQUALITY">
+                    <Column Name="[CustomerId]" ColumnId="3" />
+                    <Column Name="[Region]" ColumnId="4" />
+                  </ColumnGroup>
+                  <ColumnGroup Usage="INCLUDE">
+                    <Column Name="[Amount]" ColumnId="6" />
+                  </ColumnGroup>
+                </MissingIndex>
+              </MissingIndexGroup>
+            </MissingIndexes>
+            <RelOp NodeId="1" PhysicalOp="Index Seek" LogicalOp="Index Seek" EstimateRows="15" EstimatedRowsRead="500" EstimateIO="0.02" EstimateCPU="0.005" AvgRowSize="24" EstimatedTotalSubtreeCost="0.025" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+              <OutputList />
+              <IndexScan Ordered="1" Storage="RowStore">
+                <Object Database="[QD_Lab]" Schema="[dbo]" Table="[Orders]" Index="[IX_Orders_CustomerId]" IndexKind="NonClustered" Storage="RowStore" />
+              </IndexScan>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>

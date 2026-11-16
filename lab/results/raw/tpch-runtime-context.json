@@ -1,0 +1,236 @@
+[
+    {
+        "label":  "Q01",
+        "file":  "TPCH_Q01.qs.1.sqlplan",
+        "query_id":  24,
+        "plan_id":  27,
+        "execution_count":  1,
+        "avg_rows_returned":  3,
+        "consumption_pct":  6.2383
+    },
+    {
+        "label":  "Q02",
+        "file":  "TPCH_Q02.qs.1.sqlplan",
+        "query_id":  25,
+        "plan_id":  28,
+        "execution_count":  1,
+        "avg_rows_returned":  100,
+        "consumption_pct":  2.7585
+    },
+    {
+        "label":  "Q03",
+        "file":  "TPCH_Q03.qs.1.sqlplan",
+        "query_id":  26,
+        "plan_id":  29,
+        "execution_count":  1,
+        "avg_rows_returned":  10,
+        "consumption_pct":  4.5405
+    },
+    {
+        "label":  "Q04",
+        "file":  "TPCH_Q04.qs.1.sqlplan",
+        "query_id":  27,
+        "plan_id":  30,
+        "execution_count":  1,
+        "avg_rows_returned":  5,
+        "consumption_pct":  2.5613
+    },
+    {
+        "label":  "Q05",
+        "file":  "TPCH_Q05.qs.1.sqlplan",
+        "query_id":  28,
+        "plan_id":  31,
+        "execution_count":  1,
+        "avg_rows_returned":  0,
+        "consumption_pct":  10.8883
+    },
+    {
+        "label":  "Q06",
+        "file":  "TPCH_Q06.qs.1.sqlplan",
+        "query_id":  29,
+        "plan_id":  32,
+        "execution_count":  1,
+        "avg_rows_returned":  1,
+        "consumption_pct":  1.4489
+    },
+    {
+        "label":  "Q07",
+        "file":  "TPCH_Q07.qs.1.sqlplan",
+        "query_id":  30,
+        "plan_id":  33,
+        "execution_count":  1,
+        "avg_rows_returned":  0,
+        "consumption_pct":  7.3981
+    },
+    {
+        "label":  "Q08",
+        "file":  "TPCH_Q08.qs.1.sqlplan",
+        "query_id":  31,
+        "plan_id":  34,
+        "execution_count":  1,
+        "avg_rows_returned":  2,
+        "consumption_pct":  8.9169
+    },
+    {
+        "label":  "Q09",
+        "file":  "TPCH_Q09.qs.1.sqlplan",
+        "query_id":  32,
+        "plan_id":  35,
+        "execution_count":  1,
+        "avg_rows_returned":  0,
+        "consumption_pct":  7.906
+    },
+    {
+        "label":  "Q10",
+        "file":  "TPCH_Q10.qs.1.sqlplan",
+        "query_id":  33,
+        "plan_id":  36,
+        "execution_count":  1,
+        "avg_rows_returned":  20,
+        "consumption_pct":  2.845
+    },
+    {
+        "label":  "Q11",
+        "file":  "TPCH_Q11.qs.1.sqlplan",
+        "query_id":  34,
+        "plan_id":  37,
+        "execution_count":  1,
+        "avg_rows_returned":  381,
+        "consumption_pct":  2.6406
+    },
+    {
+        "label":  "Q12",
+        "file":  "TPCH_Q12.qs.1.sqlplan",
+        "query_id":  35,
+        "plan_id":  38,
+        "execution_count":  1,
+        "avg_rows_returned":  2,
+        "consumption_pct":  2.4209
+    },
+    {
+        "label":  "Q13",
+        "file":  "TPCH_Q13.qs.1.sqlplan",
+        "query_id":  36,
+        "plan_id":  39,
+        "execution_count":  1,
+        "avg_rows_returned":  2,
+        "consumption_pct":  3.9602
+    },
+    {
+        "label":  "Q14",
+        "file":  "TPCH_Q14.qs.1.sqlplan",
+        "query_id":  37,
+        "plan_id":  40,
+        "execution_count":  1,
+        "avg_rows_returned":  1,
+        "consumption_pct":  3.2616
+    },
+    {
+        "label":  "Q15",
+        "file":  "TPCH_Q15.qs.1.sqlplan",
+        "query_id":  38,
+        "plan_id":  41,
+        "execution_count":  1,
+        "avg_rows_returned":  1,
+        "consumption_pct":  2.1785
+    },
+    {
+        "label":  "Q16",
+        "file":  "TPCH_Q16.qs.1.sqlplan",
+        "query_id":  39,
+        "plan_id":  42,
+        "execution_count":  1,
+        "avg_rows_returned":  42,
+        "consumption_pct":  2.3502
+    },
+    {
+        "label":  "Q17",
+        "file":  "TPCH_Q17.qs.1.sqlplan",
+        "query_id":  40,
+        "plan_id":  43,
+        "execution_count":  1,
+        "avg_rows_returned":  1,
+        "consumption_pct":  0.3283
+    },
+    {
+        "label":  "Q18",
+        "file":  "TPCH_Q18.qs.1.sqlplan",
+        "query_id":  41,
+        "plan_id":  44,
+        "execution_count":  1,
+        "avg_rows_returned":  100,
+        "consumption_pct":  7.3258
+    },
+    {
+        "label":  "Q19",
+        "file":  "TPCH_Q19.qs.1.sqlplan",
+        "query_id":  42,
+        "plan_id":  45,
+        "execution_count":  1,
+        "avg_rows_returned":  1,
+        "consumption_pct":  2.0972
+    },
+    {
+        "label":  "Q20",
+        "file":  "TPCH_Q20.qs.1.sqlplan",
+        "query_id":  43,
+        "plan_id":  46,
+        "execution_count":  1,
+        "avg_rows_returned":  0,
+        "consumption_pct":  8.1836
+    },
+    {
+        "label":  "Q21",
+        "file":  "TPCH_Q21.qs.1.sqlplan",
+        "query_id":  44,
+        "plan_id":  47,
+        "execution_count":  1,
+        "avg_rows_returned":  0,
+        "consumption_pct":  7.6495
+    },
+    {
+        "label":  "Q22",
+        "file":  "TPCH_Q22.qs.1.sqlplan",
+        "query_id":  45,
+        "plan_id":  48,
+        "execution_count":  1,
+        "avg_rows_returned":  0,
+        "consumption_pct":  2.0718
+    },
+    {
+        "label":  "NEG01",
+        "file":  "TPCH_NEG01.qs.1.sqlplan",
+        "query_id":  46,
+        "plan_id":  49,
+        "execution_count":  1,
+        "avg_rows_returned":  5,
+        "consumption_pct":  0.0044
+    },
+    {
+        "label":  "NEG02",
+        "file":  "TPCH_NEG02.qs.1.sqlplan",
+        "query_id":  47,
+        "plan_id":  50,
+        "execution_count":  1,
+        "avg_rows_returned":  25,
+        "consumption_pct":  0.0044
+    },
+    {
+        "label":  "NEG03",
+        "file":  "TPCH_NEG03.qs.1.sqlplan",
+        "query_id":  48,
+        "plan_id":  51,
+        "execution_count":  1,
+        "avg_rows_returned":  1,
+        "consumption_pct":  0.008
+    },
+    {
+        "label":  "NEG04",
+        "file":  "TPCH_NEG04.qs.1.sqlplan",
+        "query_id":  49,
+        "plan_id":  52,
+        "execution_count":  1,
+        "avg_rows_returned":  4,
+        "consumption_pct":  0.0133
+    }
+]
