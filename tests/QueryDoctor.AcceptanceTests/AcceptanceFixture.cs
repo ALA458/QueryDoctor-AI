@@ -155,6 +155,9 @@ public sealed class AcceptanceFixture : IAsyncLifetime, IDisposable
             ["Probe:LabTrustedCertificateServers:0"] = Server,
             ["Probe:LabTrustedCertificateServers:1"] = ServerAlias,
             ["AiService:BaseUrl"] = AiServiceDouble.BaseAddress.ToString(),
+
+            // CA-HU12.1: corte corto para que "el proveedor no responde" no espere los 200 s de producción.
+            ["AiService:TimeoutSeconds"] = "3",
         });
 
         builder.Services.AddWorkerServices(builder.Configuration);
