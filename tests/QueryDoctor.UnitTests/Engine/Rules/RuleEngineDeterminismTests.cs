@@ -314,4 +314,49 @@ public sealed class RuleEngineDeterminismTests
             return drafts;
         }
     }
+
+    [Fact]
+    public void BorradoresDuplicadosConMismoFindingIdSeDeduplicanConservandoMayorSeveridad()
+    {
+        var xml = LoadFixture("ESC01.qs.1.sqlplan");
+        var parser = new ShowplanXmlParser();
+        var engine = new DeterministicRuleEngine(
+            parser,
+            new VersionedRuleCatalog([new DuplicateDraftsRule()]),
+            RuleThresholds.Default);
+
+        var result = engine.Analyze(new PlanAnalysisRequest(
+            ShowplanXml: xml,
+            QueryStoreQueryId: 101,
+            QueryStorePlanId: 202,
+            PlanIdentifier: "ESC01.qs.1",
+            QueryConsumptionPct: 5.0));
+
+        var finding = Assert.Single(result.Findings);
+        Assert.Equal("ALTA", finding.Severity);
+    }
+
+    private sealed class DuplicateDraftsRule : IRule
+    {
+        public RuleDescriptor Descriptor { get; } = VersionedRuleCatalog.BuiltInDescriptors
+            .First(d => d.RuleId == "REG-02");
+
+        public IReadOnlyList<RuleFindingDraft> Evaluate(RuleEvaluationContext context)
+        {
+            var firstNode = context.Plan.EnumerateAllOperators().First();
+            return
+            [
+                new RuleFindingDraft(
+                    Severity: FindingSeverity.Media,
+                    Nodes: [new FindingNodeContract(firstNode.NodeId, firstNode.PhysicalOp)],
+                    Evidence: new Dictionary<string, string?> { ["table"] = "dbo.Orders" },
+                    Discriminator: "1|QD_Lab.dbo.Orders|EQ:CustomerId"),
+                new RuleFindingDraft(
+                    Severity: FindingSeverity.Alta,
+                    Nodes: [new FindingNodeContract(firstNode.NodeId, firstNode.PhysicalOp)],
+                    Evidence: new Dictionary<string, string?> { ["table"] = "dbo.Orders" },
+                    Discriminator: "1|QD_Lab.dbo.Orders|EQ:CustomerId"),
+            ];
+        }
+    }
 }

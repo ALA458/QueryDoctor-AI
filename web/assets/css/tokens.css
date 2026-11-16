@@ -1,51 +1,145 @@
 /*
- * Query Doctor AI — TOKENS DE DISEÑO (el único archivo que hay que tocar para cambiar el aspecto).
- *
- * Todas las páginas del front enlazan este archivo ANTES que su propio CSS:
- *   <link rel="stylesheet" href="/assets/css/tokens.css">
- * Ningún otro CSS del proyecto debe escribir colores, fuentes ni radios a mano: usa var(--...).
- * Así, cambiar la paleta aquí cambia login, conexiones, dashboard, explicaciones (S1-15, S1-16, S2-09..S2-11).
- *
- * Los nombres dicen el ROL del color, no el color: --color-accent es "el acento", sea bermellón o verde.
+ * Query Doctor AI — Sistema de Tokens (Polar Slate Claro por defecto + Dark Mode opcional).
+ * Incluye fuentes autoalojadas (CSP default-src 'self').
  */
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("../fonts/instrument-sans-latin-wght-normal.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+
 :root {
-  /* ---- Superficies claras (formularios, listados, tablas) ---- */
-  --color-bg: #f2ede3;             /* fondo de página */
-  --color-surface: #e7e0d1;        /* tarjetas, avisos, filas alternas */
-  --color-text: #14110f;           /* texto principal */
-  --color-text-muted: #6d655a;     /* etiquetas, ayudas */
-  --color-border-strong: #14110f;  /* líneas de campos y cabeceras */
+  color-scheme: light;
 
-  /* ---- Superficies oscuras (panel de marca, barra lateral) ---- */
-  --color-stage-bg: #14110f;
-  --color-stage-surface: #1d1916;
-  --color-stage-line: #34302a;       /* cuadrícula de fondo */
-  --color-stage-stroke: #5a5347;     /* contornos de nodos y enlaces */
-  --color-stage-ghost: #3d372f;      /* trazos de fondo */
-  --color-stage-text: #f2ede3;
-  --color-stage-text-soft: #cfc7b8;
-  --color-stage-text-muted: #a49b8c;
+  /* ---- Superficies claras cohesivas (Polar Slate) ---- */
+  --color-bg: #f8fafc;
+  --color-card: #ffffff;
+  --color-surface: #eef2f6;
+  --color-surface-hover: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #526075;
+  --color-border: #dce3ec;
+  --color-border-subtle: #e9eef5;
+  --color-border-strong: #94a3b8;
 
-  /* ---- Acento de marca ---- */
-  --color-accent: #d9402a;           /* "la señal": énfasis, foco, hallazgos */
-  --color-accent-strong: #b22f1b;    /* acento en estado pulsado/oscuro */
-  --color-on-accent: #14110f;        /* texto sobre el acento */
+  /* ---- Rail lateral (claro suave en tema claro) ---- */
+  --color-rail-bg: #f1f5f9;
+  --color-rail-surface: #e2e8f0;
+  --color-rail-elevated: #e6f4f1;
+  --color-rail-border: #dbe3ee;
+  --color-rail-text: #0f172a;
+  --color-rail-text-soft: #334155;
+  --color-rail-text-muted: #64748b;
 
-  /* ---- Acción principal (botones) ---- */
-  --color-primary: #14110f;
-  --color-on-primary: #f2ede3;
+  /* ---- Bloques de código SQL y T-SQL (claro legible en tema claro) ---- */
+  --color-code-bg: #f1f5f9;
+  --color-code-head: #e2e8f0;
+  --color-code-border: #cbd5e1;
+  --color-code-text: #0f172a;
+  --color-code-muted: #475569;
 
-  /* ---- Estados (para dashboards y avisos) ---- */
-  --color-success: #2f6f5e;
-  --color-warning: #b7791f;
-  --color-danger: #b22f1b;
-  --color-info: #35607a;
+  /* ---- Escenario oscuro dedicado solo para pantallas de login/stage ---- */
+  --color-stage-bg: #0f172a;
+  --color-stage-surface: #182235;
+  --color-stage-elevated: #1e293b;
+  --color-stage-line: #243247;
+  --color-stage-stroke: #3b4d68;
+  --color-stage-ghost: #253347;
+  --color-stage-text: #f1f5f9;
+  --color-stage-text-soft: #cbd5e1;
+  --color-stage-text-muted: #94a3b8;
 
-  /* ---- Tipografía (archivos en /assets/fonts, declarados en auth.css) ---- */
-  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  /* ---- Acento y acción principal (Telemetry Teal) ---- */
+  --color-accent: #0d9488;
+  --color-accent-strong: #0f766e;
+  --color-accent-soft: rgba(13, 148, 136, 0.12);
+  --color-on-accent: #ffffff;
+
+  --color-primary: #0d9488;
+  --color-on-primary: #ffffff;
+
+  /* ---- Semántica de diagnóstico ---- */
+  --color-success: #059669;
+  --color-success-soft: rgba(5, 150, 105, 0.12);
+  --color-warning: #d97706;
+  --color-warning-soft: rgba(217, 119, 6, 0.13);
+  --color-danger: #dc2626;
+  --color-danger-soft: rgba(220, 38, 38, 0.11);
+  --color-info: #0284c7;
+  --color-info-soft: rgba(2, 132, 199, 0.12);
+
+  /* ---- Tipografía geométrica y monoespaciada ---- */
+  --font-display: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
-  /* ---- Forma ---- */
-  --radius: 2px;
+  /* ---- Geometría y elevación ---- */
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px -16px rgba(15, 23, 42, 0.12);
+  --shadow-drawer: -12px 0 36px -12px rgba(15, 23, 42, 0.22);
 }
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg: #090d14;
+  --color-card: #111824;
+  --color-surface: #182232;
+  --color-surface-hover: #212e42;
+  --color-text: #e6edf6;
+  --color-text-muted: #91a2b8;
+  --color-border: #243247;
+  --color-border-subtle: #1b2638;
+  --color-border-strong: #475c7a;
+
+  --color-rail-bg: #0c121c;
+  --color-rail-surface: #151f2e;
+  --color-rail-elevated: #162a2c;
+  --color-rail-border: #1e2a3b;
+  --color-rail-text: #f1f5f9;
+  --color-rail-text-soft: #cbd5e1;
+  --color-rail-text-muted: #8596ad;
+
+  --color-code-bg: #0d141f;
+  --color-code-head: #141e2e;
+  --color-code-border: #243247;
+  --color-code-text: #e6edf6;
+  --color-code-muted: #91a2b8;
+
+  --color-accent: #14b8a6;
+  --color-accent-strong: #2dd4bf;
+  --color-accent-soft: rgba(20, 184, 166, 0.15);
+  --color-on-accent: #041312;
+
+  --color-primary: #14b8a6;
+  --color-on-primary: #041312;
+
+  --color-success: #10b981;
+  --color-success-soft: rgba(16, 185, 129, 0.15);
+  --color-warning: #f59e0b;
+  --color-warning-soft: rgba(245, 158, 11, 0.15);
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248, 113, 113, 0.14);
+  --color-info: #38bdf8;
+  --color-info-soft: rgba(56, 189, 248, 0.14);
+
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.35), 0 10px 28px -16px rgba(0, 0, 0, 0.6);
+  --shadow-drawer: -14px 0 42px -10px rgba(0, 0, 0, 0.65);
+}
+
+/* Garantizar que el atributo HTML [hidden] prevalezca sobre display: flex/grid */
+[hidden] { display: none; }

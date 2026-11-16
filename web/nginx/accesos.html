@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="same-origin">
+  <title>Accesos y usuarios · Query Doctor AI</title>
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/auth.css">
+  <link rel="stylesheet" href="/assets/css/workbench.css">
+  <script src="/assets/js/qd-core.js" defer></script>
+  <script src="/assets/js/accesos.js" defer></script>
+</head>
+<body data-page="access" data-nav="access">
+  <div class="app">
+    <aside class="side" aria-label="Barra lateral de navegación"></aside>
+
+    <main class="main" id="main" hidden>
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Gobierno y privilegio mínimo · Solo DBA</p>
+          <h1>Accesos y usuarios</h1>
+          <p class="sub">Crea cuentas con rol Desarrollador (cambio obligatorio de contraseña en primer ingreso) y asigna explícitamente qué conexiones SQL Server puede consultar cada usuario.</p>
+        </div>
+      </header>
+
+      <div id="access-notice" class="notice" role="alert" aria-live="polite"></div>
+
+      <section class="split-grid">
+        <article class="surface-card">
+          <p class="eyebrow">Provisionamiento</p>
+          <h2>Nuevo usuario Desarrollador</h2>
+          <p class="sub">El usuario tendrá acceso de solo lectura únicamente sobre las conexiones que le asignes.</p>
+
+          <form id="create-user-form" autocomplete="off" novalidate>
+            <div class="field">
+              <label for="u-username">Nombre de usuario</label>
+              <div class="control"><input id="u-username" type="text" required maxlength="100" placeholder="ej. dev.analitica" spellcheck="false"></div>
+            </div>
+            <div class="field">
+              <label for="u-email">Correo electrónico</label>
+              <div class="control"><input id="u-email" type="email" required maxlength="200" placeholder="usuario@empresa.local" spellcheck="false"></div>
+            </div>
+            <div class="field">
+              <label for="u-password">Contraseña inicial temporal</label>
+              <div class="control">
+                <input id="u-password" type="password" required minlength="12" autocomplete="new-password">
+                <button type="button" class="reveal" id="u-toggle-pass" aria-pressed="false">Mostrar</button>
+              </div>
+            </div>
+            <p class="panel-note">Requisitos mínimos: 12 caracteres, mayúscula, minúscula, número y símbolo. Al iniciar sesión deberá definir una contraseña propia.</p>
+            <button type="submit" class="btn" id="u-submit">
+              <span>Crear cuenta Desarrollador</span><span class="arrow" aria-hidden="true">→</span>
+            </button>
+          </form>
+        </article>
+
+        <article class="surface-card">
+          <div class="timeline-top">
+            <div>
+              <p class="eyebrow">Control por conexión (RNF-SEG-12)</p>
+              <h2>Asignaciones de conexiones</h2>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="a-connection">Conexión monitoreada</label>
+            <div class="control"><select id="a-connection"></select></div>
+          </div>
+
+          <div id="assignments-host"></div>
+        </article>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

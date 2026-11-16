@@ -55,7 +55,7 @@ jobs:
                 node-version: "22"
 
             - name: Pruebas frontend
-              run: node --test tests/web/explanation_view.test.mjs
+              run: node --test tests/web/explanation_view.test.mjs tests/web/wizard_and_core.test.mjs tests/web/plan_graph.test.mjs
 
     ai-service:
         name: AI Service (pytest)
