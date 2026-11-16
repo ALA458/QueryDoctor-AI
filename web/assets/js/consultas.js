@@ -1,4 +1,4 @@
-/* Query Doctor AI — Explorador de consultas (/consultas). Usa qd-core.js (textContent-only). */
+/* Query Doctor AI — Explorador de consultas (/consultas) con tarjetas legibles sin recortes. */
 (function () {
   "use strict";
 
@@ -18,6 +18,7 @@
     Saludable: ["Saludable", "ok"]
   };
 
+  var SQL_PREVIEW_LIMIT = 280;
   var connectionNamesById = {};
 
   function showNotice(message) {
@@ -69,7 +70,7 @@
       if (preselectId && connectionNamesById[preselectId]) {
         select.value = preselectId;
       }
-    }).catch(function () { /* si falla, permanece "Todas" */ });
+    }).catch(function () { /* noop */ });
   }
 
   function renderSummaryStrip(items) {
@@ -84,9 +85,9 @@
     var lowestScore = scored.length ? Math.min.apply(null, scored.map(function (q) { return q.score; })) : null;
 
     var cards = [
-      ["Consultas visibles", total, "En ventana " + $("f-window").value, "info"],
+      ["Consultas visibles", total, "Ventana " + $("f-window").value, "info"],
       ["Con hallazgos", withFindings, total > 0 ? Math.round((withFindings / total) * 100) + " % del listado" : "Sin registros", withFindings > 0 ? "warn" : "ok"],
-      ["En banda Crítica", critical, "Requieren revisión prioritaria", critical > 0 ? "danger" : "ok"],
+      ["En banda Crítica", critical, "Atención prioritaria", critical > 0 ? "danger" : "ok"],
       ["Menor Health Score", lowestScore !== null ? C.formatNumber(lowestScore, 1) : "—", "Escala 0–100 (menor = más severa)", lowestScore !== null && lowestScore < 40 ? "danger" : "neutral"]
     ];
 
@@ -123,55 +124,34 @@
     });
   }
 
-  function renderTable(items) {
+  function renderQueryCards(items) {
     var list = $("list");
     C.clear(list);
 
-    var card = C.el("div", "table-card");
-    var wrap = C.el("div", "table-wrap");
-    var table = C.el("table", "table");
-    var thead = C.el("thead");
-    var head = C.el("tr");
-    ["Consulta SQL (enmascarada)", "Health Score", "Consumo", "Ejecuciones", "Hallazgos"].forEach(function (name) {
-      var th = C.el("th", null, name);
-      th.setAttribute("scope", "col");
-      head.appendChild(th);
-    });
-    thead.appendChild(head);
-    table.appendChild(thead);
-
+    var stack = C.el("div", "query-list");
     var currentWindow = $("f-window").value || "24h";
-    var body = C.el("tbody");
 
     items.forEach(function (item) {
-      var row = C.el("tr");
+      var card = C.el("article", "query-card");
+      if (item.band) { card.setAttribute("data-band", item.band); }
 
-      var tdQuery = C.el("td");
-      var link = document.createElement("a");
-      link.className = "q-link";
-      link.href = "/consulta?id=" + encodeURIComponent(item.id) + "&window=" + encodeURIComponent(currentWindow);
-      link.appendChild(C.el("code", "q-sql", item.sqlPreview || (item.sqlExpired ? "[SQL expirado]" : "[Sin texto SQL]")));
-      tdQuery.appendChild(link);
-      tdQuery.appendChild(C.el("span", "secondary", (item.server ? item.server + " · " : "") + (item.databaseName || "")));
-      row.appendChild(tdQuery);
+      var head = C.el("div", "qc-head");
+      var metrics = C.el("div", "qc-metrics");
 
-      var tdScore = C.el("td");
+      metrics.appendChild(C.el("span", "qc-source", (item.server ? item.server + " / " : "") + (item.databaseName || "")));
+
       if (typeof item.score === "number" && !isNaN(item.score)) {
-        var box = C.el("div", "q-score-cell");
-        box.appendChild(C.el("span", "q-score-val", C.formatNumber(item.score, 1)));
+        var scoreBox = C.el("div", "qc-score");
+        scoreBox.appendChild(C.el("span", "qc-score-val", C.formatNumber(item.score, 1)));
         if (item.band) {
           var b = BANDS[item.band];
-          var badgeNode = C.badge(b ? b[0] : item.band, b ? b[1] : "neutral");
-          badgeNode.setAttribute("title", "Banda de referencia provisional; usa la posición relativa en la ventana");
-          box.appendChild(badgeNode);
+          scoreBox.appendChild(C.badge(b ? b[0] : item.band, b ? b[1] : "neutral"));
         }
-        tdScore.appendChild(box);
+        metrics.appendChild(scoreBox);
       } else {
-        tdScore.appendChild(C.el("span", "no-findings", "Sin score"));
+        metrics.appendChild(C.badge("Sin score", "neutral"));
       }
-      row.appendChild(tdScore);
 
-      var tdMeter = C.el("td");
       var pct = typeof item.consumptionPct === "number" ? Math.max(0, Math.min(100, item.consumptionPct)) : 0;
       var meter = C.el("div", "meter");
       var track = C.el("span", "meter-track");
@@ -180,39 +160,56 @@
       track.appendChild(bar);
       meter.appendChild(track);
       meter.appendChild(C.el("span", "meter-value", formatPct(item.consumptionPct)));
-      tdMeter.appendChild(meter);
-      row.appendChild(tdMeter);
+      metrics.appendChild(meter);
 
-      var tdExec = C.el("td", "tabular", formatInt(item.executions));
-      row.appendChild(tdExec);
+      metrics.appendChild(C.el("span", "qc-execs", formatInt(item.executions) + " ejec."));
+      head.appendChild(metrics);
 
-      var tdFind = C.el("td");
+      var openLink = C.el("a", "btn btn-sm", "Diagnosticar →");
+      openLink.href = "/consulta?id=" + encodeURIComponent(item.id) + "&window=" + encodeURIComponent(currentWindow);
+      head.appendChild(openLink);
+      card.appendChild(head);
+
+      // Bloque SQL completo/expandible (nunca cortado al seleccionar texto)
+      var rawSql = item.sqlPreview || (item.sqlExpired ? "[SQL expirado por retención]" : "[Sin texto SQL]");
+      var sqlBox = C.el("div", "qc-sql-box");
+      var expanded = false;
+      var needsCollapse = rawSql.length > SQL_PREVIEW_LIMIT;
+      var codeEl = C.el("code", "qc-sql-code", needsCollapse ? (rawSql.slice(0, SQL_PREVIEW_LIMIT) + "…") : rawSql);
+      sqlBox.appendChild(codeEl);
+
+      if (needsCollapse) {
+        var toggleBtn = C.el("button", "qc-sql-toggle", "Ver sentencia completa (" + rawSql.length + " car.)");
+        toggleBtn.type = "button";
+        toggleBtn.addEventListener("click", function () {
+          expanded = !expanded;
+          codeEl.textContent = expanded ? rawSql : (rawSql.slice(0, SQL_PREVIEW_LIMIT) + "…");
+          toggleBtn.textContent = expanded ? "Contraer sentencia" : ("Ver sentencia completa (" + rawSql.length + " car.)");
+        });
+        sqlBox.appendChild(toggleBtn);
+      }
+      card.appendChild(sqlBox);
+
+      var findRow = C.el("div", "qc-findings");
       var findings = item.findings || [];
       if (!findings.length) {
-        tdFind.appendChild(C.el("span", "no-findings", "Sin hallazgos"));
+        findRow.appendChild(C.el("span", "no-findings", "Sin hallazgos determinísticos en el último análisis"));
       } else {
-        var boxFindings = C.el("div", "findings");
         findings.forEach(function (f) {
-          var line = C.el("div", "finding");
-          var top = C.el("div");
-          top.appendChild(C.el("strong", null, f.ruleId + " "));
+          var pill = C.el("div", "qc-finding-pill");
+          pill.appendChild(C.el("strong", "mono", f.ruleId));
           var s = SEVERITY[f.severity];
-          top.appendChild(C.badge(s ? s[0] : "Sin dato", s ? s[1] : "neutral"));
-          line.appendChild(top);
-          if (f.summary) { line.appendChild(C.el("span", "secondary", f.summary)); }
-          boxFindings.appendChild(line);
+          pill.appendChild(C.badge(s ? s[0] : "Sin dato", s ? s[1] : "neutral"));
+          if (f.summary) { pill.appendChild(C.el("span", null, f.summary)); }
+          findRow.appendChild(pill);
         });
-        tdFind.appendChild(boxFindings);
       }
-      row.appendChild(tdFind);
+      card.appendChild(findRow);
 
-      body.appendChild(row);
+      stack.appendChild(card);
     });
 
-    table.appendChild(body);
-    wrap.appendChild(table);
-    card.appendChild(wrap);
-    list.appendChild(card);
+    list.appendChild(stack);
   }
 
   function loadQueries() {
@@ -239,7 +236,7 @@
         renderEmpty("No hay consultas para estos filtros", "Prueba ampliar la ventana de tiempo, limpiar la severidad o ejecutar una ingesta desde el Centro de control.");
         return;
       }
-      renderTable(items);
+      renderQueryCards(items);
     }).catch(function () {
       renderEmpty("El servicio no está disponible", "No pudimos cargar las consultas. Inténtalo de nuevo en unos minutos.");
     });

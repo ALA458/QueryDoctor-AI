@@ -1,59 +1,120 @@
 /*
- * Query Doctor AI — TOKENS DE DISEÑO (Telemetry & Clinical SQL Workbench).
- * Todas las páginas enlazan este archivo antes que sus hojas de estilo específicas.
- * Sin CDN externos (CSP default-src 'self').
+ * Query Doctor AI — Sistema de Tokens (Polar Slate & Telemetry Teal).
+ * Incluye fuentes autoalojadas (CSP default-src 'self') y soporte dual Claro (por defecto) / Oscuro.
  */
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("../fonts/instrument-sans-latin-wght-normal.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono-latin-500-normal.woff2") format("woff2");
+  font-weight: 500;
+  font-display: swap;
+}
+
 :root {
-  /* ---- Superficies claras ("Precision Paper & Ink Telemetry") ---- */
-  --color-bg: #f4f1ea;
-  --color-card: #fbf9f4;
-  --color-surface: #e8e1d3;
-  --color-surface-hover: #dfd6c4;
-  --color-text: #161311;
-  --color-text-muted: #665e53;
-  --color-border: #d4cbb9;
-  --color-border-subtle: #e5decb;
-  --color-border-strong: #1c1917;
+  color-scheme: light;
 
-  /* ---- Superficies oscuras (rail lateral, stage y código SQL/Showplan) ---- */
-  --color-stage-bg: #141210;
-  --color-stage-surface: #1d1a17;
-  --color-stage-elevated: #27231e;
-  --color-stage-line: #34302a;
-  --color-stage-stroke: #5a5347;
-  --color-stage-ghost: #3d372f;
-  --color-stage-text: #f4f1ea;
-  --color-stage-text-soft: #d3cbba;
-  --color-stage-text-muted: #9f9687;
+  /* ---- Superficies claras modernas (Polar Slate) ---- */
+  --color-bg: #f8fafc;
+  --color-card: #ffffff;
+  --color-surface: #eef2f6;
+  --color-surface-hover: #e2e8f0;
+  --color-text: #0f172a;
+  --color-text-muted: #526075;
+  --color-border: #dce3ec;
+  --color-border-subtle: #e9eef5;
+  --color-border-strong: #94a3b8;
 
-  /* ---- Acento de señal ---- */
-  --color-accent: #d63d28;
-  --color-accent-strong: #b22f1b;
-  --color-accent-soft: rgba(214, 61, 40, 0.1);
-  --color-on-accent: #fbf9f4;
+  /* ---- Rail lateral y consola SQL/Showplan ---- */
+  --color-stage-bg: #0b111a;
+  --color-stage-surface: #131c29;
+  --color-stage-elevated: #1c283a;
+  --color-stage-line: #223044;
+  --color-stage-stroke: #3b4d68;
+  --color-stage-ghost: #253347;
+  --color-stage-text: #f1f5f9;
+  --color-stage-text-soft: #cbd5e1;
+  --color-stage-text-muted: #8596ad;
 
-  /* ---- Acción principal ---- */
-  --color-primary: #161311;
-  --color-on-primary: #f4f1ea;
+  /* ---- Acento de producto (Telemetry Teal) ---- */
+  --color-accent: #0d9488;
+  --color-accent-strong: #0f766e;
+  --color-accent-soft: rgba(13, 148, 136, 0.11);
+  --color-on-accent: #ffffff;
 
-  /* ---- Estados semánticos ---- */
-  --color-success: #1f6b56;
-  --color-success-soft: rgba(31, 107, 86, 0.12);
-  --color-warning: #b57414;
-  --color-warning-soft: rgba(181, 116, 20, 0.13);
-  --color-danger: #b22f1b;
-  --color-danger-soft: rgba(178, 47, 27, 0.11);
-  --color-info: #2d5f7a;
-  --color-info-soft: rgba(45, 95, 122, 0.12);
+  /* ---- Acción primaria ---- */
+  --color-primary: #0f172a;
+  --color-on-primary: #f8fafc;
 
-  /* ---- Tipografía autoalojada (/assets/fonts) ---- */
-  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  /* ---- Semántica de diagnóstico ---- */
+  --color-success: #059669;
+  --color-success-soft: rgba(5, 150, 105, 0.12);
+  --color-warning: #d97706;
+  --color-warning-soft: rgba(217, 119, 6, 0.13);
+  --color-danger: #dc2626;
+  --color-danger-soft: rgba(220, 38, 38, 0.11);
+  --color-info: #0284c7;
+  --color-info-soft: rgba(2, 132, 199, 0.12);
+
+  /* ---- Tipografía geométrica y monoespaciada ---- */
+  --font-display: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
   /* ---- Geometría y elevación ---- */
-  --radius: 4px;
-  --radius-lg: 8px;
-  --shadow-card: 0 1px 0 rgba(22, 19, 17, 0.06), 0 10px 26px -18px rgba(22, 19, 17, 0.22);
-  --shadow-drawer: -14px 0 42px -12px rgba(20, 18, 16, 0.34);
+  --radius: 6px;
+  --radius-lg: 10px;
+  --shadow-card: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px -16px rgba(15, 23, 42, 0.14);
+  --shadow-drawer: -12px 0 36px -12px rgba(11, 17, 26, 0.28);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-bg: #090d14;
+  --color-card: #111824;
+  --color-surface: #182232;
+  --color-surface-hover: #212e42;
+  --color-text: #e6edf6;
+  --color-text-muted: #91a2b8;
+  --color-border: #243247;
+  --color-border-subtle: #1b2638;
+  --color-border-strong: #475c7a;
+
+  --color-stage-bg: #06090f;
+  --color-stage-surface: #0e1520;
+  --color-stage-elevated: #172234;
+  --color-stage-line: #1e2c40;
+  --color-stage-stroke: #384d6b;
+  --color-stage-ghost: #1d2a3d;
+
+  --color-accent: #14b8a6;
+  --color-accent-strong: #2dd4bf;
+  --color-accent-soft: rgba(20, 184, 166, 0.14);
+  --color-on-accent: #041312;
+
+  --color-primary: #14b8a6;
+  --color-on-primary: #041312;
+
+  --color-success: #10b981;
+  --color-success-soft: rgba(16, 185, 129, 0.15);
+  --color-warning: #f59e0b;
+  --color-warning-soft: rgba(245, 158, 11, 0.15);
+  --color-danger: #f87171;
+  --color-danger-soft: rgba(248, 113, 113, 0.14);
+  --color-info: #38bdf8;
+  --color-info-soft: rgba(56, 189, 248, 0.14);
+
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, 0.35), 0 10px 28px -16px rgba(0, 0, 0, 0.6);
+  --shadow-drawer: -14px 0 42px -10px rgba(0, 0, 0, 0.65);
 }

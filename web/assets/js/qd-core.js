@@ -273,26 +273,92 @@
     return svg;
   }
 
+  function renderNavIcon(id) {
+    var svg = svgEl("svg", {
+      class: "nav-ico",
+      viewBox: "0 0 24 24",
+      fill: "none",
+      "stroke-width": "1.8",
+      "stroke-linecap": "round",
+      "stroke-linejoin": "round",
+      "aria-hidden": "true"
+    });
+    var dById = {
+      connections: "M4 6h16M4 12h16M4 18h10",
+      connect: "M12 5v14M5 12h14",
+      queries: "M4 5h16v14H4zM8 9h8M8 13h5",
+      access: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87",
+      trace: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"
+    };
+    if (id === "access") {
+      svg.appendChild(svgEl("circle", { cx: "9", cy: "7", r: "3.5" }));
+      svg.appendChild(svgEl("path", { d: "M3 20v-1a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v1M17 11l2 2 4-4" }));
+      return svg;
+    }
+    svg.appendChild(svgEl("path", { d: dById[id] || "M5 12h14" }));
+    return svg;
+  }
+
+  function applyTheme(theme) {
+    var root = document.documentElement;
+    if (theme === "dark") {
+      root.setAttribute("data-theme", "dark");
+    } else {
+      root.removeAttribute("data-theme");
+    }
+    try { window.localStorage.setItem("qd_theme", theme === "dark" ? "dark" : "light"); } catch (_) { /* noop */ }
+  }
+
+  function getSavedTheme() {
+    try { return window.localStorage.getItem("qd_theme") === "dark" ? "dark" : "light"; } catch (_) { return "light"; }
+  }
+
+  function setCollapsed(collapsed) {
+    document.body.classList.toggle("nav-collapsed", Boolean(collapsed));
+    try { window.localStorage.setItem("qd_nav_collapsed", collapsed ? "1" : "0"); } catch (_) { /* noop */ }
+    var btn = document.querySelector(".side-collapse-btn");
+    if (btn) {
+      btn.textContent = collapsed ? "»" : "«";
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      btn.setAttribute("title", collapsed ? "Expandir panel lateral" : "Colapsar panel lateral");
+    }
+  }
+
   function mountSidebar(sideEl, me, activeNav) {
     if (!sideEl) { return; }
     clear(sideEl);
 
     var top = el("div", "side-top");
-    var brand = el("a", "brand brand-link");
+    var headerRow = el("div", "side-header-row");
+
+    var brand = el("a", "brand-link");
     brand.href = "/";
     brand.appendChild(renderBrandMark());
-    var brandCopy = el("div", null, "Query Doctor AI");
-    brandCopy.appendChild(el("small", null, "Observabilidad SQL · Evidencia"));
-    brand.appendChild(brandCopy);
-    top.appendChild(brand);
+    var brandText = el("div", "brand-text");
+    brandText.appendChild(el("strong", null, "Query Doctor AI"));
+    brandText.appendChild(el("small", null, "Observabilidad SQL"));
+    brand.appendChild(brandText);
+    headerRow.appendChild(brand);
 
-    var closeMobile = el("button", "side-close", "Cerrar");
+    var isCollapsed = document.body.classList.contains("nav-collapsed");
+    var collapseBtn = el("button", "side-collapse-btn", isCollapsed ? "»" : "«");
+    collapseBtn.type = "button";
+    collapseBtn.setAttribute("aria-label", "Alternar panel lateral");
+    collapseBtn.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
+    collapseBtn.setAttribute("title", isCollapsed ? "Expandir panel lateral" : "Colapsar panel lateral");
+    collapseBtn.addEventListener("click", function () {
+      setCollapsed(!document.body.classList.contains("nav-collapsed"));
+    });
+    headerRow.appendChild(collapseBtn);
+
+    var closeMobile = el("button", "side-close", "Cerrar ✕");
     closeMobile.type = "button";
     closeMobile.setAttribute("aria-label", "Cerrar menú");
     closeMobile.addEventListener("click", function () {
       document.body.classList.remove("nav-open");
     });
-    top.appendChild(closeMobile);
+    headerRow.appendChild(closeMobile);
+    top.appendChild(headerRow);
 
     var navLabel = el("p", "side-section-label", isDba(me) ? "Operación DBA" : "Diagnóstico");
     top.appendChild(navLabel);
@@ -302,11 +368,12 @@
     buildNavItems(me).forEach(function (item) {
       var link = el("a", "nav-item" + (item.id === activeNav ? " is-active" : ""));
       link.href = item.href;
+      link.setAttribute("title", item.label);
       if (item.id === activeNav) {
         link.setAttribute("aria-current", "page");
       }
-      link.appendChild(el("span", null, item.label));
-      link.appendChild(el("small", null, item.code));
+      link.appendChild(renderNavIcon(item.id));
+      link.appendChild(el("span", "nav-label", item.label));
       nav.appendChild(link);
     });
     top.appendChild(nav);
@@ -323,6 +390,20 @@
     who.appendChild(roleSpan);
     foot.appendChild(who);
 
+    var currentTheme = getSavedTheme();
+    var themeBtn = el("button", "side-theme-btn");
+    themeBtn.type = "button";
+    themeBtn.appendChild(el("span", "theme-label", "Tema"));
+    var themeVal = el("span", null, currentTheme === "dark" ? "Oscuro" : "Claro");
+    themeBtn.appendChild(themeVal);
+    themeBtn.setAttribute("title", "Cambiar entre tema claro y oscuro");
+    themeBtn.addEventListener("click", function () {
+      var next = getSavedTheme() === "dark" ? "light" : "dark";
+      applyTheme(next);
+      themeVal.textContent = next === "dark" ? "Oscuro" : "Claro";
+    });
+    foot.appendChild(themeBtn);
+
     var logoutForm = el("form");
     logoutForm.method = "post";
     logoutForm.action = "/api/auth/logout";
@@ -333,25 +414,43 @@
     sideEl.appendChild(foot);
   }
 
-  function ensureMobileTopbar() {
-    if ($("qd-mobile-bar")) { return; }
-    var bar = el("div", "mobile-bar");
-    bar.id = "qd-mobile-bar";
-    var menuBtn = el("button", "mobile-menu-btn", "Menú");
-    menuBtn.type = "button";
-    menuBtn.addEventListener("click", function () {
-      document.body.classList.toggle("nav-open");
-    });
-    var title = el("span", "mobile-brand", "Query Doctor AI");
-    bar.appendChild(menuBtn);
-    bar.appendChild(title);
-    document.body.insertBefore(bar, document.body.firstChild);
+  function ensureMobileChrome() {
+    if (!$("qd-mobile-bar")) {
+      var bar = el("div", "mobile-bar");
+      bar.id = "qd-mobile-bar";
+      var menuBtn = el("button", "mobile-menu-btn", "☰ Menú");
+      menuBtn.type = "button";
+      menuBtn.addEventListener("click", function () {
+        document.body.classList.toggle("nav-open");
+      });
+      var title = el("span", "mobile-brand", "Query Doctor AI");
+      bar.appendChild(menuBtn);
+      bar.appendChild(title);
+      document.body.insertBefore(bar, document.body.firstChild);
+    }
+    if (!$("qd-nav-backdrop")) {
+      var backdrop = el("div", "nav-backdrop");
+      backdrop.id = "qd-nav-backdrop";
+      backdrop.addEventListener("click", function () {
+        document.body.classList.remove("nav-open");
+      });
+      document.body.appendChild(backdrop);
+      document.addEventListener("keydown", function (ev) {
+        if (ev.key === "Escape") { document.body.classList.remove("nav-open"); }
+      });
+    }
   }
 
   function mountShell(options) {
     var opts = options || {};
     var activeNav = opts.activeNav || document.body.getAttribute("data-nav") || "";
-    ensureMobileTopbar();
+    applyTheme(getSavedTheme());
+    try {
+      if (window.localStorage.getItem("qd_nav_collapsed") === "1") {
+        document.body.classList.add("nav-collapsed");
+      }
+    } catch (_) { /* noop */ }
+    ensureMobileChrome();
 
     return apiRequest("/api/auth/me").then(function (res) {
       if (res.redirected) { return null; }

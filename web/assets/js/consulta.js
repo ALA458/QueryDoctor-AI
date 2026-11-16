@@ -125,8 +125,29 @@
     var hero = el("div", "score-hero");
 
     var dial = el("div", "score-dial");
-    dial.appendChild(el("span", "score-number", formatNum(score.score, 1)));
-    dial.appendChild(el("span", "score-scale-tag", "Escala 0 – 100 · Prioridad P(q): " + formatNum(score.priority, 1)));
+    var gaugeRow = el("div", "score-gauge-row");
+    var scoreVal = typeof score.score === "number" ? Math.max(0, Math.min(100, score.score)) : 0;
+    var r = 30;
+    var circ = 2 * Math.PI * r;
+    var gaugeSvg = svgEl("svg", { class: "score-gauge-svg", viewBox: "0 0 76 76", "aria-hidden": "true" });
+    gaugeSvg.appendChild(svgEl("circle", { class: "score-gauge-track", cx: "38", cy: "38", r: r }));
+    var arc = svgEl("circle", {
+      class: "score-gauge-arc",
+      cx: "38",
+      cy: "38",
+      r: r,
+      "stroke-dasharray": circ.toFixed(1),
+      "stroke-dashoffset": (circ * (1 - scoreVal / 100)).toFixed(1)
+    });
+    arc.setAttribute("data-tone", BAND_TONE[score.band] || "neutral");
+    gaugeSvg.appendChild(arc);
+    gaugeRow.appendChild(gaugeSvg);
+
+    var numWrap = el("div");
+    numWrap.appendChild(el("span", "score-number", formatNum(score.score, 1)));
+    numWrap.appendChild(el("span", "score-scale-tag", "Escala 0 – 100 · Prioridad P(q): " + formatNum(score.priority, 1)));
+    gaugeRow.appendChild(numWrap);
+    dial.appendChild(gaugeRow);
 
     var badges = el("div", "score-badges");
     badges.appendChild(badge("Referencia provisional: " + (score.bandLabel || score.band), BAND_TONE[score.band] || "neutral"));
@@ -269,15 +290,31 @@
     return section;
   }
 
-  // ---------- Render: Series por plan ----------
-  function buildSvgMetricChart(title, points, planClassMap, valueSelector, decimals) {
-    var card = el("div", "chart-card");
-    card.appendChild(el("h3", null, title));
+  // ---------- Render: Series por plan interactivas ----------
+  function formatChartValue(val, unitKind, decimals) {
+    if (typeof val !== "number" || isNaN(val)) { return "—"; }
+    if (unitKind === "ms") {
+      if (Math.abs(val) >= 1000) { return formatNum(val / 1000, 2) + " s"; }
+      return formatNum(val, decimals) + " ms";
+    }
+    if (unitKind === "count" && window.QDPlanGraph) {
+      return window.QDPlanGraph.formatCompactCount(val);
+    }
+    return formatNum(val, decimals);
+  }
 
-    var width = 460;
-    var height = 210;
-    var padLeft = 56;
-    var padRight = 16;
+  function buildSvgMetricChart(title, points, planClassMap, valueSelector, decimals, unitKind, activePlanFilter) {
+    var card = el("div", "chart-card");
+    var head = el("div", "chart-card-head");
+    head.appendChild(el("h3", null, title));
+    var readout = el("span", "chart-readout", "Pasa el cursor por un punto para ver el detalle");
+    head.appendChild(readout);
+    card.appendChild(head);
+
+    var width = 600;
+    var height = 225;
+    var padLeft = 64;
+    var padRight = 18;
     var padTop = 16;
     var padBottom = 34;
     var plotW = width - padLeft - padRight;
@@ -299,8 +336,7 @@
       "aria-label": title
     });
 
-    // Rejilla horizontal y etiquetas Y
-    [0, 0.5, 1].forEach(function (ratio) {
+    [0, 0.33, 0.67, 1].forEach(function (ratio) {
       var y = padTop + plotH * (1 - ratio);
       svg.appendChild(svgEl("line", {
         "class": "chart-grid-line",
@@ -308,9 +344,9 @@
       }));
       var lbl = svgEl("text", {
         "class": "chart-axis-label",
-        "x": padLeft - 6, "y": y + 3, "text-anchor": "end"
+        "x": padLeft - 8, "y": y + 3, "text-anchor": "end"
       });
-      lbl.textContent = formatNum(maxV * ratio, decimals);
+      lbl.textContent = formatChartValue(maxV * ratio, unitKind, decimals);
       svg.appendChild(lbl);
     });
 
@@ -323,15 +359,22 @@
       "x1": padLeft, "y1": padTop, "x2": padLeft, "y2": padTop + plotH
     }));
 
-    var xStartLabel = svgEl("text", { "class": "chart-axis-label", "x": padLeft, "y": height - 10, "text-anchor": "start" });
-    xStartLabel.textContent = formatShortTime(points[0].intervalStart);
-    svg.appendChild(xStartLabel);
+    // 4 marcas temporales espaciadas sin solaparse
+    [0, 0.33, 0.67, 1].forEach(function (frac) {
+      var tTick = minT + (maxT - minT) * frac;
+      var xTick = padLeft + plotW * frac;
+      var anchor = frac === 0 ? "start" : (frac === 1 ? "end" : "middle");
+      var xLbl = svgEl("text", { "class": "chart-axis-label", "x": xTick, "y": height - 10, "text-anchor": anchor });
+      xLbl.textContent = formatShortTime(new Date(tTick).toISOString());
+      svg.appendChild(xLbl);
+    });
 
-    var xEndLabel = svgEl("text", { "class": "chart-axis-label", "x": width - padRight, "y": height - 10, "text-anchor": "end" });
-    xEndLabel.textContent = formatShortTime(points[points.length - 1].intervalStart);
-    svg.appendChild(xEndLabel);
+    var guideLine = svgEl("line", {
+      "class": "chart-hover-guide",
+      "x1": padLeft, "y1": padTop, "x2": padLeft, "y2": padTop + plotH
+    });
+    svg.appendChild(guideLine);
 
-    // Agrupar puntos por PlanId para trazar una serie por plan (CA-HU07.2)
     var byPlan = {};
     points.forEach(function (p) {
       if (!byPlan[p.planId]) { byPlan[p.planId] = []; }
@@ -340,7 +383,11 @@
 
     Object.keys(byPlan).forEach(function (planId) {
       var cls = planClassMap[planId] || "series-0";
-      var planPoints = byPlan[planId];
+      var dimmed = activePlanFilter && activePlanFilter !== planId;
+      var planPoints = byPlan[planId].slice().sort(function (a, b) {
+        return new Date(a.intervalStart).getTime() - new Date(b.intervalStart).getTime();
+      });
+
       var coords = planPoints.map(function (p) {
         var t = new Date(p.intervalStart).getTime();
         var x = padLeft + ((t - minT) / (maxT - minT)) * plotW;
@@ -349,25 +396,47 @@
       });
 
       if (coords.length > 1) {
+        var areaPoints = coords.map(function (c) { return c.x + "," + c.y; }).join(" ") +
+          " " + coords[coords.length - 1].x + "," + (padTop + plotH) +
+          " " + coords[0].x + "," + (padTop + plotH);
+        svg.appendChild(svgEl("polygon", {
+          "class": "chart-area " + cls + (dimmed ? " chart-series-dim" : ""),
+          "points": areaPoints
+        }));
         svg.appendChild(svgEl("polyline", {
-          "class": "chart-line " + cls,
+          "class": "chart-line " + cls + (dimmed ? " chart-series-dim" : ""),
           "points": coords.map(function (c) { return c.x + "," + c.y; }).join(" ")
         }));
       }
 
       coords.forEach(function (c) {
         var circle = svgEl("circle", {
-          "class": "chart-dot " + cls,
+          "class": "chart-dot " + cls + (dimmed ? " chart-series-dim" : ""),
           "cx": c.x,
           "cy": c.y,
-          "r": 4
+          "r": 4.2,
+          "tabindex": "0"
         });
+        var summaryText = "Plan #" + c.point.queryStorePlanId + " · " + formatDateTime(c.point.intervalStart) +
+          " → " + formatChartValue(valueSelector(c.point), unitKind, decimals);
         var tip = svgEl("title");
-        tip.textContent = "Plan #" + c.point.queryStorePlanId + " · " + formatDateTime(c.point.intervalStart) +
-          ": " + formatNum(valueSelector(c.point), decimals);
+        tip.textContent = summaryText;
         circle.appendChild(tip);
+
+        var showHover = function () {
+          guideLine.setAttribute("x1", c.x);
+          guideLine.setAttribute("x2", c.x);
+          guideLine.classList.add("is-visible");
+          readout.textContent = summaryText;
+        };
+        circle.addEventListener("mouseenter", showHover);
+        circle.addEventListener("focus", showHover);
         svg.appendChild(circle);
       });
+    });
+
+    svg.addEventListener("mouseleave", function () {
+      guideLine.classList.remove("is-visible");
     });
 
     card.appendChild(svg);
@@ -389,30 +458,55 @@
       planClassMap[plan.planId] = "series-" + (idx % 4);
     });
 
-    if (plans.length > 0) {
-      var legend = el("div", "plan-legend");
-      plans.forEach(function (plan, idx) {
-        var cls = "series-" + (idx % 4);
-        var item = el("span", "legend-item");
-        item.appendChild(el("span", "legend-swatch " + cls));
-        var label = "Plan #" + plan.queryStorePlanId;
-        if (plan.queryPlanHash) { label += " (" + plan.queryPlanHash.slice(0, 10) + ")"; }
-        item.appendChild(el("span", null, label));
-        legend.appendChild(item);
-      });
-      section.appendChild(legend);
+    var activePlanFilter = null;
+    var legendHost = el("div", "plan-legend");
+    var chartsHost = el("div", "charts-grid");
+
+    function paintCharts() {
+      legendHost.replaceChildren();
+      chartsHost.replaceChildren();
+
+      if (plans.length > 0) {
+        plans.forEach(function (plan, idx) {
+          var cls = "series-" + (idx % 4);
+          var btn = el("button", "legend-pill" + (activePlanFilter && activePlanFilter !== plan.planId ? " is-dimmed" : ""));
+          btn.type = "button";
+          btn.setAttribute("aria-pressed", activePlanFilter === plan.planId ? "true" : "false");
+          btn.appendChild(el("span", "legend-swatch " + cls));
+          var label = "Plan #" + plan.queryStorePlanId + (plan.queryPlanHash ? " (" + plan.queryPlanHash.slice(0, 8) + ")" : "");
+          btn.appendChild(el("span", null, label));
+          btn.addEventListener("click", function () {
+            activePlanFilter = activePlanFilter === plan.planId ? null : plan.planId;
+            paintCharts();
+          });
+          legendHost.appendChild(btn);
+        });
+      }
+
+      chartsHost.appendChild(buildSvgMetricChart("Duración promedio", series, planClassMap, function (p) { return p.avgDurationMs; }, 2, "ms", activePlanFilter));
+      chartsHost.appendChild(buildSvgMetricChart("CPU promedio", series, planClassMap, function (p) { return p.avgCpuTimeMs; }, 2, "ms", activePlanFilter));
+      chartsHost.appendChild(buildSvgMetricChart("Lecturas lógicas promedio", series, planClassMap, function (p) { return p.avgLogicalIoReads; }, 1, "count", activePlanFilter));
+      chartsHost.appendChild(buildSvgMetricChart("Ejecuciones por intervalo", series, planClassMap, function (p) { return p.executionCount; }, 0, "count", activePlanFilter));
     }
 
     if (!series.length) {
+      if (plans.length > 0) {
+        plans.forEach(function (plan, idx) {
+          var cls = "series-" + (idx % 4);
+          var item = el("span", "legend-item");
+          item.appendChild(el("span", "legend-swatch " + cls));
+          item.appendChild(el("span", null, "Plan #" + plan.queryStorePlanId));
+          legendHost.appendChild(item);
+        });
+        section.appendChild(legendHost);
+      }
       section.appendChild(el("p", "panel-note", "No hay intervalos de ejecución registrados en la ventana seleccionada."));
       return section;
     }
 
-    var chartsGrid = el("div", "charts-grid");
-    chartsGrid.appendChild(buildSvgMetricChart("Duración promedio (ms)", series, planClassMap, function (p) { return p.avgDurationMs; }, 2));
-    chartsGrid.appendChild(buildSvgMetricChart("CPU promedio (ms)", series, planClassMap, function (p) { return p.avgCpuTimeMs; }, 2));
-    chartsGrid.appendChild(buildSvgMetricChart("Lecturas lógicas promedio", series, planClassMap, function (p) { return p.avgLogicalIoReads; }, 1));
-    section.appendChild(chartsGrid);
+    paintCharts();
+    section.appendChild(legendHost);
+    section.appendChild(chartsHost);
 
     var details = el("details", "details-toggle");
     details.setAttribute("open", "");
@@ -548,12 +642,14 @@
     return section;
   }
 
-  // ---------- Render: Visor jerárquico del plan (S2-10) ----------
+  // ---------- Render: Visor jerárquico del plan (S2-10 + Vista Gráfica) ----------
   var planViewerState = {
     queryId: null,
     activePlanId: null,
     selectedKey: null,
     onlyFlagged: false,
+    viewMode: "graph",
+    zoom: 1,
     collapsed: {},
     cache: {},
     renderBody: null,
@@ -705,6 +801,29 @@
       (planView.engineVersion ? " · SQL " + planView.engineVersion : "")));
 
     var actions = el("div", "plan-toolbar-actions");
+
+    var viewToggleBtn = el("button", "plan-btn", planViewerState.viewMode === "graph" ? "Cambiar a vista árbol lista" : "Cambiar a vista gráfica");
+    viewToggleBtn.type = "button";
+    viewToggleBtn.setAttribute("aria-pressed", planViewerState.viewMode === "graph" ? "true" : "false");
+    viewToggleBtn.addEventListener("click", function () {
+      planViewerState.viewMode = planViewerState.viewMode === "graph" ? "list" : "graph";
+      renderLoadedPlanTree(planView);
+    });
+    actions.appendChild(viewToggleBtn);
+
+    if (planViewerState.viewMode === "graph" && window.QDPlanGraph) {
+      [0.75, 1, 1.25].forEach(function (z) {
+        var zBtn = el("button", "plan-btn", Math.round(z * 100) + "%");
+        zBtn.type = "button";
+        zBtn.setAttribute("aria-pressed", planViewerState.zoom === z ? "true" : "false");
+        zBtn.addEventListener("click", function () {
+          planViewerState.zoom = z;
+          renderLoadedPlanTree(planView);
+        });
+        actions.appendChild(zBtn);
+      });
+    }
+
     var filterBtn = el("button", "plan-btn", planViewerState.onlyFlagged ? "Mostrando hallazgos/advertencias" : "Solo hallazgos y advertencias");
     filterBtn.type = "button";
     filterBtn.setAttribute("aria-pressed", planViewerState.onlyFlagged ? "true" : "false");
@@ -714,7 +833,7 @@
     });
     actions.appendChild(filterBtn);
 
-    if (planView.totalOperators > 1) {
+    if (planViewerState.viewMode === "list" && planView.totalOperators > 1) {
       var expandBtn = el("button", "plan-btn", "Expandir todo");
       expandBtn.type = "button";
       expandBtn.addEventListener("click", function () {
@@ -780,6 +899,31 @@
 
       var prefixes = buildTreePrefixes(stmt.operators);
       var visibleByFilter = computeVisibleSet(stmt.operators, planViewerState.onlyFlagged);
+
+      if (planViewerState.viewMode === "graph" && window.QDPlanGraph) {
+        var filteredOps = stmt.operators.filter(function (_, idx) { return visibleByFilter[idx]; });
+        filteredOps.forEach(function (op) {
+          var key = planView.planId + ":" + stmtIdx + ":" + op.nodeId;
+          if (planViewerState.selectedKey === key) {
+            selectedOpRef = op;
+            selectedStmtIdx = stmtIdx;
+          }
+        });
+        var graphView = window.QDPlanGraph.renderGraphCanvas(document, filteredOps, {
+          planId: planView.planId,
+          stmtIdx: stmtIdx,
+          selectedKey: planViewerState.selectedKey,
+          zoom: planViewerState.zoom,
+          onSelectNode: function (op, key) {
+            planViewerState.selectedKey = key;
+            renderLoadedPlanTree(planView);
+          }
+        });
+        stmtBox.appendChild(graphView);
+        body.appendChild(stmtBox);
+        return;
+      }
+
       var list = el("ul", "plan-tree");
       list.setAttribute("role", "tree");
 
@@ -910,6 +1054,12 @@
           row.scrollIntoView({ behavior: "smooth", block: "center" });
           var btn = row.querySelector(".plan-node-select");
           if (btn) { btn.focus({ preventScroll: true }); }
+        } else {
+          var graphNode = document.querySelector(".pg-node.is-selected");
+          if (graphNode) {
+            graphNode.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+            graphNode.focus({ preventScroll: true });
+          }
         }
       }
     };
@@ -1168,18 +1318,17 @@
     stack.appendChild(renderScorePanel(detail.score));
 
     var workbench = el("div", "detail-workbench");
-    var primaryCol = el("div", "detail-col");
-    primaryCol.appendChild(renderSqlPanel(detail));
-    primaryCol.appendChild(renderPlanTreePanel(detail));
-    primaryCol.appendChild(renderSeriesPanel(detail));
-
-    var asideCol = el("div", "detail-col detail-col-aside");
-    asideCol.appendChild(renderExplanationPanel(detail));
-    asideCol.appendChild(renderFindingsPanel(detail.findings));
-
-    workbench.appendChild(primaryCol);
-    workbench.appendChild(asideCol);
+    var leftCol = el("div", "detail-col");
+    leftCol.appendChild(renderSqlPanel(detail));
+    var rightCol = el("div", "detail-col");
+    rightCol.appendChild(renderExplanationPanel(detail));
+    workbench.appendChild(leftCol);
+    workbench.appendChild(rightCol);
     stack.appendChild(workbench);
+
+    stack.appendChild(renderPlanTreePanel(detail));
+    stack.appendChild(renderSeriesPanel(detail));
+    stack.appendChild(renderFindingsPanel(detail.findings));
     root.appendChild(stack);
   }
 
