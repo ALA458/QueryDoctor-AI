@@ -90,6 +90,11 @@
   }
 
   function loadSession() {
+    if (window.QDCore) {
+      return window.QDCore.mountShell({ activeNav: "queries" }).then(function (ctx) {
+        return ctx ? ctx.me : null;
+      });
+    }
     return fetch("/api/auth/me", { credentials: "same-origin" }).then(function (response) {
       if (response.status === 401) { goToLogin(); return null; }
       if (!response.ok) { throw new Error("me " + response.status); }
@@ -232,8 +237,21 @@
   function renderSqlPanel(detail) {
     var section = el("section", "panel");
     var head = el("div", "panel-head");
-    head.appendChild(el("h2", null, "Texto SQL de la consulta"));
-    head.appendChild(el("p", "panel-note", "Literales enmascarados de forma determinista antes de mostrarse"));
+    var titleWrap = el("div");
+    titleWrap.appendChild(el("h2", null, "Texto SQL de la consulta"));
+    titleWrap.appendChild(el("p", "panel-note", "Literales enmascarados de forma determinista antes de mostrarse"));
+    head.appendChild(titleWrap);
+
+    if (!detail.sqlMaskingFailure && !detail.sqlExpired && detail.sqlText && window.QDCore) {
+      var copyBtn = el("button", "btn btn-sm btn-secondary", "Copiar SQL");
+      copyBtn.type = "button";
+      copyBtn.addEventListener("click", function () {
+        window.QDCore.copyToClipboard(detail.sqlText).then(function () {
+          window.QDCore.showToast("SQL enmascarado copiado al portapapeles.", "ok");
+        });
+      });
+      head.appendChild(copyBtn);
+    }
     section.appendChild(head);
 
     if (detail.sqlMaskingFailure) {
@@ -1148,11 +1166,20 @@
     root.replaceChildren();
     var stack = el("div", "detail-stack");
     stack.appendChild(renderScorePanel(detail.score));
-    stack.appendChild(renderExplanationPanel(detail));
-    stack.appendChild(renderSqlPanel(detail));
-    stack.appendChild(renderSeriesPanel(detail));
-    stack.appendChild(renderPlanTreePanel(detail));
-    stack.appendChild(renderFindingsPanel(detail.findings));
+
+    var workbench = el("div", "detail-workbench");
+    var primaryCol = el("div", "detail-col");
+    primaryCol.appendChild(renderSqlPanel(detail));
+    primaryCol.appendChild(renderPlanTreePanel(detail));
+    primaryCol.appendChild(renderSeriesPanel(detail));
+
+    var asideCol = el("div", "detail-col detail-col-aside");
+    asideCol.appendChild(renderExplanationPanel(detail));
+    asideCol.appendChild(renderFindingsPanel(detail.findings));
+
+    workbench.appendChild(primaryCol);
+    workbench.appendChild(asideCol);
+    stack.appendChild(workbench);
     root.appendChild(stack);
   }
 

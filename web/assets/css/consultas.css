@@ -1,11 +1,15 @@
-/* Listado de consultas (S1-16). Solo usa tokens.css. */
+/* Explorador de consultas — refinamiento Telemetry Workbench (solo tokens.css). */
+.filters-card {
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.9rem;
+}
+
 .filters {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0 1.5rem;
-  margin-bottom: 1.5rem;
+  gap: 0 1.25rem;
 }
-.filters .field { margin-bottom: 0.75rem; }
+.filters .field { margin-bottom: 0.5rem; }
 .filters select:disabled { color: var(--color-text-muted); }
 
 .q-sql {
@@ -14,9 +18,13 @@
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  max-width: 46ch;
+  max-width: 50ch;
+  padding: 0.45rem 0.65rem;
+  background: var(--color-stage-bg);
+  color: var(--color-stage-text);
+  border-radius: var(--radius);
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 0.78rem;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -24,7 +32,7 @@
 .meter { display: flex; align-items: center; gap: 0.6rem; min-width: 9rem; }
 .meter-track { flex: 1; height: 0.5rem; background: var(--color-surface); border-radius: var(--radius); overflow: hidden; }
 .meter-bar { display: block; height: 100%; background: var(--color-accent); }
-.meter-value { font-family: var(--font-mono); font-size: 0.8125rem; min-width: 3.5rem; text-align: right; }
+.meter-value { font-family: var(--font-mono); font-size: 0.8125rem; min-width: 3.5rem; text-align: right; font-variant-numeric: tabular-nums; }
 
 .findings { display: flex; flex-direction: column; gap: 0.5rem; }
 .finding { display: flex; flex-direction: column; gap: 0.2rem; }
@@ -36,20 +44,21 @@
   color: inherit;
   text-decoration: none;
   border-radius: var(--radius);
-  padding: 0.15rem 0.25rem;
-  margin: -0.15rem -0.25rem;
-  transition: background-color 0.12s ease;
+  transition: transform 0.12s ease;
 }
 
 .q-link:hover .q-sql,
 .q-link:focus-visible .q-sql {
-  color: var(--color-accent);
-  text-decoration: underline;
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
 }
 
 .q-score-cell { display: flex; align-items: center; gap: 0.45rem; white-space: nowrap; }
-.q-score-val { font-family: var(--font-mono); font-weight: 700; font-size: 0.875rem; }
+.q-score-val { font-family: var(--font-mono); font-weight: 700; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
 
-@media (max-width: 880px) {
+@media (max-width: 920px) {
   .filters { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .filters { grid-template-columns: 1fr; }
 }

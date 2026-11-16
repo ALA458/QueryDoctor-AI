@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="same-origin">
+  <title>Trazabilidad y auditoría · Query Doctor AI</title>
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/auth.css">
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="/assets/css/workbench.css">
+  <script src="/assets/js/qd-core.js" defer></script>
+  <script src="/assets/js/trazabilidad.js" defer></script>
+</head>
+<body data-page="trace" data-nav="trace">
+  <div class="app">
+    <aside class="side"></aside>
+
+    <main class="main" id="main" hidden>
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Cadenas SHA-256 inmutables · Solo DBA</p>
+          <h1>Trazabilidad y auditoría</h1>
+          <p class="sub">Bitácora encadenada criptográficamente de explicaciones de IA y eventos de seguridad (sin texto SQL ni credenciales).</p>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn btn-sm" id="btn-verify-chains">Verificar integridad SHA-256</button>
+        </div>
+      </header>
+
+      <section class="verify-banner" id="verify-banner" aria-label="Verificación criptográfica"></section>
+
+      <div id="trace-notice" class="notice" role="alert" aria-live="polite"></div>
+
+      <div class="tab-bar surface-card" role="tablist" aria-label="Registros inmutables">
+        <button type="button" class="tab-btn" role="tab" id="tab-btn-trace" aria-selected="true" data-tab="trace">Trazabilidad de IA (/trace)</button>
+        <button type="button" class="tab-btn" role="tab" id="tab-btn-audit" aria-selected="false" data-tab="audit">Eventos de auditoría (/audit)</button>
+      </div>
+
+      <!-- TAB TRACE -->
+      <section id="panel-trace" class="surface-card">
+        <form id="trace-filters" class="filters">
+          <div class="field">
+            <label for="t-query-id">ID de consulta (UUID opcional)</label>
+            <div class="control"><input id="t-query-id" type="text" placeholder="Filtrar por query_id" spellcheck="false"></div>
+          </div>
+          <div class="field">
+            <label for="t-take">Máximo de registros</label>
+            <div class="control">
+              <select id="t-take">
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="250">250</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn btn-sm">Consultar traza</button>
+          </div>
+        </form>
+        <div id="trace-list"></div>
+      </section>
+
+      <!-- TAB AUDIT -->
+      <section id="panel-audit" class="surface-card" hidden>
+        <form id="audit-filters" class="filters">
+          <div class="field">
+            <label for="a-type">Tipo de evento</label>
+            <div class="control"><select id="a-type"><option value="">Todos los eventos</option></select></div>
+          </div>
+          <div class="field">
+            <label for="a-take">Máximo de registros</label>
+            <div class="control">
+              <select id="a-take">
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="250">250</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button type="submit" class="btn btn-sm">Consultar auditoría</button>
+          </div>
+        </form>
+        <div id="audit-list"></div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

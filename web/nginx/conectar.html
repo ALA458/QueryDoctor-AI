@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="referrer" content="same-origin">
+  <title>Asistente de conexión · Query Doctor AI</title>
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+  <link rel="stylesheet" href="/assets/css/auth.css">
+  <link rel="stylesheet" href="/assets/css/app.css">
+  <link rel="stylesheet" href="/assets/css/workbench.css">
+  <script src="/assets/js/qd-core.js" defer></script>
+  <script src="/assets/js/wizard-state.js" defer></script>
+  <script src="/assets/js/conectar.js" defer></script>
+</head>
+<body data-page="connect" data-nav="connect">
+  <div class="app">
+    <aside class="side"></aside>
+
+    <main class="main" id="main" hidden>
+      <nav class="breadcrumb" aria-label="Ruta de navegación">
+        <a href="/">← Volver al centro de control</a>
+      </nav>
+
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Onboarding guiado · Solo DBA</p>
+          <h1>Asistente de primera conexión</h1>
+          <p class="sub">Configura una instancia SQL Server en 4 pasos verificados: privilegio mínimo, credenciales cifradas, sondeo de capacidades y primera ingesta.</p>
+        </div>
+      </header>
+
+      <ol class="wizard-steps" id="wizard-stepper" aria-label="Pasos del asistente">
+        <li class="wizard-step is-active" data-step="1">
+          <span class="wizard-step-kicker">Paso 1</span>
+          <strong>Preparación T-SQL</strong>
+        </li>
+        <li class="wizard-step" data-step="2">
+          <span class="wizard-step-kicker">Paso 2</span>
+          <strong>Destino y credenciales</strong>
+        </li>
+        <li class="wizard-step" data-step="3">
+          <span class="wizard-step-kicker">Paso 3</span>
+          <strong>Sondeo en vivo</strong>
+        </li>
+        <li class="wizard-step" data-step="4">
+          <span class="wizard-step-kicker">Paso 4</span>
+          <strong>Primera ingesta</strong>
+        </li>
+      </ol>
+
+      <div id="wizard-notice" class="notice" role="alert" aria-live="polite"></div>
+
+      <!-- PASO 1 -->
+      <section class="wizard-layout" id="step-1">
+        <div class="surface-card">
+          <p class="eyebrow">Paso 1 de 4</p>
+          <h2>Entorno y script de privilegio mínimo</h2>
+          <p class="sub">Query Doctor AI opera estrictamente en modo solo lectura. Antes de registrar la conexión, asegúrate de contar con un login dedicado y Query Store activo en la base.</p>
+
+          <div class="row">
+            <div class="field">
+              <label for="w-platform">Plataforma</label>
+              <div class="control">
+                <select id="w-platform">
+                  <option value="SqlServer">SQL Server (2016 – 2022 / Managed Instance)</option>
+                  <option value="AzureSqlDatabase">Azure SQL Database</option>
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="w-encryption">Política TLS</label>
+              <div class="control">
+                <select id="w-encryption">
+                  <option value="Mandatory">Obligatorio (Mandatory)</option>
+                  <option value="Strict">Estricto (Strict · TDS 8.0)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label for="w-preview-db">Base objetivo (vista previa script)</label>
+              <div class="control"><input id="w-preview-db" type="text" value="QD_Lab" maxlength="128" spellcheck="false"></div>
+            </div>
+            <div class="field">
+              <label for="w-preview-login">Login de solo lectura</label>
+              <div class="control"><input id="w-preview-login" type="text" value="qd_reader" maxlength="128" spellcheck="false"></div>
+            </div>
+          </div>
+
+          <div class="code-card">
+            <div class="code-card-head">
+              <span>Script T-SQL de privilegio mínimo (solo referencia para el DBA)</span>
+              <button type="button" class="code-copy" id="w-copy-sql">Copiar T-SQL</button>
+            </div>
+            <pre id="w-sql-preview"></pre>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" class="btn btn-auto" id="w-to-step-2">
+              <span>Continuar a credenciales</span><span class="arrow" aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+
+        <aside class="surface-card">
+          <p class="eyebrow">Verificación previa</p>
+          <h3>Garantías de seguridad</h3>
+          <ul class="checklist">
+            <li><span>●</span><span><strong>Sin escritura en producción:</strong> solo se ejecutan consultas SELECT de lista blanca sobre vistas de Query Store.</span></li>
+            <li><span>●</span><span><strong>Cifrado en tránsito y reposo:</strong> TLS obligatorio hacia SQL Server y cifrado AES-256-GCM en PostgreSQL.</span></li>
+            <li><span>●</span><span><strong>Ingesta automática:</strong> al pasar el sondeo, el Worker programa la recolección recurrente sin pasos extra.</span></li>
+          </ul>
+        </aside>
+      </section>
+
+      <!-- PASO 2 -->
+      <section class="wizard-layout" id="step-2" hidden>
+        <div class="surface-card">
+          <p class="eyebrow">Paso 2 de 4</p>
+          <h2>Punto de conexión y credenciales</h2>
+          <p class="sub">La contraseña viaja cifrada hacia la API y no se conserva en el navegador tras enviarse.</p>
+
+          <form id="w-form" autocomplete="off" novalidate>
+            <div class="field">
+              <label for="w-server">Servidor y puerto</label>
+              <div class="control"><input id="w-server" name="server" type="text" placeholder="ej. qd-lab-sql,1433 o db.empresa.local,1433" required maxlength="255" spellcheck="false"></div>
+            </div>
+            <div class="field">
+              <label for="w-db">Base de datos</label>
+              <div class="control"><input id="w-db" name="databaseName" type="text" placeholder="ej. QD_Lab" required maxlength="128" spellcheck="false"></div>
+            </div>
+            <div class="row">
+              <div class="field">
+                <label for="w-user">Usuario SQL</label>
+                <div class="control"><input id="w-user" name="username" type="text" placeholder="qd_reader" required maxlength="128" autocomplete="off" spellcheck="false"></div>
+              </div>
+              <div class="field">
+                <label for="w-pass">Contraseña</label>
+                <div class="control">
+                  <input id="w-pass" name="password" type="password" required autocomplete="new-password">
+                  <button type="button" class="reveal" id="w-toggle-pass" aria-pressed="false">Mostrar</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button type="button" class="btn btn-auto btn-secondary" id="w-back-step-1">
+                <span>← Volver a preparación</span>
+              </button>
+              <button type="submit" class="btn btn-auto" id="w-submit">
+                <span>Registrar y sondear instancia</span><span class="arrow" aria-hidden="true">→</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <aside class="surface-card">
+          <p class="eyebrow">Resumen seleccionado</p>
+          <dl class="fact-grid">
+            <div class="fact-item"><dt>Plataforma</dt><dd id="w-sum-platform">SQL Server</dd></div>
+            <div class="fact-item"><dt>Cifrado TLS</dt><dd id="w-sum-tls">Mandatory</dd></div>
+          </dl>
+          <p class="panel-note">No se permiten prefijos <code>np:</code>, <code>lpc:</code> ni <code>admin:</code> en el nombre del servidor.</p>
+        </aside>
+      </section>
+
+      <!-- PASO 3 -->
+      <section class="surface-card" id="step-3" hidden>
+        <div class="probe-stage">
+          <div class="timeline-top">
+            <div>
+              <p class="eyebrow">Paso 3 de 4</p>
+              <h2 id="w-probe-title">Sondeo de capacidades en curso...</h2>
+            </div>
+            <span class="probe-pill" id="w-probe-pill">Consultando Worker</span>
+          </div>
+          <p id="w-probe-summary" class="sub">El Worker está validando conectividad, TLS, permisos y estado de Query Store.</p>
+
+          <dl class="fact-grid" id="w-probe-facts"></dl>
+          <div id="w-probe-warnings"></div>
+
+          <div class="btn-row">
+            <button type="button" class="btn btn-auto btn-secondary" id="w-probe-retry-poll">Actualizar estado</button>
+            <button type="button" class="btn btn-auto btn-secondary" id="w-probe-edit" hidden>← Corregir credenciales</button>
+            <button type="button" class="btn btn-auto" id="w-to-step-4" hidden>
+              <span>Continuar a primera ingesta</span><span class="arrow" aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PASO 4 -->
+      <section class="surface-card" id="step-4" hidden>
+        <div class="probe-stage">
+          <p class="eyebrow">Paso 4 de 4</p>
+          <h2>Ejecutar primera ingesta</h2>
+          <p class="sub">La conexión quedó activa y con recolección periódica programada. Lanza ahora la primera lectura de Query Store para poblar el explorador de consultas y calcular el Health Score inicial.</p>
+
+          <div class="btn-row">
+            <button type="button" class="btn btn-auto" id="w-run-ingest">
+              <span>Iniciar primera ingesta ahora</span><span class="arrow" aria-hidden="true">→</span>
+            </button>
+            <a class="btn btn-auto btn-secondary" id="w-skip-queries" href="/consultas">Ir al explorador</a>
+          </div>
+
+          <div id="w-ingest-status"></div>
+
+          <div class="btn-row" id="w-finish-actions" hidden>
+            <a class="btn btn-auto" id="w-go-queries" href="/consultas">
+              <span>Ver consultas diagnosticadas</span><span class="arrow" aria-hidden="true">→</span>
+            </a>
+            <a class="btn btn-auto btn-secondary" id="w-go-access" href="/accesos">Asignar a un Desarrollador</a>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

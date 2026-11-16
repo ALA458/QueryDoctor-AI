@@ -1,51 +1,59 @@
 /*
- * Query Doctor AI — TOKENS DE DISEÑO (el único archivo que hay que tocar para cambiar el aspecto).
- *
- * Todas las páginas del front enlazan este archivo ANTES que su propio CSS:
- *   <link rel="stylesheet" href="/assets/css/tokens.css">
- * Ningún otro CSS del proyecto debe escribir colores, fuentes ni radios a mano: usa var(--...).
- * Así, cambiar la paleta aquí cambia login, conexiones, dashboard, explicaciones (S1-15, S1-16, S2-09..S2-11).
- *
- * Los nombres dicen el ROL del color, no el color: --color-accent es "el acento", sea bermellón o verde.
+ * Query Doctor AI — TOKENS DE DISEÑO (Telemetry & Clinical SQL Workbench).
+ * Todas las páginas enlazan este archivo antes que sus hojas de estilo específicas.
+ * Sin CDN externos (CSP default-src 'self').
  */
 :root {
-  /* ---- Superficies claras (formularios, listados, tablas) ---- */
-  --color-bg: #f2ede3;             /* fondo de página */
-  --color-surface: #e7e0d1;        /* tarjetas, avisos, filas alternas */
-  --color-text: #14110f;           /* texto principal */
-  --color-text-muted: #6d655a;     /* etiquetas, ayudas */
-  --color-border-strong: #14110f;  /* líneas de campos y cabeceras */
+  /* ---- Superficies claras ("Precision Paper & Ink Telemetry") ---- */
+  --color-bg: #f4f1ea;
+  --color-card: #fbf9f4;
+  --color-surface: #e8e1d3;
+  --color-surface-hover: #dfd6c4;
+  --color-text: #161311;
+  --color-text-muted: #665e53;
+  --color-border: #d4cbb9;
+  --color-border-subtle: #e5decb;
+  --color-border-strong: #1c1917;
 
-  /* ---- Superficies oscuras (panel de marca, barra lateral) ---- */
-  --color-stage-bg: #14110f;
-  --color-stage-surface: #1d1916;
-  --color-stage-line: #34302a;       /* cuadrícula de fondo */
-  --color-stage-stroke: #5a5347;     /* contornos de nodos y enlaces */
-  --color-stage-ghost: #3d372f;      /* trazos de fondo */
-  --color-stage-text: #f2ede3;
-  --color-stage-text-soft: #cfc7b8;
-  --color-stage-text-muted: #a49b8c;
+  /* ---- Superficies oscuras (rail lateral, stage y código SQL/Showplan) ---- */
+  --color-stage-bg: #141210;
+  --color-stage-surface: #1d1a17;
+  --color-stage-elevated: #27231e;
+  --color-stage-line: #34302a;
+  --color-stage-stroke: #5a5347;
+  --color-stage-ghost: #3d372f;
+  --color-stage-text: #f4f1ea;
+  --color-stage-text-soft: #d3cbba;
+  --color-stage-text-muted: #9f9687;
 
-  /* ---- Acento de marca ---- */
-  --color-accent: #d9402a;           /* "la señal": énfasis, foco, hallazgos */
-  --color-accent-strong: #b22f1b;    /* acento en estado pulsado/oscuro */
-  --color-on-accent: #14110f;        /* texto sobre el acento */
+  /* ---- Acento de señal ---- */
+  --color-accent: #d63d28;
+  --color-accent-strong: #b22f1b;
+  --color-accent-soft: rgba(214, 61, 40, 0.1);
+  --color-on-accent: #fbf9f4;
 
-  /* ---- Acción principal (botones) ---- */
-  --color-primary: #14110f;
-  --color-on-primary: #f2ede3;
+  /* ---- Acción principal ---- */
+  --color-primary: #161311;
+  --color-on-primary: #f4f1ea;
 
-  /* ---- Estados (para dashboards y avisos) ---- */
-  --color-success: #2f6f5e;
-  --color-warning: #b7791f;
+  /* ---- Estados semánticos ---- */
+  --color-success: #1f6b56;
+  --color-success-soft: rgba(31, 107, 86, 0.12);
+  --color-warning: #b57414;
+  --color-warning-soft: rgba(181, 116, 20, 0.13);
   --color-danger: #b22f1b;
-  --color-info: #35607a;
+  --color-danger-soft: rgba(178, 47, 27, 0.11);
+  --color-info: #2d5f7a;
+  --color-info-soft: rgba(45, 95, 122, 0.12);
 
-  /* ---- Tipografía (archivos en /assets/fonts, declarados en auth.css) ---- */
+  /* ---- Tipografía autoalojada (/assets/fonts) ---- */
   --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
   --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
-  /* ---- Forma ---- */
-  --radius: 2px;
+  /* ---- Geometría y elevación ---- */
+  --radius: 4px;
+  --radius-lg: 8px;
+  --shadow-card: 0 1px 0 rgba(22, 19, 17, 0.06), 0 10px 26px -18px rgba(22, 19, 17, 0.22);
+  --shadow-drawer: -14px 0 42px -12px rgba(20, 18, 16, 0.34);
 }

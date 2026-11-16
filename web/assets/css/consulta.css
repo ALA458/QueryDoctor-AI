@@ -698,3 +698,29 @@
   .score-hero { grid-template-columns: 1fr; }
   .plan-node-row { flex-direction: column; align-items: stretch; }
 }
+
+/* ---------- Refinamiento Telemetry Workbench ---------- */
+.panel {
+  border-color: var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-card);
+  box-shadow: var(--shadow-card);
+}
+
+.detail-workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(21rem, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.detail-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+@media (max-width: 1220px) {
+  .detail-workbench { grid-template-columns: 1fr; }
+}
