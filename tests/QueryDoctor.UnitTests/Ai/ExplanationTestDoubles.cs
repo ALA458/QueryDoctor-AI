@@ -131,7 +131,10 @@ internal sealed class ExplainQueryHarness
         TimeProvider.System);
 
     /// <summary>Siembra una consulta con el SQL sembrado, el plan del laboratorio sembrado y sus hallazgos reales.</summary>
-    public Guid SeedQuery(string fixture = "ESC01.actual.sqlplan", Func<FindingContract, FindingContract>? alter = null)
+    public Guid SeedQuery(
+        string fixture = "ESC01.actual.sqlplan",
+        Func<FindingContract, FindingContract>? alter = null,
+        bool evidenceExpired = false)
     {
         var queryId = Guid.NewGuid();
         var contracts = LiteralMaskerEvidenceTests.AnalyzeSeeded(fixture, out var plan);
@@ -145,7 +148,8 @@ internal sealed class ExplainQueryHarness
             Encryptor.Encrypt(plan),
             "16.0.4315.2",
             findings,
-            ExplanationContextBuilderTests.Score()));
+            ExplanationContextBuilderTests.Score(),
+            evidenceExpired));
         return queryId;
     }
 

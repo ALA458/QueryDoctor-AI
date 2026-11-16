@@ -1,6 +1,7 @@
 using System.Reflection;
 using Hangfire;
 using QueryDoctor.Application.Ai;
+using QueryDoctor.Application.Explanations;
 using QueryDoctor.Application.Jobs;
 using QueryDoctor.Application.Validation;
 using QueryDoctor.Domain.Ai;
@@ -265,6 +266,24 @@ public sealed class ExplainQueryTests
         Assert.Equal(ExplanationState.NotGenerated, explanation.State);
         Assert.Equal(ExplanationCause.NoFindings, explanation.Cause);
         Assert.Empty(client.RecordedBodies);
+    }
+
+    [Fact]
+    public async Task ConLaEvidenciaExpiradaNoSeLlamaALaIaYQuedaNoGenerada()
+    {
+        // S2-13 (RNF-SEG-10, D6): el plan del último análisis se purgó; sin evidencia no hay nada que trazar.
+        var queryId = _harness.SeedQuery(evidenceExpired: true);
+        var explanation = _harness.Request(queryId);
+        var client = new ScriptedAiExplanationClient(ExplainQueryHarness.TracedResponse);
+
+        await _harness.Create(client).ExecuteAsync(explanation.Id, CancellationToken.None);
+
+        Assert.Equal(ExplanationState.NotGenerated, explanation.State);
+        Assert.Equal(ExplanationCause.EvidenceExpired, explanation.Cause);
+        Assert.Empty(client.RecordedBodies);
+        Assert.Equal(
+            ExplanationCodes.EvidenceExpiredNotice,
+            ExplanationCodes.NoticeFor(explanation.State, explanation.Cause));
     }
 
     [Fact]

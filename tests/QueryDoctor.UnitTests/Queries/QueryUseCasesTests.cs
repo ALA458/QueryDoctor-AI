@@ -135,7 +135,9 @@ public sealed class QueryUseCasesTests
                     [
                         CreateFinding(planIdB, 22, "F-BBB222", "REG-02", FindingSeverity.Alta,
                             "{\"table\":\"dbo.Pedidos\",\"estimated_rows\":\"9000\"}"),
-                    ]),
+                    ],
+                    // S2-13: "expirado" sale de la marca de purga, no del texto nulo.
+                    SqlPurgedAt: DateTimeOffset.UtcNow),
             ],
         };
 
@@ -158,7 +160,38 @@ public sealed class QueryUseCasesTests
         var onlyHigh = Assert.Single(byScore.Items);
         Assert.Equal(idB, onlyHigh.Id);
         Assert.True(onlyHigh.SqlExpired);
+        Assert.Equal("[Evidencia expirada]", onlyHigh.SqlPreview);
         Assert.Equal("Critica", onlyHigh.Band);
+    }
+
+    [Fact]
+    public async Task UnTextoNuloSinPurgaNoSeMuestraComoEvidenciaExpirada()
+    {
+        var reader = new StubQuerySourceReader
+        {
+            Rows =
+            [
+                new QueryListSourceRow(
+                    QueryId: Guid.NewGuid(),
+                    ConnectionId: Guid.NewGuid(),
+                    QueryStoreQueryId: 103,
+                    Server: "sql-prod-01",
+                    DatabaseName: "Ventas",
+                    DecryptedSqlText: null,
+                    ConsumptionPct: 10,
+                    Executions: 10,
+                    Score: null,
+                    Band: null,
+                    Findings: []),
+            ],
+        };
+
+        var sut = new GetQueries(reader, new LiteralMasker(), new VersionedRuleCatalog());
+        var result = Assert.IsType<GetQueriesResult.Ok>(await sut.ExecuteAsync(new QueryListFilter(null, "24h", null, null)));
+
+        var item = Assert.Single(result.Items);
+        Assert.False(item.SqlExpired);
+        Assert.Equal("[Sin texto SQL]", item.SqlPreview);
     }
 
     [Fact]
