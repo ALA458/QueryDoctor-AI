@@ -20,6 +20,9 @@ public static class ExplanationCodes
     public const string NoSendableFindingsNotice =
         "Ningún hallazgo se pudo enviar al servicio de IA de forma segura: no se genera una explicación.";
 
+    public const string EvidenceExpiredNotice =
+        "La evidencia de esta consulta expiró (retención o borrado a pedido): no se genera una explicación nueva.";
+
     public const string StatePending = "PENDIENTE";
     public const string StateRunning = "EN_CURSO";
     public const string StateCompleted = "COMPLETADA";
@@ -42,6 +45,7 @@ public static class ExplanationCodes
     {
         ExplanationState.Unavailable => UnavailableNotice,
         ExplanationState.NotGenerated when cause == ExplanationCause.NoSendableFindings => NoSendableFindingsNotice,
+        ExplanationState.NotGenerated when cause == ExplanationCause.EvidenceExpired => EvidenceExpiredNotice,
         ExplanationState.NotGenerated => NoFindingsNotice,
         _ => null,
     };

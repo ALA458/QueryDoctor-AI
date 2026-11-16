@@ -187,7 +187,9 @@ public sealed class EfExplanationStore : IExplanationStore, IExplanationSourceRe
             plan?.EncryptedPlanXml,
             plan?.EngineVersion ?? run.EngineVersion,
             findings,
-            score);
+            score,
+            // S2-13: el plan del último análisis se purgó, y con él la evidencia de sus hallazgos.
+            EvidenceExpired: plan?.PurgedAt is not null);
     }
 
     private Task<Guid?> LatestRunIdAsync(Guid queryId, CancellationToken cancellationToken) =>

@@ -117,6 +117,7 @@ public sealed record QueryPlanTreeView(
     PlanAnalysisStatus AnalysisStatus,
     string? NotAnalyzableCause,
     bool PlanExpired,
+    DateTimeOffset? PlanExpiredAt,
     string? PlanMaskingFailure,
     string? ParseFailureReason,
     int TotalOperators,

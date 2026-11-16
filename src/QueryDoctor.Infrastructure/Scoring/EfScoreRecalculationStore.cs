@@ -206,7 +206,8 @@ public sealed class EfScoreRecalculationStore : IScoreRecalculationStore
                     PlanExecutionCount: planExecutions,
                     AvgRowsReturned: avgRowsReturned,
                     HasCurrentAnalysisRun: hasCurrentRun,
-                    ExistingFindings: existingFindings);
+                    ExistingFindings: existingFindings,
+                    EvidenceExpired: latestPlan.PurgedAt is not null);
             }
 
             querySnapshots.Add(new WindowQuerySnapshot(
@@ -254,6 +255,16 @@ public sealed class EfScoreRecalculationStore : IScoreRecalculationStore
             }
 
             var planIdsToUpdate = batch.AnalyzedPlans.Select(p => p.PlanId).ToHashSet();
+
+            // S2-13 (RNF-SEG-10, auditoría M1): la purga pudo confirmarse entre la instantánea y este guardado. Se bloquean
+            // las filas de los planes y se relee purged_at: si la purga ya pasó, no se escribe evidencia nueva; si llega
+            // después, espera este bloqueo y su UPDATE de hallazgos ve los que se insertan aquí. Solo bloquea, no lee datos,
+            // y el Worker tiene acceso Sistema: no hay filtro que saltar.
+            var lockedIds = planIdsToUpdate.ToArray();
+            await _db.Database.ExecuteSqlAsync(
+                $"SELECT 1 FROM core.plan WHERE id = ANY({lockedIds}) FOR UPDATE",
+                cancellationToken);
+
             var trackedPlans = await _db.Plans
                 .Where(p => planIdsToUpdate.Contains(p.Id))
                 .ToDictionaryAsync(p => p.Id, cancellationToken);
@@ -262,6 +273,11 @@ public sealed class EfScoreRecalculationStore : IScoreRecalculationStore
             {
                 if (trackedPlans.TryGetValue(analyzed.PlanId, out var planEntity))
                 {
+                    if (planEntity.PurgedAt is not null)
+                    {
+                        continue;
+                    }
+
                     planEntity.AnalysisStatus = analyzed.UpdatedPlanAnalysisStatus;
                 }
 

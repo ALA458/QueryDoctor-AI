@@ -118,6 +118,9 @@ services:
       # de 200 s: el servicio ya hace 60 s y 2 reintentos hacia el LLM (RNF-FIA-02), así que aquí no se reintenta.
       AiService__BaseUrl: http://ai:8000/
       AiService__TimeoutSeconds: ${AI_SERVICE_TIMEOUT_SECONDS:-200}
+      # S2-13 (RNF-SEG-10): días desde la ingesta tras los cuales se purgan texto SQL y planes (1–3650). Fuera de
+      # rango, el Worker no arranca. Se configura aquí, no desde la interfaz.
+      Retention__SqlTextAndPlanDays: ${QD_RETENTION_DAYS:-30}
       # La excepción de TLS del laboratorio NO va aquí: solo en docker-compose.lab.yml (invariante 3).
     secrets:
       - postgres_password

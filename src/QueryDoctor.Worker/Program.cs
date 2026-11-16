@@ -24,6 +24,9 @@ builder.Services.AddLiteralMasking();
 // S2-05: trabajo explain (único que habla con el servicio de IA, invariante 2), con degradación si la IA falla.
 builder.Services.AddExplanations(builder.Configuration);
 
+// S2-13 (RNF-SEG-10): purga automática del texto SQL y de los planes al vencer Retention:SqlTextAndPlanDays.
+builder.Services.AddRetention(builder.Configuration);
+
 // Invariante 3: la excepción de TLS del laboratorio (docker-compose.lab.yml) no arranca fuera de Development.
 LabCertificateGuard.EnsureAllowed(builder.Configuration, builder.Environment.EnvironmentName);
 
@@ -62,4 +65,11 @@ if (!string.IsNullOrWhiteSpace(postgresConn))
 }
 
 var host = builder.Build();
+
+if (!string.IsNullOrWhiteSpace(postgresConn))
+{
+    // S2-13: valida el plazo antes de arrancar (fuera de rango, el Worker no arranca) y programa retention a diario.
+    DependencyInjection.ScheduleRetention(host.Services);
+}
+
 host.Run();

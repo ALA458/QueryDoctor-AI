@@ -14,7 +14,8 @@ public sealed record EncryptedExplanationSource(
     string? EncryptedPlanXml,
     string? EngineVersion,
     IReadOnlyList<Finding> Findings,
-    HealthScore? LatestScore);
+    HealthScore? LatestScore,
+    bool EvidenceExpired = false);
 
 /// <summary>Lee el material de una consulta para su explicación. Solo lo usa el Worker (invariante 2).</summary>
 public interface IExplanationSourceReader

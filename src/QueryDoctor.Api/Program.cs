@@ -5,6 +5,7 @@ using QueryDoctor.Api.Auth;
 using QueryDoctor.Api.Connections;
 using QueryDoctor.Api.Explanations;
 using QueryDoctor.Api.Queries;
+using QueryDoctor.Api.Retention;
 using QueryDoctor.Api.Traceability;
 using QueryDoctor.Infrastructure;
 using QueryDoctor.Infrastructure.Persistence;
@@ -33,6 +34,8 @@ builder.Services.AddExplanationRequests();
 builder.Services.AddConnectionAssignments();
 // S1-16 / S2-09: listado y detalle de consultas con enmascarado seguro de salida.
 builder.Services.AddQueryViews();
+// S2-13 (RNF-SEG-10): borrado a pedido del DBA de texto SQL, planes y evidencia, auditado.
+builder.Services.AddEvidenceDeletion();
 
 // Enumerados como texto en las respuestas (contrato de S1-15), nunca como número.
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -79,6 +82,7 @@ app.MapAuthEndpoints();
 app.MapConnectionEndpoints();
 app.MapAssignmentEndpoints();
 app.MapQueryEndpoints();
+app.MapEvidenceEndpoints();
 app.MapExplanationEndpoints();
 
 // S2-06: traza y auditoría, solo lectura (RF-TRZ-02/03).

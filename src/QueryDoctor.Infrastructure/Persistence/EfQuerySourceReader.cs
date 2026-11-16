@@ -63,10 +63,10 @@ public sealed class EfQuerySourceReader : IQuerySourceReader
             .ToArray();
 
         var textsById = textIds.Length == 0
-            ? new Dictionary<Guid, string?>()
+            ? new Dictionary<Guid, (string? Encrypted, DateTimeOffset? PurgedAt)>()
             : await _db.QueryTexts.AsNoTracking()
                 .Where(t => textIds.Contains(t.Id))
-                .ToDictionaryAsync(t => t.Id, t => t.EncryptedSqlText, cancellationToken);
+                .ToDictionaryAsync(t => t.Id, t => (t.EncryptedSqlText, t.PurgedAt), cancellationToken);
 
         var plans = await _db.Plans.AsNoTracking()
             .Where(p => queryIds.Contains(p.QueryId))
@@ -125,13 +125,13 @@ public sealed class EfQuerySourceReader : IQuerySourceReader
                 continue;
             }
 
-            string? encryptedSql = null;
+            (string? Encrypted, DateTimeOffset? PurgedAt) text = default;
             if (query.QueryTextId.HasValue)
             {
-                textsById.TryGetValue(query.QueryTextId.Value, out encryptedSql);
+                textsById.TryGetValue(query.QueryTextId.Value, out text);
             }
 
-            var decryptedSql = TryDecrypt(encryptedSql);
+            var decryptedSql = TryDecrypt(text.Encrypted);
 
             latestScoreByQuery.TryGetValue(query.Id, out var latestScore);
             fallbackMetricsByQuery.TryGetValue(query.Id, out var fallback);
@@ -166,7 +166,8 @@ public sealed class EfQuerySourceReader : IQuerySourceReader
                 Executions: executions,
                 Score: latestScore?.Score,
                 Band: latestScore?.Band,
-                Findings: queryFindings));
+                Findings: queryFindings,
+                SqlPurgedAt: text.PurgedAt));
         }
 
         return result;
@@ -193,16 +194,14 @@ public sealed class EfQuerySourceReader : IQuerySourceReader
             return null;
         }
 
-        string? encryptedSql = null;
-        if (query.QueryTextId.HasValue)
-        {
-            encryptedSql = await _db.QueryTexts.AsNoTracking()
-                .Where(t => t.Id == query.QueryTextId.Value)
-                .Select(t => t.EncryptedSqlText)
-                .FirstOrDefaultAsync(cancellationToken);
-        }
+        var text = query.QueryTextId is { } textId
+            ? await _db.QueryTexts.AsNoTracking()
+                .Where(t => t.Id == textId)
+                .Select(t => new { t.EncryptedSqlText, t.PurgedAt })
+                .FirstOrDefaultAsync(cancellationToken)
+            : null;
 
-        var decryptedSql = TryDecrypt(encryptedSql);
+        var decryptedSql = TryDecrypt(text?.EncryptedSqlText);
 
         var plans = await _db.Plans.AsNoTracking()
             .Where(p => p.QueryId == queryId)
@@ -296,7 +295,8 @@ public sealed class EfQuerySourceReader : IQuerySourceReader
             LatestScore: latestScore,
             RankInWindow: rankInWindow,
             TotalQueriesInWindow: totalInWindow,
-            ScoreHistory: scoreHistory);
+            ScoreHistory: scoreHistory,
+            SqlPurgedAt: text?.PurgedAt);
     }
 
     public async Task<QueryPlanTreeSource?> GetPlanTreeAsync(
@@ -343,7 +343,8 @@ public sealed class EfQuerySourceReader : IQuerySourceReader
             NotAnalyzableCause: plan.NotAnalyzableCause,
             IngestedAt: plan.IngestedAt,
             DecryptedPlanXml: TryDecrypt(plan.EncryptedPlanXml),
-            Findings: findingSources);
+            Findings: findingSources,
+            PurgedAt: plan.PurgedAt);
     }
 
     private async Task<DateTimeOffset> ResolveConnectionWindowEndAsync(
@@ -389,7 +390,9 @@ public sealed class EfQuerySourceReader : IQuerySourceReader
             ContextJson: finding.ContextJson,
             ThresholdsUsedJson: finding.ThresholdsUsedJson,
             EngineVersion: finding.EngineVersion,
-            AnalyzedAt: finding.AnalyzedAt);
+            AnalyzedAt: finding.AnalyzedAt,
+            // S2-13: la evidencia se vacía al purgar el plan del hallazgo.
+            EvidenceExpired: plan?.PurgedAt is not null);
     }
 
     private string? TryDecrypt(string? cipherText)

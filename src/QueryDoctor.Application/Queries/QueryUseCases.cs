@@ -139,13 +139,19 @@ internal static class QueryMaskingProjection
             AnalyzedAt: source.AnalyzedAt);
     }
 
-    public static string BuildSqlPreview(string? maskedSql, string? sqlMaskingFailure)
+    public static string BuildSqlPreview(string? maskedSql, string? sqlMaskingFailure, bool sqlExpired = false)
     {
+        if (sqlExpired)
+        {
+            // S2-13 (RNF-SEG-10): purgado por retención o a pedido del DBA.
+            return "[Evidencia expirada]";
+        }
+
         if (string.IsNullOrWhiteSpace(maskedSql))
         {
             return sqlMaskingFailure is not null
                 ? "[Texto SQL no disponible por enmascarado seguro]"
-                : "[Evidencia expirada o sin texto SQL]";
+                : "[Sin texto SQL]";
         }
 
         var singleLine = string.Join(
@@ -381,8 +387,9 @@ public sealed class GetQueries
                 QueryStoreQueryId: row.QueryStoreQueryId,
                 Server: row.Server,
                 DatabaseName: row.DatabaseName,
-                SqlPreview: QueryMaskingProjection.BuildSqlPreview(maskedSql, sqlFailure),
-                SqlExpired: row.DecryptedSqlText is null,
+                SqlPreview: QueryMaskingProjection.BuildSqlPreview(maskedSql, sqlFailure, row.SqlPurgedAt is not null),
+                // S2-13: expirado solo si se purgó; un texto que nunca llegó no es "evidencia expirada".
+                SqlExpired: row.SqlPurgedAt is not null,
                 ConsumptionPct: Math.Round(row.ConsumptionPct, 2, MidpointRounding.AwayFromZero),
                 Executions: row.Executions,
                 Score: row.Score.HasValue ? Math.Round(row.Score.Value, 2, MidpointRounding.AwayFromZero) : null,
@@ -453,7 +460,9 @@ public sealed class GetQueryDetail
                 EngineVersion: p.EngineVersion,
                 AnalysisStatus: p.AnalysisStatus,
                 NotAnalyzableCause: p.NotAnalyzableCause,
-                IngestedAt: p.IngestedAt))
+                IngestedAt: p.IngestedAt,
+                PlanExpired: p.PurgedAt is not null,
+                ExpiredAt: p.PurgedAt))
             .ToArray();
 
         // Agrupar estadísticas por intervalo y plan para no duplicar puntos si existen varios ExecutionType en el mismo intervalo.
@@ -522,6 +531,7 @@ public sealed class GetQueryDetail
                     Evidence: evidence,
                     EvidenceMasked: hasMasked && !hasExclusion,
                     EvidenceMaskingFailure: hasExclusion ? exclusion!.Cause.ToString() : null,
+                    EvidenceExpired: f.EvidenceExpired,
                     Context: QueryMaskingProjection.ParseContext(f.ContextJson),
                     ThresholdsUsed: QueryMaskingProjection.ParseDoubleDictionary(f.ThresholdsUsedJson),
                     EngineVersion: f.EngineVersion,
@@ -544,7 +554,8 @@ public sealed class GetQueryDetail
             WindowStart: source.WindowStart,
             WindowEnd: source.WindowEnd,
             SqlText: maskedSql,
-            SqlExpired: source.DecryptedSqlText is null,
+            SqlExpired: source.SqlPurgedAt is not null,
+            SqlExpiredAt: source.SqlPurgedAt,
             SqlMaskingFailure: sqlFailure,
             Score: score,
             Plans: plans,

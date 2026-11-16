@@ -68,7 +68,9 @@ public sealed record QueryPlanSummary(
     string? EngineVersion,
     PlanAnalysisStatus AnalysisStatus,
     string? NotAnalyzableCause,
-    DateTimeOffset IngestedAt);
+    DateTimeOffset IngestedAt,
+    bool PlanExpired,
+    DateTimeOffset? ExpiredAt);
 
 /// <summary>
 /// Punto de serie temporal agregado por intervalo y plan para duración, CPU y lecturas lógicas (RF-DASH-03, CA-HU07.1, CA-HU07.2).
@@ -106,6 +108,7 @@ public sealed record QueryFindingDetail(
     IReadOnlyDictionary<string, string> Evidence,
     bool EvidenceMasked,
     string? EvidenceMaskingFailure,
+    bool EvidenceExpired,
     FindingContextContract Context,
     IReadOnlyDictionary<string, double> ThresholdsUsed,
     string? EngineVersion,
@@ -169,6 +172,7 @@ public sealed record QueryDetailView(
     DateTimeOffset WindowEnd,
     string? SqlText,
     bool SqlExpired,
+    DateTimeOffset? SqlExpiredAt,
     string? SqlMaskingFailure,
     QueryHealthScoreDetail? Score,
     IReadOnlyList<QueryPlanSummary> Plans,

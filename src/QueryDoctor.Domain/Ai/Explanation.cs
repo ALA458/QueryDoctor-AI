@@ -50,6 +50,12 @@ public enum ExplanationCause
 
     /// <summary>La solicitud quedó en curso más allá del tiempo límite (el Worker se detuvo).</summary>
     Abandoned = 8,
+
+    /// <summary>
+    /// S2-13 (RNF-SEG-10): la evidencia del último análisis se purgó por retención o a pedido del DBA. No se llama a la
+    /// IA: sin evidencia, el validador no podría trazar nada.
+    /// </summary>
+    EvidenceExpired = 9,
 }
 
 /// <summary>

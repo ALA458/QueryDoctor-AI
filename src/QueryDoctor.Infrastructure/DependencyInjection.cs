@@ -15,9 +15,11 @@ using QueryDoctor.Application.Engine.Parsing;
 using QueryDoctor.Application.Engine.Rules;
 using QueryDoctor.Application.Explanations;
 using QueryDoctor.Application.Ingestion;
+using QueryDoctor.Application.Jobs;
 using QueryDoctor.Application.KnowledgeBase;
 using QueryDoctor.Application.Masking;
 using QueryDoctor.Application.Queries;
+using QueryDoctor.Application.Retention;
 using QueryDoctor.Application.Scoring;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Application.Traceability;
@@ -28,6 +30,7 @@ using QueryDoctor.Infrastructure.Connections;
 using QueryDoctor.Infrastructure.Explanations;
 using QueryDoctor.Infrastructure.Ingestion;
 using QueryDoctor.Infrastructure.Persistence;
+using QueryDoctor.Infrastructure.Retention;
 using QueryDoctor.Infrastructure.Scoring;
 using QueryDoctor.Infrastructure.Security;
 using QueryDoctor.Infrastructure.Telemetry;
@@ -249,6 +252,61 @@ public static class DependencyInjection
         services.AddScoped<ExplainQueryJob>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Borrado a pedido del DBA (S2-13, RNF-SEG-10): para la Api. Solo toca PostgreSQL, ni bases objetivo ni el LLM
+    /// (invariante 2), así que no pasa por Hangfire.
+    /// </summary>
+    public static IServiceCollection AddEvidenceDeletion(this IServiceCollection services)
+    {
+        services.TryAddScoped<IEvidencePurgeStore, EfEvidencePurgeStore>();
+        services.AddScoped<DeleteEvidence>();
+        return services;
+    }
+
+    /// <summary>
+    /// Purga automática por retención (S2-13, RNF-SEG-10): SOLO para el Worker. El plazo sale de
+    /// <c>Retention:SqlTextAndPlanDays</c> y se valida al arrancar (<see cref="ScheduleRetention"/>). Sin PostgreSQL no se registra.
+    /// </summary>
+    public static IServiceCollection AddRetention(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        if (string.IsNullOrWhiteSpace(GetPostgresConnectionString(configuration)))
+        {
+            return services;
+        }
+
+        services.Configure<RetentionOptions>(configuration.GetSection(RetentionOptions.SectionName));
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<RetentionOptions>>().Value;
+            options.Validate();
+            return options;
+        });
+
+        services.TryAddScoped<IEvidencePurgeStore, EfEvidencePurgeStore>();
+        services.AddScoped<PurgeExpiredEvidence>();
+        services.AddScoped<RetentionJob>();
+        return services;
+    }
+
+    /// <summary>
+    /// Valida el plazo (un valor fuera de rango impide arrancar) y registra el trabajo recurrente <c>retention</c>, diario
+    /// a las 03:00 UTC en su cola. Lo llama el host del Worker después de construirse.
+    /// </summary>
+    public static void ScheduleRetention(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        _ = services.GetRequiredService<RetentionOptions>();
+        services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<RetentionJob>(
+            RetentionJob.RecurringJobId,
+            JobQueues.Retention,
+            job => job.RunAsync(CancellationToken.None),
+            RetentionJob.DailyCron,
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
     }
 
     /// <summary>

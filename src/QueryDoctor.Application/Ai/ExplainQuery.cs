@@ -106,6 +106,13 @@ public sealed class ExplainQuery
             return Outcome(explanation, fromCache: false, findingsSent: 0, masking: null);
         }
 
+        if (encrypted.EvidenceExpired)
+        {
+            // S2-13 (D6): sin evidencia, la explicación terminaría NO_VERIFICADA y gastaría una llamada al LLM.
+            await FinishAsync(explanation, ExplanationState.NotGenerated, ExplanationCause.EvidenceExpired, cancellationToken);
+            return Outcome(explanation, fromCache: false, findingsSent: 0, masking: null);
+        }
+
         var source = Decrypt(encrypted);
         var kb = await LoadFragmentsAsync(source.Findings, cancellationToken);
         var context = _contextBuilder.Build(source, kb, explanation.CorrelationId);

@@ -166,6 +166,13 @@ public sealed class RecalculateConnectionScores
             return [];
         }
 
+        // S2-13 (D6): un plan purgado conserva sus hallazgos y no se vuelve a analizar; con XML nulo el motor fabricaría
+        // un hallazgo de plan no analizable que no corresponde.
+        if (plan.EvidenceExpired)
+        {
+            return plan.ExistingFindings;
+        }
+
         // Si el plan no tiene XML cifrado pero ya cuenta con hallazgos persistidos, se reutilizan.
         if (string.IsNullOrWhiteSpace(plan.EncryptedPlanXml) && plan.ExistingFindings.Count > 0)
         {
