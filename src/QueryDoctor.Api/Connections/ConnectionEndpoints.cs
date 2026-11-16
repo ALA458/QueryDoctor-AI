@@ -3,6 +3,7 @@ using QueryDoctor.Api.Auditing;
 using QueryDoctor.Api.Auth;
 using QueryDoctor.Application.Connections;
 using QueryDoctor.Application.Ingestion;
+using QueryDoctor.Application.Retention;
 using QueryDoctor.Application.Traceability;
 using QueryDoctor.Domain.Audit;
 using QueryDoctor.Domain.Core;
@@ -44,6 +45,9 @@ internal static class ConnectionEndpoints
         // S1-11: ingesta manual (RF-ING-06, CA-HU03.1) y sus ejecuciones con la causa (RF-ING-08, CA-HU02.2).
         group.MapPost("/{id:guid}/ingestions", RequestIngestionAsync).RequireAuthorization(AuthConstants.DbaOnlyPolicy);
         group.MapGet("/{id:guid}/ingestions", ListIngestionsAsync);
+
+        // S2-13: borrado bajo demanda de texto SQL y planes XML de una conexión por el DBA (RNF-SEG-10, RNF-SEG-12).
+        group.MapDelete("/{id:guid}/data", DeleteDataAsync).RequireAuthorization(AuthConstants.DbaOnlyPolicy);
 
         return app;
     }
@@ -179,5 +183,27 @@ internal static class ConnectionEndpoints
         return detail is null
             ? Results.Problem(statusCode: StatusCodes.Status404NotFound, detail: "La conexión no existe.")
             : Results.Ok(detail);
+    }
+
+    private static async Task<IResult> DeleteDataAsync(
+        Guid id,
+        DeleteConnectionTelemetry useCase,
+        ClaimsPrincipal principal,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await useCase.ExecuteAsync(id, AuditTrail.UserId(principal), AuditTrail.UserName(principal), cancellationToken);
+        return outcome switch
+        {
+            DeleteConnectionTelemetryOutcome.Found found => Results.Ok(new
+            {
+                connectionId = found.ConnectionId,
+                textsCleared = found.TextsCleared,
+                plansCleared = found.PlansCleared,
+            }),
+            DeleteConnectionTelemetryOutcome.NotFound => Results.Problem(
+                statusCode: StatusCodes.Status404NotFound,
+                detail: "La conexión no existe."),
+            _ => throw new InvalidOperationException("Resultado de borrado no contemplado."),
+        };
     }
 }

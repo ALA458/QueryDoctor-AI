@@ -1,0 +1,1549 @@
+\documentclass[12pt,a4paper]{article}
+
+% --- PAQUETES ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla,es-noshorthands]{babel}
+\usepackage{geometry}
+\geometry{top=3.5cm, bottom=3cm, left=2.5cm, right=2.5cm}
+\usepackage[table]{xcolor}
+\usepackage{graphicx}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds,calc}
+\usepackage{hyperref}
+
+\captionsetup{font=small,labelfont=bf}
+
+% --- COLORES INSTITUCIONALES ---
+\definecolor{utbblue}{RGB}{0, 51, 102}
+\definecolor{utblight}{RGB}{0, 102, 204}
+\definecolor{utbmuted}{RGB}{90, 105, 125}
+\definecolor{utbgreen}{RGB}{22, 115, 71}
+\definecolor{utbamber}{RGB}{176, 106, 0}
+
+% --- CONFIGURACIÓN DE HYPERREF ---
+\hypersetup{
+    colorlinks=true,
+    linkcolor=utbblue,
+    urlcolor=utblight,
+    citecolor=utbblue,
+    pdftitle={Query Doctor AI -- Documento Final del Proyecto de Grado},
+    pdfauthor={Ayala, Gonzalez, Madrid, Tache -- Universidad Tecnologica de Bolivar}
+}
+
+% --- ESTILO DE PÁGINA Y ENCABEZADOS ---
+\setlength{\headheight}{50pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{utbblue}{\textbf{Facultad de Ingeniería}}\\\textcolor{utbblue}{\small Proyecto de Ingeniería I $\cdot$ Ingeniería de Sistemas}}
+\fancyhead[R]{\textcolor{utbblue}{\small Query Doctor AI -- Trabajo de Grado}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.8pt}
+\renewcommand{\headrule}{\hbox to\headwidth{\color{utbblue}\leaders\hrule height \headrulewidth\hfill}}
+
+% --- ESPACIADO ---
+\setlength{\parskip}{1.2ex plus 0.3ex minus 0.2ex}
+\setlength{\parindent}{0pt}
+\setlength{\emergencystretch}{3em}
+
+% --- FORMATO DE SECCIONES ---
+\titleformat{\section}{\color{utbblue}\Large\bfseries\sffamily}{\thesection.}{1em}{}[\vspace{-0.3cm}{\color{utbblue}\rule{\textwidth}{0.8pt}}]
+\titleformat{\subsection}{\color{utblight}\large\bfseries\sffamily}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\color{utbblue!85!black}\normalsize\bfseries\sffamily}{\thesubsubsection}{1em}{}
+
+% --- MACRO PARA CAPTURAS DE PANTALLA ---
+\newcommand{\captura}[4]{%
+  \begin{figure}[H]
+    \centering
+    \IfFileExists{#2}{%
+      \includegraphics[width=0.88\linewidth,height=0.36\textheight,keepaspectratio]{#2}%
+    }{%
+      \fbox{\parbox[c][4.2cm][c]{0.86\linewidth}{\centering\small\textit{Insertar captura (#4)}}}%
+    }
+    \caption{#3}
+    \label{fig:#1}
+  \end{figure}}
+
+\newcommand{\dagsym}{\ensuremath{^{\dagger}}}
+
+\begin{document}
+
+% ======================================================
+% PORTADA INSTITUCIONAL CON DOS LOGOS
+% ======================================================
+\begin{titlepage}
+    \noindent
+    \begin{minipage}{0.3\textwidth}
+        \IfFileExists{utb-logotipo.png}{
+            \includegraphics[width=\linewidth]{utb-logotipo.png}
+        }{
+            \framebox[3.2cm]{\textbf{Logo UTB}}
+        }
+    \end{minipage}%
+    \hfill
+    \begin{minipage}{0.4\textwidth}
+        \begin{flushright}
+            \IfFileExists{logo-transformacion-digital.png}{
+                \includegraphics[width=\linewidth]{logo-transformacion-digital.png}
+            }{
+                \framebox[4.2cm]{\textbf{Logo Transformación Digital}}
+            }
+        \end{flushright}
+    \end{minipage}
+
+    \vspace{2.0cm}
+    \begin{center}
+        \textcolor{utbblue}{\Huge \textbf{QUERY DOCTOR AI}}\\
+        \vspace{0.8cm}
+        \textcolor{utblight}{\Large Diseño y desarrollo de una plataforma inteligente para el análisis, diagnóstico y recomendación de optimizaciones de consultas SQL basada en evidencia observable}\\
+        \vspace{0.4cm}
+        \textcolor{utbmuted}{\normalsize Proyecto de Ingeniería I $\cdot$ Periodo académico 2026-2 $\cdot$ Corte post-Sprint 2}
+        \par\vspace{1.2cm}
+
+        \textbf{Autores:}\\
+        \vspace{0.3cm}
+        Álvaro Jesús Ayala Alcalá -- T00078312\\
+        Joel David González Barros -- T00078571\\
+        Maykol Stiven Madrid Romero -- T00078588\\
+        Daniel Alejandro Tache Lara -- \textit{[Código pendiente]}\\
+
+        \vfill
+        \textbf{Director / Tutor del proyecto:}\\
+        Aisner Marrugo\\
+
+        \vfill
+        \textbf{Universidad Tecnológica de Bolívar}\\
+        Escuela de Transformación Digital $\cdot$ Programa de Ingeniería de Sistemas y Computación\\
+        Cartagena de Indias, 15 de noviembre de 2026
+    \end{center}
+\end{titlepage}
+
+% ======================================================
+% ÍNDICES PRELIMINARES
+% ======================================================
+\tableofcontents
+\newpage
+\listoftables
+\listoffigures
+\newpage
+
+% ======================================================
+% NOTA EDITORIAL Y FICHA TÉCNICA
+% ======================================================
+\section*{Ficha técnica del proyecto}
+\addcontentsline{toc}{section}{Ficha técnica del proyecto}
+
+\begin{quote}
+\textbf{Nota editorial.} Los marcadores entre corchetes (como \textit{[POR COMPLETAR]}) señalan exclusivamente datos administrativos pendientes del equipo o mediciones empíricas programadas para la fase de evaluación final (Sprint 3). Ninguna cifra ni resultado técnico ha sido estimado ni extrapolado fuera de la evidencia verificada en el repositorio.
+\end{quote}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{>{\bfseries}p{0.28\textwidth} X}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Campo}} & \textcolor{white}{\textbf{Contenido}} \\
+\midrule
+Título del proyecto & Diseño y desarrollo de una plataforma inteligente para el análisis, diagnóstico y recomendación de optimizaciones de consultas SQL basada en evidencia observable \\
+Nombre del producto & Query Doctor AI \\
+Director / tutor & Aisner Marrugo \\
+Organización vinculada & Ninguna. Proyecto académico de la Universidad Tecnológica de Bolívar; la organización propietaria de la base de datos monitoreada actúa como beneficiario indirecto genérico \\
+Línea temática & Bases de datos, ingeniería de software e inteligencia artificial aplicada \\
+Fecha de corte & 15 de noviembre de 2026 (estabilización pre-Sprint 3 posterior al Sprint 2) \\
+Repositorio y versión & \url{https://github.com/ALA458/QueryDoctor-AI} $\cdot$ Rama \texttt{chore/pre-sprint3-bloqueantes-y-docs} (base \texttt{main} \texttt{543af12}; etiqueta final \texttt{v1.0} pendiente del cierre en Sprint 3) \\
+\bottomrule
+\end{tabularx}
+\caption{Información general del proyecto}
+\label{tab:ficha-proyecto}
+\end{table}
+\endgroup
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.28\textwidth} p{0.15\textwidth} p{0.21\textwidth} X}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Nombre completo}} & \textcolor{white}{\textbf{Código}} & \textcolor{white}{\textbf{Correo}} & \textcolor{white}{\textbf{Responsabilidad técnica}} \\
+\midrule
+Álvaro Jesús Ayala Alcalá & T00078312 & \textit{[POR COMPLETAR]} & Ingesta, conectividad y persistencia \\
+Joel David González Barros & T00078571 & \textit{[POR COMPLETAR]} & Motor determinístico, Query Health Score y validador \\
+Maykol Stiven Madrid Romero & T00078588 & \textit{[POR COMPLETAR]} & Componente de IA, base de conocimiento y evaluación \\
+Daniel Alejandro Tache Lara & \textit{[POR COMPLETAR]} & \textit{[POR COMPLETAR]} & Interfaz web, experiencia de usuario y gobernanza \\
+\bottomrule
+\end{tabularx}
+\caption{Equipo de trabajo y distribución de responsabilidades}
+\label{tab:equipo}
+\end{table}
+\endgroup
+
+% ======================================================
+% SECCIÓN 1
+% ======================================================
+\section{Título del proyecto}
+
+\textbf{Título:} Diseño y desarrollo de una plataforma inteligente para el análisis, diagnóstico y recomendación de optimizaciones de consultas SQL basada en evidencia observable.
+
+\textbf{Nombre del producto:} Query Doctor AI.
+
+El título delimita con precisión el propósito del trabajo (analizar, diagnosticar y recomendar optimizaciones), el objeto de estudio (consultas SQL en motores relacionales) y el enfoque de solución (integración verificable entre análisis determinístico sobre evidencia observable e inteligencia artificial generativa), evitando formulaciones genéricas.
+
+% ======================================================
+% SECCIÓN 2
+% ======================================================
+\section{Resumen ejecutivo}
+
+Identificar qué consulta SQL consume una proporción elevada de recursos resulta relativamente directo mediante las vistas de rendimiento del motor; sin embargo, explicar las causas técnicas de dicha degradación exige interpretar planes de ejecución serializados en formato XML, correlacionar estadísticas históricas y comprender el comportamiento del optimizador. En la práctica operativa, ese conocimiento suele concentrarse de manera tácita en los administradores de bases de datos (DBA), lo cual ralentiza la resolución de incidentes y dificulta la autonomía de los equipos de desarrollo.
+
+Query Doctor AI es una plataforma web no invasiva que se conecta exclusivamente en modo de solo lectura a \textit{Query Store} en Microsoft SQL Server (2016 o superior) y Azure SQL Database para extraer texto de consultas, planes de ejecución y estadísticas agregadas. Un motor determinístico de reglas versionado analiza los planes en busca de antipatrones con evidencia explícita y reproducible; un indicador compuesto, denominado \textit{Query Health Score}, prioriza las consultas según su impacto relativo sobre la carga de trabajo; y un servicio de inteligencia artificial generativa traduce los hallazgos en explicaciones estructuradas en español a partir de fragmentos de conocimiento técnico curados y recuperados de forma determinística desde el núcleo del sistema. Toda afirmación generada atraviesa un validador determinístico externo al modelo de lenguaje que la contrasta contra la evidencia del motor y contra relaciones causa-efecto curadas, registrando el resultado en una bitácora de trazabilidad de solo adición.
+
+El principio rector del diseño establece que el motor determinístico constituye la única fuente de verdad técnica y que la inteligencia artificial únicamente explica evidencia previamente demostrada por dicho motor. La plataforma no ejecuta sentencias de escritura ni modifica la base monitoreada: toda intervención correctiva es evaluada y ejecutada manualmente por una persona. La solución se implementa como un monolito modular en .NET 10 (hosts API y Worker), un servicio de IA aislado en Python (FastAPI), una interfaz web estática en HTML5, CSS y JavaScript servida mediante Nginx, y PostgreSQL 16 (\texttt{pgvector}) como repositorio local. La validación empírica contempla escenarios sembrados, cargas de referencia TPC-H, contraste con un especialista en bases de datos y arneses reproducibles, reportando todos los resultados como tasas medidas bajo condiciones explícitas de laboratorio.
+
+% ======================================================
+% SECCIÓN 3
+% ======================================================
+\section{Contexto y antecedentes}
+
+\subsection{Contexto del problema}
+
+Las bases de datos transaccionales (OLTP) y analíticas (OLAP) ejecutan millones de sentencias SQL a diario. Al crecer el volumen de datos y la concurrencia aparecen degradaciones de rendimiento, y la respuesta operativa inicial consiste en identificar qué consultas monopolizan CPU, memoria y E/S. La instrumentación moderna hace que ese primer paso sea relativamente simple; la dificultad real radica en el diagnóstico de causa raíz.
+
+SQL es un lenguaje declarativo: la persona describe qué datos requiere y el optimizador de consultas decide cómo obtenerlos, evaluando alternativas de unión y de acceso a partir de estadísticas de distribución e índices disponibles. Cuando las estadísticas están desactualizadas, los datos presentan sesgo o falta una estructura de acceso adecuada, el optimizador estima de forma imprecisa y produce planes ineficientes. Comprender por qué ocurre obliga a leer grafos de operadores serializados como \textit{Showplan XML} y cruzarlos con métricas de ejecución, tarea para la que la mayoría de los equipos de desarrollo carece de tiempo o formación especializada. El resultado habitual es prueba y error, escalamiento vertical costoso o código que perpetúa el problema.
+
+\subsection{Soluciones nativas del motor}
+
+SQL Server incorpora \textit{Query Store}, que persiste texto de consultas, planes y estadísticas agregadas por intervalo de tiempo \cite{ms-qs-collect}, y desde SQL Server 2017 la corrección automática de planes (\textit{Automatic Plan Correction}), que compara el plan actual con el último plan bueno conocido y expone recomendaciones en la vista \texttt{sys.dm\_db\_tuning\_recommendations}. Microsoft refinó posteriormente el modelo estadístico de esa función \cite{ms-apc-2026}. Esto confirma que detectar regresiones con evidencia estadística es un enfoque validado por el propio fabricante, pero su alcance es limitado: cubre regresiones de plan ya detectadas, no explica causas de fondo en lenguaje comprensible ni prioriza el conjunto completo de consultas problemáticas de una base de datos.
+
+\subsection{Herramientas comerciales de monitoreo}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.25\textwidth} p{0.33\textwidth} X}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Herramienta}} & \textcolor{white}{\textbf{Enfoque principal}} & \textcolor{white}{\textbf{Limitación frente a Query Doctor AI}} \\
+\midrule
+SolarWinds Database Performance Analyzer & Análisis de esperas multimotor con detección de anomalías asistida por IA & Recomendaciones orientadas al cuello de botella general; menor profundidad causal por consulta individual \\
+Redgate SQL Monitor & Monitoreo en tiempo real, alertas y asesores de tablas e índices & Seguimiento de planes y recomendaciones reactivos, sin explicación en lenguaje natural trazable a evidencia \cite{sqlyard-2025} \\
+Datadog Database Monitoring & Correlación de métricas SQL con trazas de aplicación & El diagnóstico SQL es un módulo dentro de una plataforma de observabilidad general, no el núcleo \cite{idera-2025} \\
+\bottomrule
+\end{tabularx}
+\caption{Comparación con herramientas comerciales de monitoreo SQL}
+\label{tab:comerciales}
+\end{table}
+\endgroup
+
+\subsection{Investigación académica}
+
+El antecedente directo más relevante es \textit{D-Bot}, un sistema de diagnóstico de bases de datos basado en modelos de lenguaje grandes \cite{zhou-dbot}, precedido por la línea «LLM as DBA» del mismo grupo \cite{zhou-llmdba}. Como antecedente previo a los LLM, \textit{DBSherlock} ayuda a explicar la causa raíz de anomalías comparando regiones de comportamiento normal y anómalo \cite{yoon-dbsherlock}. La literatura sobre ajuste automático de índices, desde heurísticas hasta aprendizaje por refuerzo, se encuentra consolidada \cite{zhao-index,ding-index}. Asimismo, un estudio de clasificación de la calidad de consultas SQL con árboles de decisión, \textit{k}-NN, SVM y \textit{Naive Bayes} respalda el análisis estático de patrones \cite{radi-sql}, mientras que una revisión sistemática sobre AIOps en la era de los grandes modelos de lenguaje muestra que su uso en operaciones de infraestructura constituye un campo activo \cite{zhang-aiops}.
+
+Para el componente de IA se adoptan principios de generación aumentada por recuperación \cite{lewis-rag}, evaluación de fidelidad inspirada en RAGAS \cite{es-ragas} y la conceptualización formal de alucinación como afirmación no sustentada por el contexto disponible \cite{ji-hallucination}.
+
+\subsection{Hallazgo técnico propio: evidencia disponible en Query Store}
+
+Antes de comprometer las reglas del motor se analizó, mediante la documentación oficial del fabricante, qué evidencia ofrece realmente \textit{Query Store} (SRS, Apéndice A). Las conclusiones condicionaron todo el diseño:
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item Los planes almacenados son \textbf{planes estimados}, equivalentes a \texttt{SET SHOWPLAN\_XML ON} \cite{ms-qs-collect,ms-qs-plan,ms-ss2022,ms-qs-manage}. No contienen filas reales por operador ni advertencias de desbordamiento a TempDB, las cuales solo existen en un plan real \cite{ms-plans,ms-tempdb}.
+    \item Las estadísticas de ejecución están \textbf{agregadas por plan e intervalo}, no por operador \cite{ms-qs-stats}.
+    \item Las señales de compilación (conversión implícita que afecta el plan, índices faltantes, ausencia de estadísticas, uniones sin predicado, lecturas completas y búsquedas por clave) sí están presentes en el plan estimado y son plenamente detectables \cite{redgate-warnings}.
+    \item El plan real constituye una función opcional que exige permiso a nivel de servidor y configuración explícita del DBA \cite{ms-plan-stats}; la plataforma nunca la habilita, en estricto cumplimiento de la restricción de solo lectura.
+\end{enumerate}
+
+De ahí surge la \textbf{clase de evidencia} de cada hallazgo (\texttt{ESTIMADA}, \texttt{EJECUCION\_AGREGADA} o \texttt{PLAN\_REAL}): ni el motor ni la IA pueden presentar un dato estimado como observado en una ejecución real.
+
+Estas hipótesis (\texttt{H1}--\texttt{H5}) y hallazgos documentales (\texttt{F1}--\texttt{F8}) se verificaron empíricamente durante el Sprint 1 (\texttt{S1-07}) sobre SQL Server 2022 Developer (\texttt{16.0.4315.2}, compatibilidad \texttt{160}) mediante siete escenarios sembrados (\texttt{ESC01} a \texttt{ESC06} y \texttt{ESC04B}), 16 planes de referencia y tres corridas consecutivas con reproducibilidad idéntica por hash SHA-256 (\texttt{lab/results/S1-07-verificacion.md}).
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{>{\bfseries}p{0.09\textwidth} p{0.31\textwidth} p{0.18\textwidth} p{0.34\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Hallazgo o hipótesis evaluada}} & \textcolor{white}{\textbf{Veredicto empírico}} & \textcolor{white}{\textbf{Evidencia medida en el laboratorio}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Hallazgo o hipótesis evaluada}} & \textcolor{white}{\textbf{Veredicto empírico}} & \textcolor{white}{\textbf{Evidencia medida en el laboratorio}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Resumen de la verificación empírica de Query Store en SQL Server 2022 (S1-07)}
+\label{tab:hallazgos-f1-f8}
+\endlastfoot
+F1 (H1) & El plan en Query Store es estimado (\texttt{SHOWPLAN\_XML}) & \textbf{Confirmado} & 0 nodos \texttt{<RunTimeInformation>} y 0 atributos \texttt{ActualRows} en los 9 planes \texttt{*.qs.*.sqlplan}, frente a presencia total en los \texttt{*.actual.sqlplan}. \\
+F2 (H1) & El plan estimado omite advertencias reales de \textit{spill} & \textbf{Confirmado} & \texttt{ESC05.actual.sqlplan} registra \texttt{SpillToTempDb=2} y \texttt{SortSpillDetails=2}; \texttt{ESC05.qs.1.sqlplan} registra 0 ocurrencias. \\
+F3 (H3) & \texttt{sys.query\_store\_runtime\_stats} agrega por intervalo sin filas por operador ni contadores de \textit{spill} & \textbf{Confirmado} (con precisión de nombre) & Inspección de las 74 columnas reales (\texttt{checks.txt}): la columna de memoria se denomina \texttt{avg\_query\_max\_used\_memory} y se observan múltiples filas por intervalo. \\
+F4 & Leer Query Store requiere \texttt{VIEW DATABASE STATE} (o \texttt{VIEW DATABASE PERFORMANCE STATE}) y cero escritura & \textbf{Confirmado} & \texttt{qd\_reader} lee todas las vistas y falla al intentar \texttt{INSERT} (error 229); \texttt{qd\_noperm} falla con error 262 hasta recibir \texttt{VIEW DATABASE PERFORMANCE STATE}. \\
+F5 & Valores por defecto en bases nuevas de SQL Server 2022 & \textbf{Confirmado} & Base temporal \texttt{QD\_Defaults}: Query Store activo (\texttt{READ\_WRITE}), intervalo 60 min, retención 30 días, modo \texttt{AUTO}, límite 1000 MB. \\
+F6 (H5) & \texttt{sys.dm\_exec\_query\_plan\_stats} es opcional, volátil y exige permiso de servidor & \textbf{Confirmado} & Con opción en 0 omite \texttt{ActualRows}; tras \texttt{CLEAR PROCEDURE\_CACHE} desaparece la fila; \texttt{qd\_reader} recibe error 300. \\
+F7 (H2) & Señales de compilación permanecen en el plan de Query Store & \textbf{Confirmado} & Verificado en \texttt{ESC01.qs.1}, \texttt{ESC02.qs.1}, \texttt{ESC03.qs.1} y \texttt{ESC04B.qs.1}. \\
+F8 & El tipo \texttt{xml} de SQL Server falla sobre 128 niveles; debe leerse como \texttt{nvarchar(max)} & \textbf{Confirmado} & En \texttt{ESC06} (140 niveles), \texttt{TRY\_CAST(query\_plan AS xml)} devuelve \texttt{NULL}, mientras \texttt{CAST(... AS nvarchar(max))} entrega los 304 890 caracteres íntegros. \\
+H4 & La discrepancia de cardinalidad sin plan real solo se observa a nivel de sentencia & \textbf{Confirmado} & En \texttt{ESC04B} (\texttt{plan\_id=25}), \texttt{StatementEstRows=1.0} frente a \texttt{avg\_rowcount=495000.5} en \texttt{runtime\_stats}. \\
+\end{longtable}
+\endgroup
+
+Adicionalmente, el escenario \texttt{ESC04} evidenció que bajo nivel de compatibilidad 160 (\textit{Parameter Sensitive Plan Optimization}) SQL Server genera planes \textit{Dispatcher} (\texttt{ESC04.qs.1.sqlplan}, 1 264 bytes) sin nodos \texttt{<RelOp>}, hallazgo incorporado al diseño tolerante de \texttt{ShowplanXmlParser} (\texttt{S1-12}). Asimismo, la validación de la lista blanca (\texttt{S1-08}) detectó que las vistas del catálogo \texttt{sys.*} no aparecen en \texttt{sys.columns}/\texttt{sys.objects}, lo cual motivó su corrección a \texttt{sys.all\_columns} y \texttt{sys.all\_objects} en \texttt{TelemetryStatementWhitelist.cs}.
+
+\subsection{Balance y vacío identificado}
+
+Ninguna de las soluciones revisadas integra de forma verificable evidencia determinística del motor con explicaciones en lenguaje natural obligatoriamente ancladas a dato observable. Las herramientas nativas detectan regresiones sin explicar causas; las comerciales rara vez exhiben la evidencia que sustenta sus recomendaciones; y los sistemas académicos basados en LLM no siempre garantizan que cada afirmación apunte a un dato verificado del motor. \textbf{Ese espacio entre la detección automatizada y la explicación verificable constituye el aporte central del proyecto.}
+
+% ======================================================
+% SECCIÓN 4
+% ======================================================
+\section{Planteamiento del problema}
+
+\subsection{Descripción del problema}
+
+\textbf{¿Qué ocurre?} Diagnosticar la causa de una consulta SQL lenta o costosa exige interpretar manualmente planes de ejecución y estadísticas, un conocimiento escasamente documentado de forma reproducible.
+
+\textbf{¿Dónde ocurre?} En equipos que operan bases de datos SQL Server y Azure SQL Database, tanto locales como en la nube, donde el consumo de cómputo se traduce en costo operativo directo.
+
+\textbf{¿Quiénes están afectados?} Los DBA, que concentran la carga de diagnóstico; los desarrolladores backend, que dependen del DBA para entender el desempeño de sus propias consultas; y las organizaciones, que enfrentan incidentes de rendimiento y sobreaprovisionamiento.
+
+\textbf{Evidencia.} La existencia y pertinencia del problema se sustentan en documentación oficial del fabricante \cite{ms-apc-2026}, literatura comercial \cite{sqlyard-2025,idera-2025} e investigación académica reciente \cite{zhou-dbot,yoon-dbsherlock}. Como limitación metodológica declarada, no se levantó una línea base primaria mediante entrevistas o mediciones cronometradas en una organización productiva concreta; dicha brecha se mitiga mediante el contraste frente a un especialista externo (\texttt{RF-EVA-03}) y la prueba controlada de usabilidad (\texttt{RNF-INT-01}).
+
+\textbf{Pertinencia para Ingeniería de Sistemas.} El problema exige integrar bases de datos, arquitectura de software, ingeniería de requisitos, seguridad aplicada, diseño de interfaces y evaluación experimental de modelos de lenguaje.
+
+\subsection{Análisis de causas y efectos}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.46\textwidth} X}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Causa identificada}} & \textcolor{white}{\textbf{Efecto observado}} \\
+\midrule
+Falta de correlación automática entre métricas, plan de ejecución y estructura de índices & Diagnóstico lento y dependiente de un especialista senior \\
+Ausencia de historial estructurado de análisis por consulta & Imposibilidad de detectar regresiones de forma trazable sin herramientas externas \\
+Conocimiento tácito no documentado sobre patrones de planes problemáticos & Curva de aprendizaje elevada para desarrolladores backend \\
+Herramientas existentes que generan alertas con explicaciones opacas & Baja confianza y adopción parcial de recomendaciones automáticas \\
+Recomendaciones de IA sin verificación contra evidencia observable & Riesgo de alucinaciones y sesgo de automatización \cite{parasuraman-bias} \\
+\bottomrule
+\end{tabularx}
+\caption{Matriz de causas y efectos del problema de diagnóstico SQL}
+\label{tab:causas-efectos}
+\end{table}
+\endgroup
+
+\subsection{Pregunta problema}
+
+¿De qué manera el diseño y desarrollo de una plataforma inteligente que combine el análisis determinístico de telemetría (métricas y planes de ejecución) con inteligencia artificial generativa puede asistir a desarrolladores y DBA en el diagnóstico temprano, la explicación comprensible y la recomendación fundamentada de optimizaciones para consultas SQL problemáticas?
+
+% ======================================================
+% SECCIÓN 5
+% ======================================================
+\section{Justificación}
+
+\subsection{Relevancia del problema}
+
+El rendimiento de las bases de datos incide directamente en la experiencia del usuario final y en el costo de infraestructura, especialmente en entornos en la nube facturados por consumo. Automatizar la correlación inicial entre métricas y estructura del plan reduce el tiempo medio de resolución de incidentes y disminuye la dependencia exclusiva de un especialista. Asimismo, el proyecto aborda un problema actual de la ingeniería de IA aplicada: cómo aprovechar modelos generativos sin sacrificar verificabilidad.
+
+\subsection{Beneficiarios}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Directos:} administradores de bases de datos (DBA) y desarrolladores backend responsables de escribir y mantener consultas SQL.
+    \item \textbf{Indirectos:} equipos de plataforma e infraestructura que responden por acuerdos de nivel de servicio (SLA) y la organización propietaria de la base de datos.
+    \item \textbf{Académicos:} docentes y evaluadores, quienes pueden reproducir la verificación empírica mediante los arneses y fixtures versionados en el repositorio.
+\end{itemize}
+
+\subsection{Impacto esperado}
+
+Las mejoras esperadas se expresan como indicadores verificables: tiempo de identificación de la consulta prioritaria y su causa (\texttt{RNF-INT-01}), precisión y exhaustividad por regla (\texttt{RNF-FUN-01}), cero explicaciones no validadas presentadas como verificadas (\texttt{RNF-FUN-02}), cero literales sensibles enviados al proveedor de IA (\texttt{RNF-SEG-05}) y sobrecarga acotada sobre la instancia monitoreada (\texttt{RNF-RND-01}).
+
+\subsection{Pertinencia para Ingeniería de Sistemas}
+
+El desarrollo aplica ingeniería de requisitos bajo ISO/IEC/IEEE 29148:2018 \cite{iso-29148}, calidad de software bajo ISO/IEC 25010:2023 \cite{iso-25010}, arquitectura bajo ISO/IEC/IEEE 42010:2022 \cite{iso-42010}, seguridad alineada con OWASP Top 10 for LLM Applications 2025 \cite{owasp-llm} y ASVS 5.0 \cite{owasp-asvs}, protección de datos conforme a la Ley Estatutaria 1581 de 2012 \cite{ley-1581}, ingesta incremental idempotente y evaluación experimental reproducible.
+
+% ======================================================
+% SECCIÓN 6
+% ======================================================
+\section{Objetivos}
+
+\subsection{Objetivo general}
+
+Diseñar y desarrollar una plataforma que integre métricas de ejecución, análisis de planes y explicaciones generadas mediante inteligencia artificial para apoyar el diagnóstico y la priorización de consultas SQL con bajo rendimiento en SQL Server y Azure SQL Database.
+
+\subsection{Objetivos específicos}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{>{\bfseries}p{0.10\textwidth} p{0.44\textwidth} X}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Objetivo específico}} & \textcolor{white}{\textbf{Resultado verificable asociado}} \\
+\midrule
+OBJ-1 & Implementar la ingesta segura y de solo lectura de métricas y planes de ejecución desde Query Store y persistirlos en un modelo de datos local propio & Ingesta idempotente y reanudable; registro de sentencias emitidas que contiene únicamente \texttt{SELECT} sobre una lista blanca \\
+OBJ-2 & Implementar un motor determinístico de reglas técnicas que analice los planes capturados y produzca hallazgos reproducibles y trazables & Catálogo versionado de reglas; mismo plan, versión y umbrales producen los mismos hallazgos \\
+OBJ-3 & Desarrollar un \textit{Query Health Score} que priorice las consultas según su impacto real sobre el consumo de recursos & Puntaje determinístico en escala 0--100 con desglose de componentes \\
+OBJ-4 & Integrar un componente de IA generativa cuyas explicaciones sean trazables a evidencia observable y verificables automáticamente & Validador determinístico externo y registro de trazabilidad de solo adición \\
+OBJ-5 & Construir un tablero funcional que presente consultas críticas, tendencias históricas y recomendaciones respaldadas por evidencia & Tablero con listado priorizado, detalle, visor jerárquico de planes y explicación con enlaces a evidencia \\
+OBJ-6 & Validar empíricamente la precisión y la utilidad de la plataforma con escenarios controlados, benchmarks estándar y contraste con un especialista & Arneses reproducibles e informe versionado del laboratorio \\
+\bottomrule
+\end{tabularx}
+\caption{Objetivos específicos del proyecto y criterios de verificación}
+\label{tab:objetivos}
+\end{table}
+\endgroup
+
+Los cinco primeros objetivos provienen de la propuesta inicial (Avance 1); el objetivo \texttt{OBJ-6} se incorporó en el SRS para sustentar de manera cuantitativa y reproducible cualquier afirmación de eficacia sobre el motor y el componente de inteligencia artificial.
+
+% ======================================================
+% SECCIÓN 7
+% ======================================================
+\section{Alcance del proyecto}
+
+\subsection{Incluye}
+
+El alcance de la Versión 1.0 (MVP) se delimita en el SRS (sección 1.2) junto con el criterio formal de ajuste de alcance (sección 5.3) y comprende:
+
+\begin{itemize}[leftmargin=1.5em]
+    \item Registro y administración de conexiones cifradas y de solo lectura a SQL Server (2016 o superior) y Azure SQL Database, con detección automática de versión, permisos, estado de Query Store y matriz de soporte de tres niveles (\textit{Probado}, \textit{Compatible sin pruebas}, \textit{No soportado}).
+    \item Ingesta manual o programada de texto de consultas, planes y estadísticas desde Query Store hacia PostgreSQL, de forma incremental, idempotente y reanudable.
+    \item Análisis estático determinístico del Showplan XML mediante un catálogo versionado para las reglas de prioridad \textit{Debe} (\texttt{REG-01}, \texttt{REG-02}, \texttt{REG-03}, \texttt{REG-04} y \texttt{REG-11}), declarando la clase de evidencia de cada hallazgo.
+    \item Cálculo determinístico del \textit{Query Health Score} con desglose de componentes e historial por consulta.
+    \item Explicaciones y recomendaciones generadas por IA sobre fragmentos de conocimiento curados y recuperados determinísticamente por regla desde el núcleo .NET, validadas automáticamente y registradas en una traza encadenada de solo adición.
+    \item Tablero de consultas críticas, series temporales por plan, visor jerárquico de planes con nodos resaltados y explicación trazable con enlaces a evidencia.
+    \item Autenticación obligatoria, control de acceso por roles (\texttt{DBA} y \texttt{Desarrollador}) filtrado en la capa de datos y cifrado por campo en reposo.
+    \item Arneses de evaluación reproducibles del motor y del componente de IA, junto con el informe del laboratorio.
+\end{itemize}
+
+\subsection{No incluye}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Cualquier modificación de la base monitoreada} (DDL, DML o cambios de configuración, incluido forzar planes). Toda acción correctiva la decide y ejecuta manualmente un DBA (\texttt{RES-01}, \texttt{ADR-07}).
+    \item Motores distintos de SQL Server y Azure SQL Database, arquitecturas \textit{multitenant} e integración con CI/CD, diferidos a Proyecto de Ingeniería II.
+    \item Monitoreo en tiempo real y alertas automáticas: se procesa telemetría histórica por ventanas.
+    \item Garantía absoluta de ausencia de errores en las explicaciones de IA: en su lugar, ninguna explicación se etiqueta como verificada si no superó el validador, y la fidelidad se reporta como tasa medida.
+    \item Seudonimización de nombres de tablas y columnas hacia el proveedor de IA (riesgo residual aceptado, \texttt{DA-13}).
+    \item Funcionalidades de prioridad \textit{Debería} y \textit{Podría} excluidas conforme al orden de recorte del SRS (§5.3): reglas \texttt{REG-05} a \texttt{REG-10}, exportación a PDF, edición de umbrales desde la interfaz, comparación gráfica de planes, comparación antes/después y captura del plan real en producción.
+\end{itemize}
+
+\subsection{Producto o resultado esperado}
+
+Una Release 1.0 desplegable mediante \texttt{docker compose up}, integrada por cinco contenedores de plataforma (\texttt{web}, \texttt{api}, \texttt{worker}, \texttt{ai}, \texttt{db}) más un sexto contenedor de laboratorio (\texttt{sqlserver} Developer 2022 en la red aislada \texttt{targets}), capaz de conectarse a una instancia soportada, priorizar consultas críticas, presentar hallazgos con su evidencia y emitir explicaciones trazables. Se entregan además el código fuente, las suites automatizadas, el SRS v1.1 definitivo, el documento de arquitectura, los arneses de evaluación y el informe del laboratorio.
+
+% ======================================================
+% SECCIÓN 8
+% ======================================================
+\section{Usuarios, clientes y partes interesadas}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{p{0.23\textwidth} p{0.20\textwidth} X p{0.12\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Actor}} & \textcolor{white}{\textbf{Rol}} & \textcolor{white}{\textbf{Necesidad o interés principal}} & \textcolor{white}{\textbf{Impacto}} \\
+\midrule
+DBA & Usuario final principal & Diagnóstico rápido, confiable y trazable; control exclusivo sobre cambios en producción & Alto \\
+Desarrollador backend & Usuario secundario & Comprender por qué su consulta es lenta dentro de sus conexiones asignadas sin depender del DBA & Alto \\
+Docente / tutor (Aisner Marrugo) & Evaluador académico & Rigor metodológico, trazabilidad IA $\rightarrow$ evidencia y reproducibilidad de resultados & Alto \\
+Organización propietaria de la BD & Beneficiario indirecto & Menor consumo de cómputo, menos incidentes y garantía verificable de no intrusión & Medio \\
+Especialista en bases de datos & Revisor externo & Contrastar hallazgos, score y explicaciones frente a criterio experto (\texttt{RF-EVA-03}) & Medio \\
+\bottomrule
+\end{tabularx}
+\caption{Actores y partes interesadas del sistema}
+\label{tab:actores}
+\end{table}
+\endgroup
+
+La validación académica corresponde al tutor, apoyado en el contraste con un especialista cuya disponibilidad efectiva y tamaño de muestra ($N$) se ratifican en la reunión \texttt{S1-20} (\texttt{DA-10}).
+
+% ======================================================
+% SECCIÓN 9
+% ======================================================
+\section{Requerimientos especificados}
+
+Los requisitos se formularon conforme a ISO/IEC/IEEE 29148:2018 \cite{iso-29148}, con sintaxis controlada EARS \cite{mavin-ears}, priorización MoSCoW \cite{clegg-moscow} y clasificación de calidad según ISO/IEC 25010:2023 \cite{iso-25010}. El SRS v1.1 definitivo (\texttt{docs/SRS.tex}) consolida \textbf{114 requisitos} (76 funcionales y 38 no funcionales), de los cuales 74 son de prioridad \textit{Debe}, equivalentes al \textbf{64,9\,\%} del total. El listado íntegro, las historias de usuario (\texttt{HU-01}--\texttt{HU-21}) \cite{cohn-stories}, los casos de uso (\texttt{CU-01}--\texttt{CU-07}) \cite{cockburn-uc}, sus criterios de aceptación \cite{north-bdd} y las matrices de trazabilidad residen en dicho SRS.
+
+\subsection{Requerimientos funcionales representativos}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{>{\bfseries}p{0.18\textwidth} p{0.65\textwidth} p{0.11\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Síntesis del requerimiento funcional}} & \textcolor{white}{\textbf{Prioridad}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Síntesis del requerimiento funcional}} & \textcolor{white}{\textbf{Prioridad}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Selección de requerimientos funcionales del SRS v1.1}
+\label{tab:rf-resumen}
+\endlastfoot
+RF-CFG-01 a 04 & Registrar conexiones, probar conectividad (15 s por defecto), rechazar versiones anteriores a SQL Server 2016 y diagnosticar el estado de Query Store sin alterarlo & Debe \\
+RF-ING-04, 05 & Agregar estadísticas ponderadas por ejecuciones e ingesta incremental idempotente sin duplicados & Debe \\
+RF-ING-09 & Clasificar como no analizable el plan nulo, truncado o inválido sin detener el lote de ingesta & Debe \\
+RF-MOT-02, 03 & Garantizar determinismo ante igual entrada, versión y umbrales; declarar evidencia, nodos y clase de evidencia por hallazgo & Debe \\
+RF-MOT-04 a 07 & Detectar conversión implícita, índices faltantes con advertencia de escritura, recorridos completos costosos y búsquedas por clave excesivas (\texttt{REG-01} a \texttt{REG-04}) & Debe \\
+RF-SCO-01 a 04 & Calcular \textit{Query Health Score} en escala 0--100 con desglose de componentes y ordenamiento por score o consumo & Debe \\
+RF-IA-01 a 03 & Explicar solo ante presencia de hallazgos; emitir afirmaciones tipadas; validar identificadores, valores numéricos y relación curada fuera del servicio de IA & Debe \\
+RF-IA-05, RF-DASH-06 & Presentar toda recomendación como sugerencia sujeta a revisión humana mediante aviso persistente & Debe \\
+RF-IA-06 & Degradar de forma controlada mostrando los hallazgos determinísticos y aviso explícito si la IA falla & Debe \\
+RF-TRZ-01, 02 & Registrar evidencia, versiones, modelo, prompt, hash de contexto y validación en bitácora encadenada de solo adición & Debe \\
+RF-DASH-01 a 05 & Proveer listado priorizado, detalle de consulta, series por plan, visor jerárquico y enlaces desde afirmaciones hacia la evidencia & Debe \\
+RF-EVA-01, 02 & Disponer de arneses reproducibles para el motor determinístico y el componente de IA & Debe \\
+RF-MOT-08 a 10, 13 & Reglas \texttt{REG-05} a \texttt{REG-08} (estadísticas, unión sin predicado, cardinalidad, regresión) & Debería \\
+RF-DASH-07, 08 & Vista gráfica del plan y comparación visual de planes & Debería \\
+RF-DASH-10 a 12 & Exportación de reportes, comparación antes/después y edición de umbrales desde UI & Podría \\
+\end{longtable}
+\endgroup
+
+\subsection{Requerimientos no funcionales representativos}
+
+Las metas identificadas con el símbolo \dagsym{} son parámetros provisionales de ingeniería sujetos a ratificación y calibración empírica (\texttt{DA-06}).
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{>{\bfseries}p{0.18\textwidth} p{0.42\textwidth} p{0.34\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Atributo y exigencia}} & \textcolor{white}{\textbf{Criterio de verificación}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Atributo y exigencia}} & \textcolor{white}{\textbf{Criterio de verificación}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Selección de requerimientos no funcionales del SRS v1.1}
+\label{tab:rnf-resumen}
+\endlastfoot
+RNF-SEG-01 & Solo \texttt{SELECT} constantes de una lista blanca contra Query Store y catálogo & 0 sentencias DDL, DML o de configuración en \texttt{statement\_log} \\
+RNF-SEG-03, 04 & TLS 1.2+ con validación de certificado; credenciales y claves cifradas en reposo & Cero secretos en texto plano en código, configuración o logs \\
+RNF-SEG-05 & Enmascarado léxico de literales con \texttt{ScriptDom} antes del envío al proveedor LLM & 0 ocurrencias de literales sembrados en solicitudes HTTP salientes \\
+RNF-SEG-06, 07 & Delimitación de datos no confiables; salida validada contra esquema y renderizada solo como texto & $\ge 10$ casos de inyección sin evadir formato ni validador; CSP \texttt{script-src 'self'} \\
+RNF-SEG-11 a 14 & Autenticación obligatoria, RBAC por conexión en capa de datos y cifrado AES-256-GCM por campo & Pruebas de autorización por endpoint, rol y filtro EF Core \\
+RNF-FUN-01 & Precisión y exhaustividad de las reglas \textit{Debe} & Precisión $\ge 90\,\%$ y exhaustividad $\ge 80\,\%$ \dagsym{} \\
+RNF-FUN-02 & Integridad del estado de validación & 0 explicaciones no validadas presentadas como verificadas \\
+RNF-FUN-03 & Fidelidad del primer intento y coincidencia numérica & $\ge 90\,\%$ de aprobación al primer intento y $100\,\%$ numérica \dagsym{} \\
+RNF-RND-01 & Sobrecarga máxima de la ingesta sobre la instancia objetivo & $\le 5\,\%$ de CPU y 0 esperas de bloqueo \dagsym{} \\
+RNF-RND-02 a 04 & Latencia de tablero, explicación y análisis de plan & Listado $\le 2\text{ s}$; explicación $\le 30\text{ s}$; plan 1 MB $\le 500\text{ ms}$ (p95) \dagsym{} \\
+RNF-FIA-01, 02 & Reanudación sin pérdida ni duplicación; límite de tiempo hacia IA & Reintento exponencial en Hangfire; 60 s y 2 reintentos en servicio IA \\
+RNF-COM-01, 02, 04 & Matriz de compatibilidad y tolerancia a elementos XML desconocidos & Aceptación en SQL Server 2022 / 2019 / Azure SQL según disponibilidad \\
+RNF-INT-01 a 03 & Usabilidad y accesibilidad & $\ge 80\,\%$ de $\ge 5$ desarrolladores identifica causa en $\le 3\text{ min}$; SUS $\ge 68$ \dagsym{}; WCAG 2.2 AA \cite{wcag-22} \\
+RNF-MAN-01, 02 & Reglas desacopladas con casos positivo y negativo por regla & Cobertura del motor $\ge 80\,\%$ \dagsym{} \\
+RNF-FLE-01 & Instalación reproducible mediante README & Despliegue completo en $\le 60\text{ min}$ \dagsym{} por persona externa \\
+\end{longtable}
+\endgroup
+
+% ======================================================
+% SECCIÓN 10
+% ======================================================
+\section{Propuesta de solución}
+
+Query Doctor AI opera como una plataforma intermedia de observabilidad diagnóstica desacoplada entre dos sistemas externos: las instancias SQL monitoreadas (solo lectura) y el proveedor de inteligencia artificial generativa (al que solo remite contexto técnico enmascarado).
+
+\textbf{Flujo de valor.} La telemetría se ingiere incrementalmente desde Query Store y se almacena cifrada en PostgreSQL; el motor determinístico analiza cada plan y produce hallazgos con nodos e evidencia; esos hallazgos alimentan simultáneamente el cálculo del \textit{Query Health Score} y, cuando el usuario solicita una explicación, el armado de un contexto léxicamente enmascarado que el servicio de IA transforma en afirmaciones tipadas, sometidas a validación determinística y registradas en la cadena de trazabilidad.
+
+\textbf{Capas funcionales principales:}
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Capa de ingesta y persistencia:} pasarela \texttt{QueryStoreGateway} con lista blanca inmutable sobre \texttt{sys.query\_store\_query\_text}, \texttt{query}, \texttt{plan}, \texttt{runtime\_stats} y \texttt{runtime\_stats\_interval} \cite{ms-qs-plan,ms-qs-stats}, junto con almacenamiento cifrado en cinco esquemas PostgreSQL.
+    \item \textbf{Capa de análisis:} analizador seguro \texttt{ShowplanXmlParser}, motor versionado de reglas determinísticas (clases de evidencia A--D) y calculadora pura \texttt{HealthScoreCalculator}.
+    \item \textbf{Capa de explicación y gobernanza:} enmascarado léxico obligatorio con \texttt{ScriptDom}, recuperación determinística de fragmentos curados por \texttt{rule\_id} (\texttt{RF-IA-04}), servicio FastAPI con esquema JSON estricto, validador externo en .NET con tres criterios (existencia de identificadores, coincidencia numérica y relación causal curada), bitácora encadenada por hash SHA-256 y tablero web con control de acceso por conexión.
+\end{enumerate}
+
+\textbf{Elementos diferenciadores:}
+\begin{itemize}[leftmargin=1.5em]
+    \item Toda señal declara clase de evidencia y nodos del plan; no existen alertas opacas.
+    \item El componente que genera nunca certifica su propia salida (\texttt{ExplanationValidator} reside en .NET, fuera de Python).
+    \item La trazabilidad distingue explícitamente \texttt{TRAZADA} de \texttt{NO\_VERIFICADA} sin atribuir validez diagnóstica absoluta.
+    \item La restricción de solo lectura es estructural y verificada en pruebas automáticas (\texttt{NetArchTest} sobre exclusividad de \texttt{SqlClient}).
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=0.75cm and 1.25cm,
+    stepbox/.style={rectangle, rounded corners=4pt, draw=utbblue, thick, fill=white, text width=5.6cm, align=left, inner sep=7pt, font=\footnotesize},
+    sidebox/.style={rectangle, rounded corners=4pt, draw=utbmuted, dashed, thick, fill=utbblue!5, text width=4.6cm, align=left, inner sep=7pt, font=\footnotesize},
+    finalbox/.style={rectangle, rounded corners=4pt, draw=utblight, very thick, fill=utblight!12, text width=5.6cm, align=left, inner sep=7pt, font=\footnotesize},
+    arr/.style={-{Stealth[length=2.4mm]}, thick, color=utbblue},
+    sidearr/.style={-{Stealth[length=2.2mm]}, thick, color=utbmuted}
+]
+\node[stepbox] (s1) {\textbf{1. Solicitud de explicación}\\La API verifica RBAC por conexión y encola \texttt{explain(explanationId)} en Hangfire.};
+\node[stepbox, below=of s1] (s2) {\textbf{2. Consulta en caché (SHA-256)}\\Clave canónica sobre contexto enmascarado, catálogo, prompt y perfil LLM.};
+\node[stepbox, below=of s2] (s3) {\textbf{3. Enmascarado y armado de contexto}\\Worker $\cdot$ \texttt{LiteralMasker} (\texttt{TSql170Parser}) sustituye literales y comentarios; selecciona fragmentos KB por \texttt{rule\_id}.};
+\node[stepbox, below=of s3] (s4) {\textbf{4. Generación en servicio IA (Python)}\\Delimitación anti-inyección (\texttt{v1.1}), invocación al perfil LLM y validación estricta de esquema Pydantic / JSON.};
+\node[stepbox, below=of s4] (s5) {\textbf{5. Validador determinístico (.NET)}\\Comprueba (a) IDs reales, (b) concordancia numérica y (c) relación causal curada en KB.};
+\node[finalbox, below=of s5] (s6) {\textbf{6. Explicación \texttt{TRAZADA}}\\Cifrado por campo + aviso persistente + entrada en \texttt{audit.trace\_entry} encadenada por hash.};
+
+\node[sidebox, right=of s1] (r1) {\textbf{Sin hallazgos (\texttt{NO\_GENERADA})}\\No se encola ni se invoca al servicio de IA (\texttt{CA-HU09.2}).};
+\node[sidebox, right=of s2] (r2) {\textbf{Acierto de caché}\\Solo se reutilizan explicaciones previas en estado \texttt{TRAZADA}.};
+\node[sidebox, right=of s4] (r4) {\textbf{Fallo o salida inválida}\\Estado \texttt{IA\_NO\_DISPONIBLE}; hallazgos y árbol del plan siguen visibles (\texttt{RF-IA-06}).};
+\node[sidebox, right=of s5] (r5) {\textbf{Incumple (a), (b) o (c)}\\Estado \texttt{NO\_VERIFICADA}; se reportan motivos de rechazo al usuario.};
+
+\draw[arr] (s1) -- node[right, font=\scriptsize]{hay hallazgos} (s2);
+\draw[arr] (s2) -- node[right, font=\scriptsize]{sin caché} (s3);
+\draw[arr] (s3) -- (s4);
+\draw[arr] (s4) -- node[right, font=\scriptsize]{JSON válido} (s5);
+\draw[arr] (s5) -- node[right, font=\scriptsize]{supera (a)+(b)+(c)} (s6);
+
+\draw[sidearr] (s1) -- (r1);
+\draw[sidearr] (s2) -- (r2);
+\draw[sidearr] (s4) -- (r4);
+\draw[sidearr] (s5) -- (r5);
+\end{tikzpicture}%
+}
+\caption{Flujo de generación, enmascarado léxico, validación determinística y trazabilidad}
+\label{fig:flujo-explicacion}
+\end{figure}
+
+% ======================================================
+% SECCIÓN 11
+% ======================================================
+\section{Alternativas de solución}
+
+La arquitectura se seleccionó comparando tres alternativas de diseño (\texttt{docs/arquitectura/ARQUITECTURA\_v0.1.md}, \texttt{ADR-01}, \texttt{ADR-08} y sección 13).
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{p{0.15\textwidth} p{0.27\textwidth} p{0.25\textwidth} p{0.26\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Criterio}} & \textcolor{white}{\textbf{A. Monolito modular .NET (2 hosts) + IA Python + PostgreSQL}} & \textcolor{white}{\textbf{B. Microservicios por módulo}} & \textcolor{white}{\textbf{C. Arquitectura preliminar de 4 capas (Collector + lakehouse + forzar plan)}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Criterio}} & \textcolor{white}{\textbf{A. Monolito modular .NET (2 hosts) + IA Python + PostgreSQL}} & \textcolor{white}{\textbf{B. Microservicios por módulo}} & \textcolor{white}{\textbf{C. Arquitectura preliminar de 4 capas (Collector + lakehouse + forzar plan)}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Comparación de alternativas arquitectónicas}
+\label{tab:alternativas}
+\endlastfoot
+Costo operativo & Bajo: un host, Docker Compose, sin broker ni almacén de objetos & Medio-alto: múltiples contenedores, orquestación y observabilidad & Alto: agente por servidor, almacenamiento de objetos y motor analítico adicional \\
+Complejidad & Moderada: límites de módulo con proyectos y dependencias unidireccionales & Alta: contratos distribuidos, versionado y trazabilidad entre servicios & Alta: tres motores de almacenamiento sin requisito que lo exija \\
+Tiempo de desarrollo & Compatible con 4 personas y ~11 semanas & Excede el calendario (\texttt{RES-04}, \texttt{RES-05}) & Excede el calendario \\
+Escalabilidad & Suficiente para una organización; particionado mensual opcional & Alta, pero innecesaria para el MVP & Alta (\textit{multitenant}), prevista para Proyecto de Ingeniería II \\
+Mantenibilidad & Alta: reglas independientes y reglas vigiladas por \texttt{NetArchTest} & Media: sobrecarga de despliegue e integración & Baja para un equipo de cuatro integrantes \\
+Seguridad & Alta: solo el Worker llega a bases objetivo y solo el servicio de IA sale a Internet & Alta si se segmenta bien, con mayor superficie de ataque & Menor: instalar agente y forzar planes viola \texttt{RES-01} \\
+Viabilidad & Alta & Media & Baja para el MVP \\
+\end{longtable}
+\endgroup
+
+\textbf{Alternativa seleccionada: A.} Representa la arquitectura mínima suficiente para satisfacer los requisitos \textit{Debe} dentro del calendario académico, preservando la restricción de solo lectura como invariante estructural y conservando los aportes válidos de C (marca de agua incremental, motor dual y flujo estructurado de hallazgos) para fases futuras.
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\small
+\begin{longtable}{>{\bfseries}p{0.11\textwidth} p{0.35\textwidth} p{0.48\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{ADR}} & \textcolor{white}{\textbf{Decisión aceptada}} & \textcolor{white}{\textbf{Justificación técnica}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{ADR}} & \textcolor{white}{\textbf{Decisión aceptada}} & \textcolor{white}{\textbf{Justificación técnica}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Registro consolidado de decisiones arquitectónicas (ADR-01 a ADR-11)}
+\label{tab:adrs}
+\endlastfoot
+ADR-01 & Monolito modular .NET con dos hosts (API y Worker) & Adecuado para 4 desarrolladores; permite separar permisos de red sin sobrecarga de microservicios \\
+ADR-02 & IA en servicio Python separado (FastAPI) & Aísla la única salida hacia Internet y aprovecha Pydantic y el ecosistema de evaluación \\
+ADR-03 & PostgreSQL 16 con \texttt{pgvector} como repositorio local & Licencia libre, sin límites de volumen de edición gratuita y motor distinto al monitoreado \\
+ADR-04 & Hangfire sobre el mismo PostgreSQL & Provee reintentos exponenciales, colas diferenciadas y monitoreo sin contenedor adicional \\
+ADR-05 & Enmascarado léxico con \texttt{ScriptDom} en el núcleo .NET & Evita expresiones regulares frágiles; garantiza que ningún literal cruce la frontera hacia Python \\
+ADR-06 & Validador determinístico en el núcleo .NET & Principio de separación: el servicio que genera nunca certifica su propia salida \\
+ADR-07 & Prohibición total de forzar plan o escribir en producción & Cumple \texttt{RES-01} y \texttt{RNF-SEG-01}; toda acción en BD objetivo es externa \\
+ADR-08 & Repositorio relacional único, sin \textit{lakehouse} & Evita introducir MinIO/Parquet/DuckDB sin volumen ni requisito que los justifique \\
+ADR-09 & ASP.NET Core Identity con usuarios locales; OIDC fuera del MVP & Cumple \texttt{RNF-SEG-13} sin depender de un proveedor de identidad externo en demostración \\
+ADR-10 & Adaptador LLM por perfiles (\texttt{openrouter\_free}, \texttt{openrouter\_paid}, \texttt{gemini\_free}, \texttt{ollama\_local}, \texttt{mock}) con candado & Permite desarrollar y probar en laboratorio sin presupuesto, impidiendo por código perfiles gratuitos con \texttt{APP\_ENV=prod} \\
+ADR-11 & Cifrado por campo AES-256-GCM en aplicación & Protege secretos, SQL, planes y afirmaciones incluso en respaldos lógicos \\
+\end{longtable}
+\endgroup
+
+% ======================================================
+% SECCIÓN 12
+% ======================================================
+\section{Arquitectura del sistema}
+
+La arquitectura del sistema sigue el documento \texttt{docs/arquitectura/ARQUITECTURA\_v0.1.md}, modelada mediante el enfoque C4 \cite{brown-c4}, organizada bajo los lineamientos de ISO/IEC/IEEE 42010:2022 \cite{iso-42010} y documentada mediante registros ADR \cite{nygard-adr}.
+
+\begin{figure}[H]
+\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=1.1cm and 1.6cm,
+    person/.style={rectangle, rounded corners=6pt, draw=utbblue, thick, fill=utbblue!8, text width=3.4cm, align=center, inner sep=7pt, font=\footnotesize},
+    system/.style={rectangle, rounded corners=8pt, draw=utbblue, very thick, fill=utbblue, text=white, text width=4.8cm, align=center, inner sep=12pt, font=\small},
+    ext/.style={rectangle, rounded corners=6pt, draw=utbmuted, thick, fill=white, text width=3.8cm, align=center, inner sep=7pt, font=\footnotesize},
+    extopt/.style={rectangle, rounded corners=6pt, draw=utbmuted, dashed, thick, fill=white, text width=3.4cm, align=center, inner sep=6pt, font=\footnotesize},
+    arr/.style={-{Stealth[length=2.5mm]}, thick, color=utbblue}
+]
+\node[system] (sys) {\textbf{Query Doctor AI}\\Plataforma de análisis determinístico sobre Query Store, scoring y explicación trazable};
+\node[person, above left=of sys] (dba) {\textbf{DBA}\\Registra conexiones, lanza ingestas, revisa diagnósticos y auditoría};
+\node[person, above=1.2cm of sys] (dev) {\textbf{Desarrollador}\\Consulta hallazgos y explicaciones de sus conexiones asignadas};
+\node[person, above right=of sys] (eval) {\textbf{Tutor / Evaluador}\\Verifica trazabilidad y ejecuta arneses empíricos};
+
+\node[ext, below left=1.3cm and 0.6cm of sys] (sql) {\textbf{SQL Server / Azure SQL}\\Base de datos objetivo\\(\textit{Query Store} + catálogo)};
+\node[ext, below right=1.3cm and 0.6cm of sys] (llm) {\textbf{Proveedor LLM en la nube}\\OpenRouter / Google Gemini\\(u Ollama local)};
+\node[extopt, right=1.5cm of sys] (oidc) {\textbf{Proveedor OIDC}\\Fuera del MVP\\(Proyecto II)};
+
+\draw[arr] (dba) -- node[left, font=\scriptsize]{HTTPS / sesión} (sys);
+\draw[arr] (dev) -- node[right, font=\scriptsize]{HTTPS / sesión} (sys);
+\draw[arr] (eval) -- node[right, font=\scriptsize]{HTTPS / CLI} (sys);
+\draw[arr] (sys) -- node[left, text width=2.8cm, align=right, font=\scriptsize]{TDS + TLS 1.2+\\Solo \texttt{SELECT} lista blanca} (sql);
+\draw[arr] (sys) -- node[right, text width=3.0cm, align=left, font=\scriptsize]{HTTPS + API Key\\Contexto enmascarado JSON} (llm);
+\draw[arr, dashed, color=utbmuted] (sys) -- node[above, font=\scriptsize]{Extensión} (oidc);
+\end{tikzpicture}%
+}
+\caption{Diagrama de contexto del sistema (Modelo C4, Nivel 1)}
+\label{fig:c4-contexto}
+\end{figure}
+
+\subsection{Contenedores y arquitectura modular}
+
+La plataforma se despliega mediante Docker Compose con cinco contenedores de sistema (\texttt{web}, \texttt{api}, \texttt{worker}, \texttt{ai}, \texttt{db}) más un sexto contenedor de laboratorio (\texttt{sqlserver} Developer 2022) para pruebas y verificación empírica.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=0.8cm and 1.1cm,
+    box/.style={rectangle, rounded corners=5pt, draw=utbblue, thick, fill=white, text width=3.5cm, align=center, inner sep=6pt, font=\scriptsize},
+    dbbox/.style={cylinder, shape border rotate=90, aspect=0.22, draw=utbblue, thick, fill=utbblue!10, text width=3.1cm, align=center, inner sep=6pt, font=\scriptsize},
+    extbox/.style={rectangle, rounded corners=5pt, draw=utbmuted, dashed, thick, fill=white, text width=3.5cm, align=center, inner sep=6pt, font=\scriptsize},
+    net/.style={rectangle, rounded corners=6pt, draw=utblight!70, dashed, inner sep=8pt},
+    arr/.style={-{Stealth[length=2.2mm]}, thick, color=utbblue}
+]
+\node[extbox] (browser) {\textbf{Navegador web}\\DBA / Desarrollador};
+\node[box, below=0.9cm of browser] (web) {\textbf{web (Nginx)}\\HTML5 + CSS + JS nativo\\Proxy \texttt{/api/} (puerto \texttt{8080})};
+\node[box, below=0.9cm of web] (api) {\textbf{api (ASP.NET Core)}\\.NET 10 $\cdot$ Identity, RBAC,\\filtro EF Core, REST, Hangfire Client};
+\node[dbbox, right=1.8cm of api] (db) {\textbf{db (PostgreSQL 16)}\\5 esquemas + \texttt{pgvector}\\Colas Hangfire y bitácora \texttt{audit.*}};
+\node[box, below=1.0cm of api] (worker) {\textbf{worker (.NET 10 Host)}\\Ingesta, \texttt{PlanParser}, reglas, score,\\\texttt{LiteralMasker}, validador, KB};
+\node[box, below=1.0cm of db] (ai) {\textbf{ai (Python FastAPI)}\\Prompt \texttt{v1.1}, adaptador LLM,\\esquema JSON, candado \texttt{prod}};
+\node[extbox, below=1.0cm of worker] (sql) {\textbf{SQL Server / Azure SQL}\\(\texttt{sqlserver} en lab, red \texttt{targets})\\Solo \texttt{SELECT} + TLS 1.2+};
+\node[extbox, below=1.0cm of ai] (llm) {\textbf{LLM externo}\\OpenRouter / Gemini\\(red \texttt{egress-ai})};
+
+\begin{scope}[on background layer]
+    \node[fit=(web)(api)(worker)(db)(ai), rectangle, rounded corners=8pt, draw=utbblue!40, fill=utbblue!4, inner sep=12pt, label={[font=\scriptsize\bfseries, text=utbblue]above right:Docker Compose -- Redes segmentadas (\texttt{frontend}, \texttt{backend}, \texttt{targets}, \texttt{egress-ai})}] {};
+\end{scope}
+
+\draw[arr] (browser) -- node[right, font=\scriptsize]{HTTP (TLS \texttt{443} pendiente)} (web);
+\draw[arr] (web) -- node[right, font=\scriptsize]{red \texttt{frontend}} (api);
+\draw[arr] (api) -- node[above, font=\scriptsize]{lee/escribe} (db);
+\draw[arr] (worker) -- node[above left, font=\scriptsize]{trabajos} (db);
+\draw[arr] (worker) -- node[above, font=\scriptsize]{HTTP enmascarado + KB} (ai);
+\draw[arr, color=utblight] (worker) -- node[right, font=\scriptsize]{TDS / TLS (red \texttt{targets})} (sql);
+\draw[arr, color=utblight] (ai) -- node[right, font=\scriptsize]{HTTPS (red \texttt{egress-ai})} (llm);
+\end{tikzpicture}%
+}
+\caption{Vista de contenedores y aislamiento de redes (Modelo C4, Nivel 2)}
+\label{fig:c4-contenedores}
+\end{figure}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{>{\bfseries}p{0.13\textwidth} p{0.20\textwidth} p{0.33\textwidth} p{0.28\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Contenedor}} & \textcolor{white}{\textbf{Tecnología implementada}} & \textcolor{white}{\textbf{Responsabilidad principal}} & \textcolor{white}{\textbf{Restricción estructural («no hace»)}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Contenedor}} & \textcolor{white}{\textbf{Tecnología implementada}} & \textcolor{white}{\textbf{Responsabilidad principal}} & \textcolor{white}{\textbf{Restricción estructural («no hace»)}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Contenedores implementados, responsabilidades y restricciones}
+\label{tab:contenedores}
+\endlastfoot
+web & HTML5, CSS y JavaScript nativo servidos por Nginx & Autenticación, alta/listado de conexiones, listado priorizado de consultas, detalle con series SVG, visor de plan y explicación solo texto & No renderiza HTML del LLM; no conserva secretos ni decide autorización \\
+api & ASP.NET Core sobre .NET 10 (LTS) & Autenticación, RBAC (\texttt{DbaOnly}, \texttt{ConnectionReader}), filtro global EF Core, endpoints REST, panel \texttt{/hangfire} y encolado & No abre conexiones a bases objetivo ni llama al servicio de IA o al LLM \\
+worker & .NET 10, \texttt{Host} + Hangfire (\texttt{Worker}, \texttt{Probe}, \texttt{Explain}) & Sondeo, ingesta incremental, parser, reglas, score, enmascarado léxico, armado de contexto, cliente HTTP hacia IA y validador & No expone puertos de red \\
+ai & Python 3.12, FastAPI, Pydantic & Prompts versionados (\texttt{v1.1}) con delimitación anti-inyección, adaptador multi-perfil, validación JSON y candado \texttt{APP\_ENV=prod} & No ve literales ni credenciales; no consulta bases objetivo; no decide estado \texttt{TRAZADA} \\
+db & PostgreSQL 16 con \texttt{pgvector} & Repositorio en cinco esquemas, almacenamiento de colas Hangfire, bitácora encadenada y KB curada & Sin exposición pública externa \\
+sqlserver (lab) & SQL Server 2022 Developer & Base controlada \texttt{QD\_Lab} (1 000 000 filas y escenarios \texttt{ESC01}--\texttt{ESC06}) para laboratorio y pruebas & Excluido del despliegue productivo \\
+\end{longtable}
+\endgroup
+
+Las dependencias de la solución .NET son estrictamente unidireccionales (\texttt{Domain} $\leftarrow$ \texttt{Application} $\leftarrow$ \texttt{Infrastructure} $\leftarrow$ \texttt{Api / Worker}), vigiladas automáticamente por 21 pruebas arquitectónicas en \texttt{QueryDoctor.ArchitectureTests} (\texttt{NetArchTest}, incluida inspección de código IL contra \texttt{IgnoreQueryFilters}).
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=0.7cm and 1.1cm,
+    layer/.style={rectangle, rounded corners=4pt, draw=utbblue, thick, fill=utbblue!6, minimum width=2.8cm, minimum height=0.9cm, align=center, font=\footnotesize},
+    host/.style={rectangle, rounded corners=4pt, draw=utblight, thick, fill=utblight!12, minimum width=2.8cm, minimum height=0.9cm, align=center, font=\footnotesize},
+    arr/.style={-{Stealth[length=2.2mm]}, thick, color=utbblue}
+]
+\node[layer] (dom) {\textbf{Domain}\\Entidades, enums, invariantes};
+\node[layer, right=of dom] (app) {\textbf{Application}\\Casos de uso, reglas puras,\\masker, score, validador};
+\node[layer, right=of app] (inf) {\textbf{Infrastructure}\\EF Core, \texttt{QueryStoreGateway},\\\texttt{SecretProtector}, Hangfire};
+\node[host, above right=0.35cm and 1.1cm of inf] (api) {\textbf{Host: Api}\\REST, Identity, RBAC};
+\node[host, below right=0.35cm and 1.1cm of inf] (wrk) {\textbf{Host: Worker}\\Jobs Hangfire};
+
+\draw[arr] (app) -- (dom);
+\draw[arr] (inf) -- (app);
+\draw[arr] (api.west) -- (inf.north east);
+\draw[arr] (wrk.west) -- (inf.south east);
+\end{tikzpicture}
+\caption{Dirección de dependencias del monolito modular vigilada por \texttt{NetArchTest}}
+\label{fig:dependencias-net}
+\end{figure}
+
+\subsection{Segmentación de red (invariante de seguridad)}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{>{\bfseries}p{0.20\textwidth} p{0.28\textwidth} X}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Servicio}} & \textcolor{white}{\textbf{Redes Compose}} & \textcolor{white}{\textbf{Salida de red permitida}} \\
+\midrule
+web & \texttt{frontend} & Ninguna (puerto publicado en Compose actual: \texttt{127.0.0.1:8080}; terminación TLS en \texttt{443} pendiente para entorno productivo) \\
+api & \texttt{frontend}, \texttt{backend} & Ninguna \\
+worker & \texttt{backend}, \texttt{targets} & Solo bases objetivo SQL Server / Azure SQL \\
+ai & \texttt{backend}, \texttt{egress-ai} & Solo dominio del proveedor LLM activo \\
+db & \texttt{backend} & Ninguna \\
+sqlserver (lab) & \texttt{targets} & Ninguna \\
+\bottomrule
+\end{tabularx}
+\caption{Segmentación de redes en Docker Compose}
+\label{tab:redes}
+\end{table}
+\endgroup
+
+Dado que Docker Compose no restringe nativamente la salida por nombre de dominio en \texttt{egress-ai}, en despliegue productivo debe aplicarse filtrado de salida mediante firewall del host o proxy dedicado (\texttt{RA-05}).
+
+\subsection{Modelo de datos en cinco esquemas}
+
+El repositorio en PostgreSQL se organiza en \textbf{cinco esquemas}, uno por frontera de permisos, todos implementados y versionados mediante \textbf{11 migraciones de EF Core} (desde \texttt{Inicial} hasta \texttt{AuditoriaUsuarioRelacionado}):
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    node distance=0.6cm and 0.6cm,
+    schema/.style={rectangle, rounded corners=4pt, draw=utbblue, thick, fill=white, text width=2.85cm, align=left, inner sep=6pt, font=\scriptsize}
+]
+\node[schema, fill=utbblue!6] (core) {\textbf{\textcolor{utbblue}{esquema: core}}\\\texttt{connection} (cifrada)\\\texttt{capability\_profile}\\\texttt{query\_text} (cifrada)\\\texttt{query}, \texttt{plan} (\texttt{text})\\\texttt{runtime\_stat} (UK)\\\texttt{ingestion\_run}};
+\node[schema, right=of core] (ana) {\textbf{\textcolor{utbblue}{esquema: analysis}}\\\texttt{rule\_catalog}\\\texttt{threshold\_set}\\\texttt{analysis\_run}\\\texttt{finding}\\\texttt{health\_score}};
+\node[schema, right=of ana] (ai) {\textbf{\textcolor{utbblue}{esquema: ai}}\\\texttt{explanation}\\\texttt{claim} (cifrada)\\\texttt{claim\_reference}\\\texttt{kb\_fragment}\\\texttt{kb\_causal\_relation}};
+\node[schema, right=of ai, fill=utblight!8] (aud) {\textbf{\textcolor{utbblue}{esquema: audit}}\\\texttt{trace\_entry}\\\texttt{audit\_event}\\Trigger inmutable +\\hash SHA-256 sin FK};
+\node[schema, right=of aud] (ops) {\textbf{\textcolor{utbblue}{esquema: ops}}\\ASP.NET Identity\\(\texttt{app\_user}, \texttt{role})\\\texttt{user\_connection}\\Tablas Hangfire};
+\end{tikzpicture}%
+}
+\caption{Organización lógica y física del modelo de datos en cinco esquemas de PostgreSQL}
+\label{fig:modelo-5-esquemas}
+\end{figure}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item La clave natural de \texttt{runtime\_stat} (\texttt{connection\_id}, \texttt{plan\_id}, \texttt{execution\_type}, \texttt{interval\_id}) garantiza el \textit{upsert} idempotente; \texttt{query\_plan} se almacena como \texttt{text} para eludir el límite de 128 niveles del tipo XML en SQL Server (\texttt{F8}).
+    \item Las tablas de \texttt{audit.*} carecen de claves foráneas hacia \texttt{core} para sobrevivir a purgas de retención (\texttt{S2-13}), están protegidas por un \textit{trigger} que rechaza \texttt{UPDATE}, \texttt{DELETE} y \texttt{TRUNCATE}, y serializan la cadena SHA-256 bajo \texttt{pg\_advisory\_xact\_lock}.
+    \item \textit{Deuda técnica documentada:} \texttt{statement\_log} utiliza actualmente el escritor en memoria \texttt{InMemoryStatementLogWriter}, y la creación de un rol de base de datos sin permisos de propietario sobre \texttt{audit.*} permanece abierta como mejora de endurecimiento (\texttt{T4}).
+\end{itemize}
+
+% ======================================================
+% SECCIÓN 13
+% ======================================================
+\section{Tecnologías adoptadas}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{>{\bfseries}p{0.20\textwidth} p{0.34\textwidth} p{0.40\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Componente}} & \textcolor{white}{\textbf{Tecnología implementada}} & \textcolor{white}{\textbf{Justificación técnica}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Componente}} & \textcolor{white}{\textbf{Tecnología implementada}} & \textcolor{white}{\textbf{Justificación técnica}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Pila tecnológica adoptada e implementada en Query Doctor AI}
+\label{tab:tecnologias}
+\endlastfoot
+Frontend & HTML5, CSS y JavaScript nativo servidos por Nginx & Elimina cadena de compilación compleja; renderiza salidas externas exclusivamente mediante \texttt{textContent} bajo CSP estricta (\texttt{script-src 'self'}) \\
+Backend & ASP.NET Core sobre .NET 10 (LTS), EF Core, Identity, Hangfire, Serilog & Soporte nativo para \texttt{Microsoft.Data.SqlClient} y \texttt{ScriptDom}; colas persistentes con reintentos y autenticación por defecto \\
+Base de datos & PostgreSQL 16 con \texttt{pgvector} & Licencia libre, almacenamiento vectorial preparado para evolución futura y separación física respecto al motor monitoreado \\
+Infraestructura & Docker Compose (4 redes), Docker secrets, GitHub Actions & Instalación reproducible (\texttt{RNF-FLE-01}) y aislamiento estructural de permisos de red \\
+IA / analítica & Python 3.12, FastAPI, Pydantic, perfiles OpenRouter (Gemma), Google Gemini (\texttt{gemini\_free} con \texttt{gemini-2.5-flash} y \texttt{responseSchema}) y Ollama local & Validación estricta de esquema JSON en salida; intercambio transparente de proveedor por configuración sin modificar .NET \\
+Integración y parsing SQL & Query Store (TDS + TLS 1.2+), \texttt{Microsoft.SqlServer.TransactSql.ScriptDom} (\texttt{TSql170Parser}) & Fuente nativa de telemetría de solo lectura y analizador léxico oficial hasta SQL Server 2022 y Azure SQL, sin expresiones regulares \\
+Calidad y CI & Git/GitHub (PR con \textit{squash}), Roslyn (\texttt{TreatWarningsAsErrors}), \texttt{dotnet format}, \texttt{NetArchTest} & Trazabilidad del proceso conforme a \texttt{WORKFLOW.md} y \texttt{GUIA\_GIT.md} \\
+Pruebas automatizadas & xUnit, \texttt{NetArchTest}, \texttt{Testcontainers.PostgreSql}, \texttt{Mvc.Testing}, \texttt{node:test}, \texttt{pytest} & Verificación unitaria, arquitectónica, integración contra PostgreSQL real, pruebas web, inyección Python y laboratorio SQL Server \\
+Corpus de evaluación & Escenarios sembrados (\texttt{QD\_Lab}), 16 fixtures \texttt{.sqlplan} y carga TPC-H & Planes reproducibles y verdad de referencia controlada (JOB pospuesto según \texttt{S0-13}) \\
+\end{longtable}
+\endgroup
+
+La definición del proveedor y modelo de pago definitivo para entornos productivos se mantiene registrada como decisión abierta \texttt{DA-04}; la validación del MVP opera con datos de laboratorio sobre los perfiles gratuitos configurables (\texttt{openrouter\_free} y \texttt{gemini\_free}).
+
+% ======================================================
+% SECCIÓN 14
+% ======================================================
+\section{Metodología}
+
+\subsection{Enfoque de desarrollo}
+
+El proyecto combina planificación iterativa basada en Scrum \cite{schwaber-scrum} con gestión visual en tablero Kanban (\textit{Backlog}, \textit{En progreso}, \textit{En revisión}, \textit{Terminado}). Los sprints semanales se ajustaron al calendario académico con revisión frente a criterios de aceptación (\texttt{CA-HUxx}). Cada tarea (\texttt{S0-xx} a \texttt{S3-xx}) documenta módulo, prioridad MoSCoW, requisitos cubiertos, criterio de aceptación, responsable, estimación (\texttt{S}, \texttt{M}, \texttt{L}), dependencias y regla explícita de recorte.
+
+\subsection{Etapas del proyecto}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{p{0.24\textwidth} p{0.34\textwidth} p{0.16\textwidth} p{0.18\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Etapa}} & \textcolor{white}{\textbf{Entregable principal}} & \textcolor{white}{\textbf{Responsable}} & \textcolor{white}{\textbf{Periodo}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Etapa}} & \textcolor{white}{\textbf{Entregable principal}} & \textcolor{white}{\textbf{Responsable}} & \textcolor{white}{\textbf{Periodo}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Etapas cronológicas y entregables del proyecto}
+\label{tab:etapas}
+\endlastfoot
+Inicio y organización & Repositorio Git y plan inicial & Equipo & 31 ago. -- 6 sep. \\
+Comprensión del problema & Propuesta del proyecto (Avance 1) & Equipo & 7 -- 14 sep. \\
+Estado del arte y requisitos & Análisis de Query Store (Apéndice A) y SRS v1.0 & Equipo y Joel & 15 -- 28 sep. \\
+Diseño, UX y adenda & Adenda v1.1 y prototipo navegable (Avance 3) & Equipo y Daniel & 29 sep. -- 12 oct. \\
+Arquitectura y planificación & Arquitectura v0.1 (C4, 11 ADR) y Modelo de datos v0.2 & Equipo & 13 -- 28 oct. \\
+Sprint 1: rebanada base & Compose, cifrado, gateway, laboratorio, parser, reglas base, conexiones y listado & Según tarea \texttt{S1-xx} & 29 oct. -- 4 nov. \\
+Sprint 2: score e IA trazada & Score, validador, enmascarado, KB, traza, RBAC, visor plan y explicación & Según tarea \texttt{S2-xx} & 5 -- 15 nov. \\
+Sprint 3: evaluación y cierre & Arneses, calibración, auditoría manual, contraste experto, rendimiento e informe & Según tarea \texttt{S3-xx} & 12 -- 15 nov. (cierre) \\
+\end{longtable}
+\endgroup
+
+\subsection{Pipeline de desarrollo y control de calidad}
+
+Cada cambio sigue el flujo formalizado en \texttt{docs/WORKFLOW.md}: (1) planificar la tarea y sus criterios \texttt{CA-HU}; (2) implementar pruebas antes o en paralelo al código; (3) ejecutar compuerta local de verificación (\texttt{/verify}: compilación con advertencias como error, pruebas, formato); (4) ejecutar auditoría estática y revisión heurística por seis ejes (invariantes, seguridad, corrección, atomicidad, eficiencia y mantenibilidad) en sesión independiente; y (5) abrir \textit{pull request} hacia \texttt{main} mediante fusión \textit{squash} (\texttt{docs/GUIA\_GIT.md}), actualizando \texttt{docs/HANDOFF.md}.
+
+\subsection{Estrategia de validación}
+
+La estrategia multinivel comprende pruebas unitarias, arquitectónicas (\texttt{NetArchTest}), de integración contra PostgreSQL real (\texttt{Testcontainers}), de laboratorio contra SQL Server 2022 (\texttt{LabTests}), de seguridad (inyección de instrucciones y literales sembrados), de rendimiento y de usabilidad (SRS, capítulo 6).
+
+\subsection{Criterio de ajuste de alcance}
+
+Conforme al SRS (§5.3), ante restricciones de calendario se excluye primero lo \textit{Podría}; luego lo \textit{Debería} no crítico (\texttt{REG-05}--\texttt{REG-10}, vista gráfica del plan, comparación de planes, prueba externa de README, corrida con perfil de pago); en tercer lugar se acota lo \textit{Debe} sin eliminarlo (KB enfocada en reglas \textit{Debe}, aceptación prioritaria en SQL Server 2022); y \textbf{nunca} se recortan la garantía de solo lectura, la trazabilidad encadenada, el principio de IA subordinada a evidencia del motor ni los arneses de evaluación.
+
+% ======================================================
+% SECCIÓN 15
+% ======================================================
+\section{Validación de la solución}
+
+\subsection{Protocolo de validación del motor determinístico (OBJ-6)}
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Escenarios sembrados:} planes generados deliberadamente con antipatrones conocidos (\texttt{ESC01}--\texttt{ESC06}, \texttt{ESC04B}, 16 planes de referencia) para medir la exhaustividad por construcción.
+    \item \textbf{Cargas de referencia:} ejecución de consultas TPC-H \cite{tpch-spec} con Query Store activo (posponiendo Join Order Benchmark \cite{leis-job} según \texttt{S0-13}).
+    \item \textbf{Anotación experta:} un especialista en bases de datos anota los hallazgos esperados sobre una muestra para medir precisión.
+    \item \textbf{Métricas:} $\text{Precisión} = \text{VP} / (\text{VP} + \text{FP})$ y $\text{Exhaustividad} = \text{VP} / (\text{VP} + \text{FN})$ por regla (\texttt{RNF-FUN-01}), calibrando umbrales en subconjunto separado (\texttt{S3-01}).
+    \item \textbf{Reproducibilidad:} ejecución automatizada mediante arnés por línea de comandos (\texttt{RF-EVA-01}).
+\end{enumerate}
+
+\subsection{Protocolo de evaluación del componente de IA}
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{Conjunto de evaluación:} al menos 30 consultas con hallazgos confirmados, incluyendo casos adversariales (comentarios con inyección de instrucciones y literales sembrados).
+    \item \textbf{Métricas automáticas (\texttt{RF-EVA-02}):} porcentaje de afirmaciones sustentadas, sin sustento y concordancia numérica, inspiradas en RAGAS \cite{es-ragas}.
+    \item \textbf{Auditoría manual:} al menos 30 explicaciones revisadas por dos evaluadores independientes; cálculo del coeficiente kappa de Cohen \cite{cohen-kappa} y tasa de falsos pasantes (\texttt{RNF-FUN-03}).
+    \item \textbf{Condición de control:} ejecución del mismo modelo únicamente con el texto SQL sin hallazgos del motor, cuantificando la reducción de afirmaciones sin sustento atribuible al diseño híbrido \cite{zhou-dbot}.
+    \item \textbf{Rigor y transparencia:} todo resultado se reporta como tasa medida declarando perfil y modelo exacto de LLM empleado.
+\end{enumerate}
+
+\subsection{Matriz de indicadores}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{p{0.18\textwidth} p{0.22\textwidth} p{0.14\textwidth} p{0.18\textwidth} p{0.22\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Objetivo}} & \textcolor{white}{\textbf{Indicador}} & \textcolor{white}{\textbf{Línea base}} & \textcolor{white}{\textbf{Meta}} & \textcolor{white}{\textbf{Método de medición}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Objetivo}} & \textcolor{white}{\textbf{Indicador}} & \textcolor{white}{\textbf{Línea base}} & \textcolor{white}{\textbf{Meta}} & \textcolor{white}{\textbf{Método de medición}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Matriz de indicadores de cumplimiento por objetivo específico}
+\label{tab:indicadores}
+\endlastfoot
+OBJ-1 Ingesta & Sentencias distintas de \texttt{SELECT} emitidas & N/A & 0 & \texttt{statement\_log} (\texttt{CA-HU15.2}) y cuenta mínima \\
+OBJ-1 Impacto & CPU de instancia y bloqueos en ingesta & Sin medición & $\le 5\,\%$ y 0 \dagsym{} & Extended Events en laboratorio \\
+OBJ-1 Fiabilidad & Duplicados o pérdida tras corte de red & N/A & 0 & Prueba de interrupción en ingesta \\
+OBJ-2 Precisión & Precisión por regla \textit{Debe} & Sin medición & $\ge 90\,\%$ \dagsym{} & Arnés del motor con anotación experta \\
+OBJ-2 Exhaustividad & Exhaustividad por regla \textit{Debe} & Sin medición & $\ge 80\,\%$ \dagsym{} & Arnés sobre escenarios sembrados \\
+OBJ-2 Determinismo & Variaciones ante entrada idéntica & N/A & 0 & Suite de determinismo \\
+OBJ-3 Priorización & Reproducibilidad y acuerdo experto & N/A & Idéntico; acuerdo por ratificar en \texttt{S1-20} & Pruebas unitarias y \texttt{RF-EVA-03} \\
+OBJ-4 Verificabilidad & No validadas mostradas como verificadas & N/A & 0 & Pruebas de \texttt{ExplanationValidator} \\
+OBJ-4 Fidelidad & Aprobación 1.er intento y numérica & Control sin contexto & $\ge 90\,\%$ y $100\,\%$ \dagsym{} & Arnés IA + auditoría manual \\
+OBJ-4 Privacidad & Literales sembrados hacia el LLM & N/A & 0 & Suite de literales sembrados \\
+OBJ-4 Robustez & Inyecciones que alteran formato/validador & N/A & 0 de $\ge 10$ & Suite dual de inyección \\
+OBJ-5 Rendimiento & Latencia p95 con 5 000 consultas & N/A & $\le 2\text{ s}$ y $\le 3\text{ s}$ \dagsym{} & Pruebas de carga sintéticas (\texttt{S3-07}) \\
+OBJ-5 Usabilidad & Tasa de identificación y puntaje SUS & N/A & $\ge 80\,\%$ en $\le 3\text{ min}$; SUS $\ge 68$ \dagsym{} & Prueba con $\ge 5$ desarrolladores \cite{nielsen-usability,brooke-sus} \\
+OBJ-6 Reproducibilidad & Tiempo de despliegue por externo & N/A & $\le 60\text{ min}$ \dagsym{} & Instalación siguiendo README \\
+\end{longtable}
+\endgroup
+
+\subsection{Resultados obtenidos (estado parcial y cierre pendiente)}
+
+\begin{quote}
+\textbf{[POR COMPLETAR al cierre del Sprint 3.]} En esta subsección se consolidarán los valores medidos de precisión y exhaustividad por regla (\texttt{S2-14}, \texttt{S3-01}), métricas de IA frente a la condición de control (\texttt{S3-02}), kappa de Cohen y tasa de falsos pasantes (\texttt{S3-03}), contraste con especialista (\texttt{S3-04}), latencia con 5 000 consultas (\texttt{S3-07}) y prueba de usabilidad (\texttt{RNF-INT-01}), declarando el perfil LLM empleado y remitiendo al anexo de laboratorio (\texttt{RF-EVA-04}).
+\end{quote}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\small
+\begin{tabularx}{\textwidth}{X p{0.18\textwidth} p{0.25\textwidth} p{0.16\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Indicador}} & \textcolor{white}{\textbf{Meta}} & \textcolor{white}{\textbf{Resultado medido}} & \textcolor{white}{\textbf{Cumplimiento}} \\
+\midrule
+Precisión de \texttt{REG-01} a \texttt{REG-04} & $\ge 90\,\%$ \dagsym{} & \textit{[POR COMPLETAR]} & \textit{[POR COMPLETAR]} \\
+Exhaustividad de \texttt{REG-01} a \texttt{REG-04} & $\ge 80\,\%$ \dagsym{} & \textit{[POR COMPLETAR]} & \textit{[POR COMPLETAR]} \\
+Afirmaciones con evidencia válida (completa) & $\ge 90\,\%$ \dagsym{} & \textit{[POR COMPLETAR]} & \textit{[POR COMPLETAR]} \\
+Afirmaciones sin sustento (completa vs. control) & Reducción medible & \textit{[POR COMPLETAR]} & \textit{[POR COMPLETAR]} \\
+Literales sembrados hacia el proveedor & 0 & \texttt{0} en suite automatizada (\texttt{S2-04}/\texttt{S2-05}); \textit{[POR COMPLETAR en S3-02]} & Parcial (\texttt{S2-04}/\texttt{S2-05}: Sí) \\
+Latencia p95 del listado (5 000 consultas) & $\le 2\text{ s}$ \dagsym{} & \textit{[POR COMPLETAR]} & \textit{[POR COMPLETAR]} \\
+Puntaje de usabilidad (SUS) & $\ge 68$ \dagsym{} & \textit{[POR COMPLETAR]} & \textit{[POR COMPLETAR]} \\
+\bottomrule
+\end{tabularx}
+\endgroup
+
+% ======================================================
+% SECCIÓN 16
+% ======================================================
+\section{Consideraciones de seguridad, privacidad y ética}
+
+\subsection{Modelo de seguridad por fronteras de confianza}
+
+La seguridad del sistema se estructura en cuatro fronteras de confianza, mapeadas contra OWASP Top 10:2025 y OWASP Top 10 for LLM Applications 2025 \cite{owasp-llm} en \texttt{docs/OWASP\_TOP10.md}.
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{>{\bfseries}p{0.16\textwidth} p{0.20\textwidth} p{0.34\textwidth} p{0.24\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Frontera}} & \textcolor{white}{\textbf{Amenaza principal}} & \textcolor{white}{\textbf{Control arquitectónico}} & \textcolor{white}{\textbf{Verificación}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Frontera}} & \textcolor{white}{\textbf{Amenaza principal}} & \textcolor{white}{\textbf{Control arquitectónico}} & \textcolor{white}{\textbf{Verificación}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Controles de seguridad por frontera de confianza}
+\label{tab:fronteras}
+\endlastfoot
+F1. Plataforma $\rightarrow$ BD objetivo & Escritura accidental o maliciosa & Exclusividad en \texttt{QueryStoreGateway}; lista blanca constante; cuenta mínima; TLS 1.2+ \cite{rfc-tls} & \texttt{statement\_log} solo \texttt{SELECT}; cuenta \texttt{qd\_reader}; \texttt{NetArchTest} \\
+F2. Núcleo $\rightarrow$ IA $\rightarrow$ LLM & Fuga de literales o datos sensibles (\texttt{LLM02}) & \texttt{LiteralMasker} con \texttt{ScriptDom}, sin regex ni interruptor de apagado; fallo cerrado sin SQL & Suite de literales sembrados: 0 centinelas en cuerpo HTTP \\
+F3. LLM $\rightarrow$ Usuario & Inyección (\texttt{LLM01}), desinformación (\texttt{LLM09}), XSS (\texttt{LLM05}) & Delimitación \texttt{v1.1}, esquema Pydantic/\texttt{responseSchema}, validador externo, render solo texto y CSP & Suite dual de inyección ($\ge 12$ casos Python y .NET); auditoría manual \\
+F4. Usuario $\rightarrow$ Plataforma & Acceso no autorizado (\texttt{A01}, \texttt{A07}) & Identity, bloqueo a 5 intentos, \textit{rate limit} en \texttt{/auth/login}, RBAC \textit{deny-by-default}, filtro EF Core por conexión & Pruebas de acceso, alta \texttt{POST /users}, filtro y límite de tasa (\texttt{S2-12}) \\
+\end{longtable}
+\endgroup
+
+Los secretos se montan mediante Docker secrets; credenciales, texto SQL, planes y afirmaciones se cifran por campo con AES-256-GCM; ningún registro operativo almacena texto SQL (\texttt{RNF-SEG-09}); y los trabajos de Hangfire reciben únicamente identificadores. El endpoint \texttt{/auth/login} incorpora límite de tasa configurable (\texttt{429}); permanecen documentados como endurecimientos previos a producción la mitigación SSRF de hosts en \texttt{targets}, un rol de PostgreSQL sin privilegios de dueño sobre \texttt{audit.*} (\texttt{T4}) y la terminación TLS en el puerto \texttt{443} de Nginx.
+
+\subsection{Protección de datos personales}
+
+El texto SQL puede contener datos personales de manera incidental (p. ej., identificadores en predicados). En cumplimiento de la Ley Estatutaria 1581 de 2012 \cite{ley-1581}, se aplica minimización mediante sustitución léxica previa a cualquier egreso, retención configurable con purga automática y borrado manual por el DBA (\texttt{RNF-SEG-10}, tarea \texttt{S2-13} implementada mediante \texttt{RetentionPurgeJob} y \texttt{DELETE /connections/\{id\}/data}), manteniendo una bitácora \texttt{audit.*} libre de SQL para preservar la trazabilidad tras la purga.
+
+\subsection{Uso responsable de la inteligencia artificial}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Transparencia:} cada afirmación enlaza a los hallazgos y nodos del plan que la sustentan, diferenciando \texttt{TRAZADA} de \texttt{NO\_VERIFICADA}.
+    \item \textbf{Supervisión humana:} toda recomendación se formula como hipótesis técnica con aviso persistente, sin sentencias ejecutables, mitigando el sesgo de automatización \cite{parasuraman-bias}.
+    \item \textbf{Veracidad:} la causalidad solo se admite sobre relaciones curadas en la base de conocimiento.
+    \item \textbf{Candado de datos:} \texttt{security\_lock.py} bloquea el arranque del servicio de IA con perfiles gratuitos si \texttt{APP\_ENV=prod}.
+    \item \textbf{Riesgo residual declarado:} los nombres de objetos viajan sin seudonimizar (\texttt{DA-13}), aceptado en laboratorio con esquemas sintéticos y públicos.
+\end{itemize}
+
+% ======================================================
+% SECCIÓN 17
+% ======================================================
+\section{Viabilidad del proyecto}
+
+\subsection{Viabilidad técnica}
+
+Alta para el MVP. El equipo cubre todas las capas tecnológicas requeridas y la fuente de telemetría fue verificada empíricamente en SQL Server 2022. La complejidad del formato Showplan XML y la variabilidad de los LLM se mitigaron con fixtures reales, \texttt{ScriptDom}, adaptador multi-perfil y degradación controlada.
+
+\subsection{Viabilidad económica}
+
+El desarrollo y las pruebas se sustentan en herramientas libres o gratuitas (PostgreSQL, .NET 10, Python, Nginx/JavaScript nativo, SQL Server Developer en contenedor de laboratorio, GitHub y perfiles gratuitos de OpenRouter y Google Gemini \texttt{gemini\_free} con datos de laboratorio). El único costo variable potencial corresponde al uso de un perfil de pago sin retención de datos en producción o en la corrida opcional \texttt{S3-10}. \textit{[POR COMPLETAR: cálculo estimado del costo por explicación y mensual del perfil de pago según tarifa vigente del modelo elegido.]} Adicionalmente, SQL Server 2016 culminó su soporte extendido el 14 de julio de 2026, justificando su clasificación como «Compatible sin pruebas» (\texttt{DA-12}).
+
+\subsection{Viabilidad operativa}
+
+La plataforma se despliega mediante Docker Compose, opera con una cuenta de privilegio mínimo (\texttt{lab/sql/04-readonly-login.sql}) y no requiere agentes en el servidor monitoreado ni modificaciones en las aplicaciones cliente. Su adopción será evaluada en la prueba de usabilidad (\texttt{RNF-INT-01/02}).
+
+\subsection{Viabilidad temporal}
+
+El cronograma académico (31 de agosto al 15 de noviembre de 2026) constituye el principal factor de riesgo: tras la Adenda v1.1, los requisitos \textit{Debe} alcanzan el \textbf{64,9\,\%} del total (por encima del umbral heurístico del 60\,\% de DSDM \cite{clegg-moscow}) y la carga estimada superó la capacidad semanal en los Sprints 1 y 2. Esta presión se gestionó aplicando rigurosamente el orden de recorte del SRS (§5.3).
+
+% ======================================================
+% SECCIÓN 18
+% ======================================================
+\section{Riesgos del proyecto}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{>{\bfseries}p{0.13\textwidth} p{0.28\textwidth} p{0.10\textwidth} p{0.09\textwidth} p{0.34\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Riesgo}} & \textcolor{white}{\textbf{Prob.}} & \textcolor{white}{\textbf{Imp.}} & \textcolor{white}{\textbf{Estrategia de mitigación}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{ID}} & \textcolor{white}{\textbf{Riesgo}} & \textcolor{white}{\textbf{Prob.}} & \textcolor{white}{\textbf{Imp.}} & \textcolor{white}{\textbf{Estrategia de mitigación}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Matriz consolidada de riesgos técnicos y de gestión}
+\label{tab:riesgos}
+\endlastfoot
+RIE-02 & Sobrealcance frente al calendario & Alta & Alto & Priorización MoSCoW, orden de recorte (§5.3) y seguimiento por sprint \\
+RIE-01 & Evidencia de Query Store insuficiente para ciertas reglas & Media & Medio & Clases de evidencia explícitas; reglas \textit{Debe} sobre evidencia Clase A/B \\
+RIE-03 & Indisponibilidad, costo o cuota del proveedor LLM & Alta & Medio & Degradación a hallazgos (\texttt{RF-IA-06}), timeout/reintentos y adaptador multi-perfil \\
+RIE-04 / LLM01 & Inyección de instrucciones desde texto SQL & Media & Alto & Delimitación \texttt{v1.1}, esquema estricto, validador externo y suite de inyección \\
+RIE-05 / LLM02 & Fuga de datos personales al LLM & Baja & Alto & \texttt{LiteralMasker} con \texttt{ScriptDom}, candado \texttt{prod} y retención \\
+RIE-06 & Sesgo de automatización en el usuario & Media & Medio & Enlaces a evidencia, aviso persistente y ausencia de acciones automáticas \\
+RIE-07 & Insuficiencia de datos o especialista en validación & Media & Medio & Escenarios sembrados, TPC-H y tamaño $N$ ratificable con tutor (\texttt{DA-10}) \\
+RIE-08 & Metas \dagsym{} mal calibradas & Media & Medio & Marca explícita y calibración empírica con el laboratorio (\texttt{S3-01}) \\
+RIE-09 & Falsos positivos del motor & Media & Medio & Reglas contextuales (\texttt{REG-03}, \texttt{REG-04}), umbrales configurables y medición \\
+RIE-10 & Curva de aprendizaje en Showplan XML & Media & Medio & Verificación empírica previa (\texttt{S1-07}), fixtures reales y revisión por pares \\
+RA-01 & Curaduría de relaciones causales más lenta de lo previsto & Alta & Alto & Priorizar \texttt{REG-01}--\texttt{REG-04} y \texttt{REG-11}; lo no cubierto queda \texttt{NO\_VERIFICADA} \\
+RA-02 & Rechazo numérico por formato o redondeo & Media & Medio & Cita por identificador numérico, formato controlado y tolerancia documentada \\
+RA-03 & \texttt{ScriptDom} no tokeniza SQL truncado o inválido & Media & Medio & Fallo cerrado enviando solo hallazgos sin SQL ni respaldo regex \\
+RA-05 & Control de egreso por dominio limitado en Compose & Alta & Bajo & Declarado parcial; mitigación con firewall del host o proxy en producción \\
+RA-07 & Query Store en modo \texttt{AUTO} omite consultas poco frecuentes & Media & Bajo & Visualización del modo de captura e inclusión en el informe \\
+\end{longtable}
+\endgroup
+
+% ======================================================
+% SECCIÓN 19
+% ======================================================
+\section{Plan de trabajo}
+
+El detalle completo de las 57 tareas planificadas (responsable, tamaño, dependencias y criterio de recorte) se documenta en \texttt{docs/sprints/SPRINTS.md}.
+
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+    bar/.style={rectangle, rounded corners=2pt, minimum height=0.45cm, anchor=west, font=\tiny\bfseries, text=white},
+    donebar/.style={bar, fill=utbblue},
+    currbar/.style={bar, fill=utblight},
+    pendbar/.style={bar, fill=utbamber}
+]
+% Ejes y semanas (0 = 31 ago, 11 = 15 nov)
+\draw[thick, color=utbblue] (0,0) -- (11.5,0);
+\foreach \x/\lbl in {0/31-Ago, 2/14-Sep, 4/28-Sep, 6/12-Oct, 8/28-Oct, 9.2/04-Nov, 10.4/11-Nov, 11.4/15-Nov} {
+    \draw[color=utbmuted!50, dashed] (\x, 0) -- (\x, 4.9);
+    \node[below, font=\tiny] at (\x, 0) {\lbl};
+}
+\node[left, font=\scriptsize] at (-0.1, 4.4) {Propuesta y SRS v1.0};
+\node[donebar, minimum width=4.0cm] at (0, 4.4) {Avance 1--2 (Hecho)};
+
+\node[left, font=\scriptsize] at (-0.1, 3.7) {Diseño, Adenda v1.1 y Arq.};
+\node[donebar, minimum width=4.0cm] at (4.0, 3.7) {Avance 3--4 (Hecho)};
+
+\node[left, font=\scriptsize] at (-0.1, 3.0) {Sprint 1: Ingesta y Motor Base};
+\node[donebar, minimum width=1.2cm] at (8.0, 3.0) {S1};
+
+\node[left, font=\scriptsize] at (-0.1, 2.3) {Sprint 2: Score, IA, Traza, RBAC};
+\node[currbar, minimum width=1.2cm] at (9.2, 2.3) {S2};
+
+\node[left, font=\scriptsize] at (-0.1, 1.6) {Sprint 3: Evaluación y Cierre};
+\node[pendbar, minimum width=1.0cm] at (10.4, 1.6) {S3};
+
+\node[left, font=\scriptsize] at (-0.1, 0.9) {Documentación y Tesis};
+\node[currbar, minimum width=11.4cm, fill=utbgreen] at (0, 0.9) {Construcción continua hasta entrega final};
+
+\end{tikzpicture}%
+}
+\caption{Línea temporal de etapas y sprints del proyecto (agosto -- noviembre de 2026)}
+\label{fig:cronograma}
+\end{figure}
+
+% ======================================================
+% SECCIÓN 20
+% ======================================================
+\section{Entregables y estado actual de implementación}
+
+\subsection{Entregables institucionales de Proyecto de Ingeniería I}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{>{\bfseries}p{0.05\textwidth} p{0.28\textwidth} p{0.39\textwidth} p{0.22\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{N.º}} & \textcolor{white}{\textbf{Entregable exigido}} & \textcolor{white}{\textbf{Evidencia en el repositorio}} & \textcolor{white}{\textbf{Estado}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{N.º}} & \textcolor{white}{\textbf{Entregable exigido}} & \textcolor{white}{\textbf{Evidencia en el repositorio}} & \textcolor{white}{\textbf{Estado}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Relación de entregables institucionales frente a la evidencia del proyecto}
+\label{tab:entregables}
+\endlastfoot
+1 & Formulación del proyecto & Avance 1 y este documento & Entregado \\
+2 & Problema sustentado & Secciones 3 y 4; Apéndice A del SRS & Entregado (brecha primaria declarada) \\
+3 & Objetivos y alcance & Secciones 6 y 7; SRS cap. 1 y 2 & Entregado \\
+4 & Estado del arte y antecedentes & Sección 3 & Entregado \\
+5 & Requerimientos formales & SRS v1.1 definitivo (114 requisitos, \texttt{docs/SRS.tex}) & Entregado \\
+6 & Análisis de alternativas & Sección 11; ADR-01 a ADR-11 aceptados & Entregado \\
+7 & Arquitectura de software & \texttt{ARQUITECTURA\_v0.1.md} y \texttt{MODELO\_DATOS\_v0.2.md} & Entregado (ajustes S1/S2 por sincronizar) \\
+8 & Selección tecnológica & Sección 13 & Entregado (\texttt{DA-04} abierta) \\
+9 & Estrategia de validación & Sección 15; SRS cap. 6 & Entregado \\
+10 & Análisis de viabilidad & Sección 17 & Entregado (costo pago pendiente) \\
+11 & Matriz de riesgos & Sección 18 & Entregado \\
+12 & Plan para Proyecto II & Sección 22.3 & Entregado \\
+13 & Prototipo y software funcional & \texttt{src/}, \texttt{ai-service/}, \texttt{web/} y \texttt{lab/} (corte pre-Sprint 3 sobre \texttt{543af12}) & Implementado hasta estabilización Sprint 2 \\
+\end{longtable}
+\endgroup
+
+\subsection{Estado real de implementación al corte pre-Sprint 3 (15 de noviembre de 2026)}
+
+Al cierre del Sprint 2 y su estabilización previa al Sprint 3, se encuentra implementado el flujo funcional completo de extremo a punta (registro de conexión $\rightarrow$ ingesta periódica desde Query Store $\rightarrow$ análisis determinístico $\rightarrow$ cálculo de score $\rightarrow$ enmascarado léxico $\rightarrow$ explicación con IA $\rightarrow$ validación determinística $\rightarrow$ traza encadenada $\rightarrow$ retención configurable $\rightarrow$ visualización protegida por RBAC). En las verificaciones ejecutadas sobre la línea base actual, la suite \texttt{QueryDoctor.UnitTests} supera \textbf{778/778} pruebas, \texttt{QueryDoctor.IntegrationTests} supera \textbf{114/114} contra PostgreSQL real, \texttt{ai-service} supera \textbf{68/68} casos \texttt{pytest}, \texttt{QueryDoctor.ArchitectureTests} supera \textbf{21/21}, \texttt{tests/web/explanation\_view.test.mjs} supera \textbf{3/3}, \texttt{dotnet format} culmina sin observaciones y \texttt{docker compose config} valida sin errores.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    width=0.92\textwidth,
+    height=5.6cm,
+    bar width=0.88cm,
+    ymin=0,
+    ymax=880,
+    enlarge x limits=0.14,
+    ylabel={Pruebas aprobadas},
+    symbolic x coords={unit,integ,py,arch,web},
+    xtick=data,
+    xticklabels={UnitTests,Integration,IA (pytest),ArchTests,Frontend},
+    nodes near coords,
+    every node near coord/.append style={font=\small\bfseries, color=utbblue},
+    ymajorgrids=true,
+    grid style=dashed,
+    axis lines*=left,
+    tick label style={font=\footnotesize}
+]
+\addplot[draw=utbblue, fill=utblight!75] coordinates {
+    (unit, 778)
+    (integ, 114)
+    (py, 68)
+    (arch, 21)
+    (web, 3)
+};
+\end{axis}
+\end{tikzpicture}
+\par\smallskip
+{\scriptsize\textit{Nota:} Verificación conjunta ejecutada en esta rama tras resolver el fallo \texttt{CA1825} en \texttt{ConnectionAccessFilterTests.cs} e integrar los flujos de \texttt{web} (\texttt{node:test}) e IA (\texttt{pytest}) en \texttt{.github/workflows/ci.yml}. Total: \textbf{984} pruebas automatizadas aprobadas.}
+\caption{Cobertura de suites automatizadas verificadas al corte pre-Sprint 3}
+\label{fig:cobertura-tests}
+\end{figure}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{p{0.25\textwidth} p{0.31\textwidth} p{0.14\textwidth} p{0.24\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Bloque / Sprint}} & \textcolor{white}{\textbf{Componentes implementados}} & \textcolor{white}{\textbf{Estado}} & \textcolor{white}{\textbf{Pendiente técnico real}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Bloque / Sprint}} & \textcolor{white}{\textbf{Componentes implementados}} & \textcolor{white}{\textbf{Estado}} & \textcolor{white}{\textbf{Pendiente técnico real}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Estado detallado de implementación por módulo al 15 de noviembre de 2026}
+\label{tab:estado-impl}
+\endlastfoot
+Base, seguridad y esquema de datos (\texttt{S1-01}--\texttt{06}, \texttt{S1-08}) & Solución .NET 10, CI (\texttt{.NET}, \texttt{web} y \texttt{pytest}), Compose segmentado, 5 esquemas (11 migraciones), \texttt{SecretProtector}, Identity y \texttt{QueryStoreGateway} (\texttt{sys.all\_columns}) & \textbf{Hecho} & Rol de PostgreSQL restringido \texttt{T4}; mitigación SSRF en \texttt{targets}. \\
+Laboratorio, sondaje e ingesta (\texttt{S1-07}, \texttt{S1-09}--\texttt{11}) & \texttt{QD\_Lab}, verificación \texttt{F1}--\texttt{F8}, 16 fixtures, \texttt{CapabilityProbe}, ingesta incremental con bloqueo consultivo y \texttt{HangfireRecurringIngestionScheduler} (\texttt{RF-ING-06}) & \textbf{Hecho} & Prueba real de corte de red frente a SQL Server (\texttt{RNF-FIA-01}). \\
+Motor determinístico y score (\texttt{S1-12}--\texttt{14}, \texttt{S2-01}--\texttt{02}) & \texttt{ShowplanXmlParser}, catálogo \texttt{1.0.0} (\texttt{REG-01}--\texttt{04}, \texttt{REG-11}), \texttt{HealthScoreCalculator} e historial & \textbf{Hecho} & Reglas \texttt{REG-05}--\texttt{10} recortadas según SRS §5.3. \\
+IA, enmascarado y validador (\texttt{S1-17}--\texttt{18}, \texttt{S2-03}--\texttt{05}, \texttt{S2-07}--\texttt{08}, \texttt{\#64}) & \texttt{LiteralMasker} (\texttt{TSql170Parser}), caché SHA-256, FastAPI (\texttt{openrouter\_*}, \texttt{gemini\_free}, \texttt{ollama\_local}), prompt \texttt{v1.1}, \texttt{ExplanationValidator} y KB curada & \textbf{Hecho} & Completar calibración y auditoría empírica en Sprint 3. \\
+Trazabilidad, RBAC y retención (\texttt{S2-06}, \texttt{S2-12}--\texttt{13}) & \texttt{audit.*} encadenada por SHA-256, acceso de \texttt{Desarrollador} a \texttt{/queries} y \texttt{/plans}, \texttt{POST /users} (\texttt{D6}), \textit{rate limit} \texttt{429}, \texttt{RetentionPurgeJob} y \texttt{DELETE /connections/\{id\}/data} & \textbf{Hecho} & Sin bloqueantes de compilación ni permisos. \\
+Interfaz Web (\texttt{S1-15}--\texttt{16}, \texttt{S2-09}--\texttt{11}) & Login, cambio de contraseña, Conexiones, Consultas y Detalle (series SVG, plan jerárquico y explicación solo texto) & \textbf{Hecho} (rediseño UI/UX) & Rediseño visual + asistente de primera conexión (\textit{wizard}); controles para ingesta, asignaciones, alta, \texttt{/trace}, \texttt{/audit} y TLS \texttt{443}. \\
+Evaluación y cierre (\texttt{S1-20}, \texttt{S2-14}, \texttt{S3-01}--\texttt{10}) & Actas tutor, arneses CLI, calibración, kappa, contraste experto, carga 5 000 consultas e informe final & \textbf{Pendiente} & Ejecución integral programada en Sprint 3. \\
+\end{longtable}
+\endgroup
+
+% ======================================================
+% SECCIÓN 21
+% ======================================================
+\section{Resultados esperados al cierre}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\small
+\begin{longtable}{p{0.26\textwidth} p{0.38\textwidth} p{0.30\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Resultado esperado}} & \textcolor{white}{\textbf{Indicador de cumplimiento}} & \textcolor{white}{\textbf{Evidencia final requerida}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Resultado esperado}} & \textcolor{white}{\textbf{Indicador de cumplimiento}} & \textcolor{white}{\textbf{Evidencia final requerida}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Resultados esperados al término de la fase de evaluación}
+\label{tab:resultados-esperados}
+\endlastfoot
+Despliegue en un comando & \texttt{docker compose up} limpio y README $\le 60\text{ min}$ \dagsym{} & Prueba controlada con evaluador externo \\
+Garantía de solo lectura & 0 sentencias no \texttt{SELECT}; operación con \texttt{qd\_reader} & \texttt{statement\_log} y \texttt{NetArchTest} \\
+Motor determinístico validado & Precisión $\ge 90\,\%$ y exhaustividad $\ge 80\,\%$ \dagsym{} & Arnés del motor e informe de laboratorio \\
+Priorización reproducible & Score determinístico; listado $\le 2\text{ s}$ (p95) con 5 000 consultas \dagsym{} & Pruebas unitarias y benchmark sintético \\
+Explicaciones trazables & 0 no validadas como verificadas; mejora frente a control & Arnés de IA y auditoría manual (kappa) \\
+Protección de datos salientes & 0 literales sembrados; 0 de $\ge 10$ inyecciones exitosas & Suites de seguridad en .NET y Python \\
+Tablero integral funcional & Historias \texttt{HU-01}--\texttt{HU-13} demostradas de extremo a punta & Demostración en vivo sin pasos ocultos \\
+Documentación sincronizada & SRS, arquitectura, modelo de datos, OWASP y tesis alineados & Repositorio etiquetado al cierre \\
+\end{longtable}
+\endgroup
+
+% ======================================================
+% SECCIÓN 22
+% ======================================================
+\section{Impacto esperado, conclusiones y trabajo futuro}
+
+\subsection{Impacto esperado}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Tecnológico:} un patrón arquitectónico replicable de integración segura entre motor determinístico e IA generativa en el que el modelo nunca certifica su propia salida.
+    \item \textbf{Operativo:} potencial reducción del tiempo de identificación de causa raíz y de la dependencia exclusiva sobre especialistas senior, sujeto a medición en la prueba de usabilidad.
+    \item \textbf{Económico:} apoyo indirecto a la contención del sobreaprovisionamiento en instancias SQL al visibilizar consultas de alto impacto, sin aplicar modificaciones automáticas.
+    \item \textbf{Académico y ético:} conjunto reproducible de arneses, escenarios sembrados y bitácora transparente que democratiza el diagnóstico hacia desarrolladores backend manteniendo supervisión humana.
+\end{itemize}
+
+\subsection{Conclusiones}
+
+\begin{quote}
+\textbf{[POR COMPLETAR al cierre del Sprint 3 con base en la sección 15.4.]} La redacción definitiva consolidará una conclusión evaluada por cada objetivo específico:
+\end{quote}
+
+\begin{enumerate}[leftmargin=1.5em]
+    \item \textbf{OBJ-1 (ingesta segura):} síntesis de resultados medidos en solo lectura, idempotencia ante fallos y sobrecarga sobre la instancia objetivo.
+    \item \textbf{OBJ-2 (motor determinístico):} precisión y exhaustividad alcanzadas por cada regla \textit{Debe} sobre escenarios sembrados y TPC-H.
+    \item \textbf{OBJ-3 (Query Health Score):} determinismo del puntaje y concordancia respecto a la priorización del especialista.
+    \item \textbf{OBJ-4 (IA trazable):} tasa de afirmaciones sustentadas frente a la condición de control sin contexto, kappa de Cohen y falsos pasantes, declarando perfil y modelo LLM.
+    \item \textbf{OBJ-5 (tablero de control):} cobertura funcional demostrada, latencias bajo carga sintética y resultado SUS.
+    \item \textbf{OBJ-6 (validación empírica):} alcance real de la evaluación reproducible y límites experimentales observados.
+\end{enumerate}
+
+Desde la perspectiva arquitectónica, el avance completado al término del Sprint 2 demuestra la viabilidad técnica de desacoplar el diagnóstico determinístico de la explicación generativa mediante un contrato estricto de afirmaciones, enmascarado léxico fuera del perímetro de IA y validación determinística independiente. Los resultados experimentales finales deberán interpretarse dentro de sus límites declarados: muestra acotada, entorno de laboratorio, ejecución con perfiles gratuitos de LLM, nombres de objetos sin seudonimizar (\texttt{DA-13}) y ausencia de línea base organizacional previa.
+
+\subsection{Trabajo futuro (Proyecto de Ingeniería II)}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item Seudonimización reversible de nombres de tablas y columnas (\texttt{T1.C1}) evaluando su impacto sobre la calidad explicativa mediante el arnés de IA.
+    \item Delegación de identidad mediante OpenID Connect (OIDC) y soporte \textit{multitenant}.
+    \item Extensión multimotor (PostgreSQL, MySQL) implementando nuevos adaptadores sobre \texttt{ITelemetrySource}.
+    \item Integración con pipelines de CI/CD y análisis continuo de regresión previo a despliegue.
+    \item Captura opcional del plan real cuando el DBA habilite \texttt{LAST\_QUERY\_PLAN\_STATS} (\texttt{RF-ING-12}).
+    \item Módulo separado de acción asistida (p. ej., forzar plan) únicamente bajo una nueva versión del SRS que lo autorice, con credencial aislada, doble confirmación humana, auditoría y reversión.
+    \item Repositorio analítico dedicado en caso de superar los volúmenes operativos previstos para PostgreSQL.
+\end{itemize}
+
+% ======================================================
+% SECCIÓN 23 (ANEXOS)
+% ======================================================
+\section{Anexos}
+
+\begingroup
+\rowcolors{2}{utbblue!8}{white}
+\scriptsize
+\begin{longtable}{>{\bfseries}p{0.08\textwidth} p{0.52\textwidth} p{0.34\textwidth}}
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Anexo}} & \textcolor{white}{\textbf{Contenido}} & \textcolor{white}{\textbf{Ubicación en el repositorio}} \\
+\midrule
+\endfirsthead
+\toprule
+\rowcolor{utbblue}
+\textcolor{white}{\textbf{Anexo}} & \textcolor{white}{\textbf{Contenido}} & \textcolor{white}{\textbf{Ubicación en el repositorio}} \\
+\midrule
+\endhead
+\bottomrule
+\caption{Anexos técnicos y normativos del proyecto}
+\label{tab:anexos}
+\endlastfoot
+A & Especificación de Requisitos de Software (SRS) v1.1 definitivo (114 requisitos, historias, casos de uso, trazabilidad y Apéndice A) & \texttt{docs/SRS.tex}, \texttt{docs/SRS\_Query\_Doctor\_AI (2).pdf} \\
+B & Documento de Arquitectura de Software v0.1 (vistas C4, ADR-01 a ADR-11, seguridad, despliegue y riesgos) & \texttt{docs/arquitectura/ARQUITECTURA\_v0.1.md} \\
+C & Modelo de datos v0.2 (esquemas \texttt{core}, \texttt{analysis}, \texttt{ai}, \texttt{audit} y \texttt{ops}) & \texttt{docs/arquitectura/MODELO\_DATOS\_v0.2.md} \\
+D & Plan de sprints (57 tareas) y resumen operativo de arquitectura & \texttt{docs/sprints/SPRINTS.md}, \texttt{docs/ARCHITECTURE\_PLAN.md} \\
+E & Mapeo OWASP Top 10:2025 y OWASP Top 10 for LLM Applications 2025 & \texttt{docs/OWASP\_TOP10.md} \\
+F & Flujo de desarrollo, guía Git y relevo de estado & \texttt{docs/WORKFLOW.md}, \texttt{docs/GUIA\_GIT.md}, \texttt{docs/HANDOFF.md} \\
+G & Informe empírico de laboratorio (\texttt{F1}--\texttt{F8}, \texttt{H1}--\texttt{H5}) y 16 fixtures \texttt{.sqlplan} & \texttt{lab/results/S1-07-verificacion.md}, \texttt{tests/fixtures/plans/} \\
+H & Informe final de evaluación del motor y de la IA (\texttt{RF-EVA-04}), revisión manual y acta de especialista & \textit{[POR COMPLETAR en Sprint 3]} \\
+I & Interfaz web implementada y diagramas fuente originales & \texttt{web/nginx/}, \texttt{docs/arquitectura/media/} \\
+J & Propuesta inicial (Avance 1) & Entregable institucional (14 de septiembre de 2026) \\
+\end{longtable}
+\endgroup
+
+% ======================================================
+% DECLARACIÓN SOBRE USO DE IA
+% ======================================================
+\section*{Declaración sobre uso de inteligencia artificial}
+\addcontentsline{toc}{section}{Declaración sobre uso de inteligencia artificial}
+
+De acuerdo con las directrices académicas de la asignatura, el equipo declara haber utilizado asistentes basados en inteligencia artificial generativa como apoyo para la estructuración editorial de documentos, el análisis de código y la generación asistida de borradores y casos de prueba, bajo las reglas explícitas consignadas en \texttt{CLAUDE.md} y el flujo de verificación de \texttt{docs/WORKFLOW.md} (planificación, pruebas de criterios de aceptación, verificación local, auditoría por ejes en sesión independiente y revisión humana obligatoria previa a cada \textit{pull request}). Ningún fragmento generado automáticamente fue aceptado sin inspección técnica ni presentado como evidencia empírica: todos los resultados técnicos y métricas reportadas en este documento provienen exclusivamente de compilaciones, suites de pruebas y ejecuciones reproducibles registradas en el repositorio. Cada integrante del equipo asume plena responsabilidad por la exactitud de la solución y está en capacidad de sustentar individualmente cualquier componente o capítulo.
+
+% ======================================================
+% REFERENCIAS BIBLIOGRÁFICAS
+% ======================================================
+\newpage
+\begin{thebibliography}{99}
+
+\bibitem{clegg-moscow} Clegg, D. y Barker, R. (1994). \textit{Case method fast-track: A RAD approach}. Addison-Wesley; Agile Business Consortium. \textit{DSDM agile project framework: MoSCoW prioritisation}.
+
+\bibitem{brooke-sus} Brooke, J. (1996). SUS: A «quick and dirty» usability scale. En P. W. Jordan, B. Thomas, B. A. Weerdmeester y I. L. McClelland (Eds.), \textit{Usability evaluation in industry} (pp. 189--194). Taylor \& Francis.
+
+\bibitem{brown-c4} Brown, S. (s. f.). \textit{The C4 model for visualising software architecture}. \url{https://c4model.com}
+
+\bibitem{cockburn-uc} Cockburn, A. (2001). \textit{Writing effective use cases}. Addison-Wesley.
+
+\bibitem{cohen-kappa} Cohen, J. (1960). A coefficient of agreement for nominal scales. \textit{Educational and Psychological Measurement}, 20(1), 37--46.
+
+\bibitem{ley-1581} Congreso de la República de Colombia. (2012). \textit{Ley Estatutaria 1581 de 2012, por la cual se dictan disposiciones generales para la protección de datos personales}.
+
+\bibitem{cohn-stories} Cohn, M. (2004). \textit{User stories applied: For agile software development}. Addison-Wesley.
+
+\bibitem{rfc-tls} Dierks, T. y Rescorla, E. (2008). \textit{RFC 5246: The Transport Layer Security (TLS) Protocol Version 1.2}. Internet Engineering Task Force; Rescorla, E. (2018). \textit{RFC 8446: The Transport Layer Security (TLS) Protocol Version 1.3}. \url{https://www.rfc-editor.org/rfc/rfc8446}
+
+\bibitem{ding-index} Ding, B., Chaudhuri, S. y Narasayya, V. (2024). ML-powered index tuning: An overview of recent progress and open challenges. \textit{ACM SIGMOD Record}. \url{https://dl.acm.org/doi/10.1145/3641832.3641836}
+
+\bibitem{es-ragas} Es, S., James, J., Espinosa-Anke, L. y Schockaert, S. (2023). \textit{RAGAS: Automated evaluation of retrieval augmented generation} (arXiv:2309.15217). arXiv.
+
+\bibitem{idera-2025} IDERA. (2025, 22 de diciembre). \textit{Top 5 SQL Server performance monitoring tools}. \url{https://www.idera.com/blogs/top-performance-monitoring-solutions/}
+
+\bibitem{iso-29148} International Organization for Standardization, International Electrotechnical Commission y Institute of Electrical and Electronics Engineers. (2018). \textit{ISO/IEC/IEEE 29148:2018. Systems and software engineering -- Life cycle processes -- Requirements engineering}.
+
+\bibitem{iso-25010} International Organization for Standardization y International Electrotechnical Commission. (2023). \textit{ISO/IEC 25010:2023. Systems and software engineering -- Systems and software Quality Requirements and Evaluation (SQuaRE) -- Product quality model}.
+
+\bibitem{iso-42010} International Organization for Standardization, International Electrotechnical Commission y Institute of Electrical and Electronics Engineers. (2022). \textit{ISO/IEC/IEEE 42010:2022. Software, systems and enterprise -- Architecture description}.
+
+\bibitem{ji-hallucination} Ji, Z., Lee, N., Frieske, R., Yu, T., Su, D., Xu, Y., Ishii, E., Bang, Y., Madotto, A. y Fung, P. (2023). Survey of hallucination in natural language generation. \textit{ACM Computing Surveys}, 55(12), 1--38.
+
+\bibitem{leis-job} Leis, V., Gubichev, A., Mirchev, A., Boncz, P., Kemper, A. y Neumann, T. (2015). How good are query optimizers, really? \textit{Proceedings of the VLDB Endowment}, 9(3), 204--215.
+
+\bibitem{lewis-rag} Lewis, P., Perez, E., Piktus, A., Petroni, F., Karpukhin, V., Goyal, N., Küttler, H., Lewis, M., Yih, W., Rocktäschel, T., Riedel, S. y Kiela, D. (2020). Retrieval-augmented generation for knowledge-intensive NLP tasks. \textit{Advances in Neural Information Processing Systems}, 33.
+
+\bibitem{mavin-ears} Mavin, A., Wilkinson, P., Harwood, A. y Novak, M. (2009). Easy approach to requirements syntax (EARS). \textit{Proceedings of the 17th IEEE International Requirements Engineering Conference}.
+
+\bibitem{ms-qs-collect} Microsoft. (s. f.-a). \textit{How Query Store collects data}. Microsoft Learn. \url{https://learn.microsoft.com/en-us/sql/relational-databases/performance/how-query-store-collects-data}
+
+\bibitem{ms-qs-plan} Microsoft. (s. f.-b). \textit{sys.query\_store\_plan (Transact-SQL)}. Microsoft Learn. \url{https://learn.microsoft.com/sql/relational-databases/system-catalog-views/sys-query-store-plan-transact-sql}
+
+\bibitem{ms-qs-stats} Microsoft. (s. f.-c). \textit{sys.query\_store\_runtime\_stats (Transact-SQL)}. Microsoft Learn. \url{https://learn.microsoft.com/sql/relational-databases/system-catalog-views/sys-query-store-runtime-stats-transact-sql}
+
+\bibitem{ms-plans} Microsoft. (s. f.-d). \textit{Display the estimated execution plan; Display an actual execution plan}. Microsoft Learn. \url{https://learn.microsoft.com/sql/relational-databases/performance/display-the-estimated-execution-plan}
+
+\bibitem{ms-plan-stats} Microsoft. (s. f.-e). \textit{sys.dm\_exec\_query\_plan\_stats (Transact-SQL)}. Microsoft Learn. \url{https://learn.microsoft.com/sql/relational-databases/system-dynamic-management-views/sys-dm-exec-query-plan-stats-transact-sql}
+
+\bibitem{ms-qs-manage} Microsoft. (s. f.-f). \textit{Manage the Query Store}. Microsoft Learn. \url{https://learn.microsoft.com/sql/relational-databases/performance/manage-the-query-store}
+
+\bibitem{ms-ss2022} Microsoft. (2022, 18 de agosto). \textit{Query Store is enabled by default in SQL Server 2022}. SQL Server Blog. \url{https://www.microsoft.com/en-us/sql-server/blog/2022/08/18/query-store-is-enabled-by-default-in-sql-server-2022/}
+
+\bibitem{ms-apc-2026} Microsoft. (2026, 6 de mayo). \textit{Query plan regressions got you down? Here's how Automatic Plan Correction can turn it around}. Microsoft Community Hub. \url{https://techcommunity.microsoft.com/blog/sqlserver/query-plan-regressions-got-you-down-heres-how-automatic-plan-correction-can-turn/4515152}
+
+\bibitem{ms-tempdb} Microsoft SQL Server Team. (s. f.). \textit{SQL Server 2016 -- Added information on TempDB spill events -- Showplan}. \url{https://blogs.msdn.microsoft.com/sql_server_team/sql-server-2016-added-information-on-tempdb-spill-events-showplan}
+
+\bibitem{nielsen-usability} Nielsen, J. (1993). \textit{Usability engineering}. Morgan Kaufmann.
+
+\bibitem{north-bdd} North, D. (2006). Introducing BDD. \textit{Better Software}.
+
+\bibitem{nygard-adr} Nygard, M. (2011, 15 de noviembre). \textit{Documenting architecture decisions}. Cognitect Blog. \url{https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions}
+
+\bibitem{owasp-llm} OWASP Foundation. (2025a). \textit{OWASP Top 10 for LLM Applications 2025}. \url{https://genai.owasp.org/llm-top-10/}
+
+\bibitem{owasp-asvs} OWASP Foundation. (2025b). \textit{OWASP Application Security Verification Standard (ASVS) 5.0.0}. \url{https://github.com/OWASP/ASVS}
+
+\bibitem{parasuraman-bias} Parasuraman, R. y Manzey, D. H. (2010). Complacency and bias in human use of automation: An attentional integration. \textit{Human Factors}, 52(3), 381--410.
+
+\bibitem{radi-sql} Radi, M. (2023). Predicting SQL query quality using machine learning techniques. \textit{Journal of Theoretical and Applied Information Technology}. \url{https://www.researchgate.net/publication/370897768_PREDICTING_SQL_QUERY_QUALITY_USING_MACHINE_LEARNING_TECHNIQUES}
+
+\bibitem{redgate-warnings} Redgate Simple Talk. (s. f.). \textit{Checking the plan cache warnings for a SQL Server database}. \url{https://www.red-gate.com/simple-talk/databases/sql-server/t-sql-programming-sql-server/checking-the-plan-cache-warnings-for-a-sql-server-database/}
+
+\bibitem{schwaber-scrum} Schwaber, K. y Sutherland, J. (2020). \textit{The Scrum guide}. \url{https://scrumguides.org}
+
+\bibitem{sqlyard-2025} SQLYARD. (2025, 29 de agosto). \textit{SolarWinds Database Performance Analyzer vs. Redgate SQL Monitor}. \url{https://sqlyard.com/2025/08/29/solarwinds-database-performance-analyzer-vs-redgate-sql-monitor/}
+
+\bibitem{tpch-spec} Transaction Processing Performance Council. (s. f.). \textit{TPC benchmark H (decision support) standard specification}. \url{https://www.tpc.org/tpch/}
+
+\bibitem{wcag-22} World Wide Web Consortium. (2023). \textit{Web Content Accessibility Guidelines (WCAG) 2.2}. \url{https://www.w3.org/TR/WCAG22/}
+
+\bibitem{yoon-dbsherlock} Yoon, D. Y., Niu, N. y Mozafari, B. (2016). DBSherlock: A performance diagnostic tool for transactional databases. En \textit{Proceedings of the 2016 International Conference on Management of Data (SIGMOD '16)} (pp. 1599--1614). ACM. \url{https://doi.org/10.1145/2882903.2915218}
+
+\bibitem{zhang-aiops} Zhang, L., Jia, T., Jia, M., Wu, Y., Liu, A., Yang, Y., Wu, Z., Hu, X., Yu, P. S. y Li, Y. (2025). A survey of AIOps in the era of large language models. \textit{ACM Computing Surveys}. \url{https://dl.acm.org/doi/10.1145/3746635}
+
+\bibitem{zhao-index} Zhao, X., Zhou, X. y Li, G. (2023). Automatic database index tuning: A survey. \textit{IEEE Transactions on Knowledge and Data Engineering}.
+
+\bibitem{zhou-llmdba} Zhou, X., Li, G. y Liu, Z. (2023a). \textit{LLM as DBA} (arXiv:2308.05481). arXiv. \url{https://arxiv.org/abs/2308.05481}
+
+\bibitem{zhou-dbot} Zhou, X., Li, G., Sun, Z., Liu, Z., Chen, W., Wu, J., Liu, J., Feng, R. y Zeng, G. (2023b). \textit{D-Bot: Database diagnosis system using large language models} (arXiv:2312.01454). arXiv. \url{https://arxiv.org/abs/2312.01454}
+
+\end{thebibliography}
+
+\end{document}

@@ -70,9 +70,9 @@ public sealed class ConnectionAccessFilterTests(PostgresFixture postgres)
         Assert.False(await db.ExplanationClaims.AnyAsync(c => c.ExplanationId == b.ExplanationId));
     }
 
-    public static TheoryData<string> FullAccess() => ["dba", "system"];
+    public static TheoryData<string> FullAccess() => new() { "dba", "system" };
 
-    public static TheoryData<string> NoAccess() => ["none", "developer-sin-asignaciones"];
+    public static TheoryData<string> NoAccess() => new() { "none", "developer-sin-asignaciones" };
 
     private static IAccessScope Scope(string name) => name switch
     {

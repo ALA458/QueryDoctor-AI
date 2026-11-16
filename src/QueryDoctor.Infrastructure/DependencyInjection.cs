@@ -18,6 +18,7 @@ using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Application.KnowledgeBase;
 using QueryDoctor.Application.Masking;
 using QueryDoctor.Application.Queries;
+using QueryDoctor.Application.Retention;
 using QueryDoctor.Application.Scoring;
 using QueryDoctor.Application.Telemetry;
 using QueryDoctor.Application.Traceability;
@@ -28,6 +29,7 @@ using QueryDoctor.Infrastructure.Connections;
 using QueryDoctor.Infrastructure.Explanations;
 using QueryDoctor.Infrastructure.Ingestion;
 using QueryDoctor.Infrastructure.Persistence;
+using QueryDoctor.Infrastructure.Retention;
 using QueryDoctor.Infrastructure.Scoring;
 using QueryDoctor.Infrastructure.Security;
 using QueryDoctor.Infrastructure.Telemetry;
@@ -175,7 +177,47 @@ public static class DependencyInjection
         services.TryAddScoped<RecalculateScoresJob>();
         services.AddScoped<IngestConnection>();
         services.AddScoped<IngestConnectionJob>();
+        services.TryAddScoped<IRecurringIngestionScheduler>(sp =>
+            sp.GetService<IRecurringJobManager>() is { } recurringJobs
+                ? new HangfireRecurringIngestionScheduler(recurringJobs)
+                : NoOpRecurringIngestionScheduler.Instance);
 
+        return services;
+    }
+
+    /// <summary>
+    /// Borrado bajo demanda de SQL y planes por un DBA (S2-13, RNF-SEG-10, RNF-SEG-12) para la Api.
+    /// </summary>
+    public static IServiceCollection AddRetentionRequests(this IServiceCollection services)
+    {
+        services.TryAddScoped<IRetentionStore, EfRetentionStore>();
+        services.AddScoped<DeleteConnectionTelemetry>();
+        return services;
+    }
+
+    /// <summary>
+    /// Purga periódica de retención (S2-13, RNF-SEG-10) para el Worker. Sin PostgreSQL no se registra.
+    /// </summary>
+    public static IServiceCollection AddRetention(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        if (string.IsNullOrWhiteSpace(GetPostgresConnectionString(configuration)))
+        {
+            return services;
+        }
+
+        services.Configure<RetentionOptions>(configuration.GetSection(RetentionOptions.SectionName));
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<RetentionOptions>>().Value;
+            options.Validate();
+            return options;
+        });
+
+        services.TryAddScoped<IRetentionStore, EfRetentionStore>();
+        services.AddScoped<PurgeExpiredTelemetry>();
+        services.AddScoped<RetentionPurgeJob>();
         return services;
     }
 

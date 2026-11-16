@@ -19,6 +19,8 @@ public sealed record AuditEventDraft(
     public const string OutcomeLocked = "locked";
     public const string OutcomeUnknownUser = "unknown_user";
     public const string SubjectConnection = "connection";
+    public const string SubjectRetention = "retention";
+    public const string SubjectUser = "user";
 }
 
 /// <summary>

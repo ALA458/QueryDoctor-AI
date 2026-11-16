@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
+using QueryDoctor.Application.Common.Security;
 using QueryDoctor.Domain.Analysis;
 using QueryDoctor.Domain.Core;
 using QueryDoctor.Domain.Ops;
@@ -77,6 +79,27 @@ public sealed class DeveloperAccessEndpointsTests(PostgresFixture postgres) : ID
         Assert.Equal(HttpStatusCode.OK, ownLatest.StatusCode);
         await using var db = postgres.CreateContext();
         Assert.False(db.Explanations.Any(e => e.QueryId == b.QueryId));
+    }
+
+    [Fact]
+    public async Task ElDesarrolladorLeeListadoDetalleYPlanSoloDeLoAsignado()
+    {
+        var a = await SeedConnectionAsync();
+        var b = await SeedConnectionAsync();
+        var (developer, userId) = await _api.SessionAsync([RoleNames.Developer]);
+        await AssignAsync(userId, a.ConnectionId);
+
+        using var listResponse = await developer.GetAsync("/queries?window=24h");
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        var list = await listResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var queryIds = list.EnumerateArray().Select(item => item.GetProperty("id").GetGuid()).ToArray();
+        Assert.Contains(a.QueryId, queryIds);
+        Assert.DoesNotContain(b.QueryId, queryIds);
+
+        Assert.Equal(HttpStatusCode.OK, (await developer.GetAsync($"/queries/{a.QueryId}?window=24h")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await developer.GetAsync($"/queries/{a.QueryId}/plans/{a.PlanId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await developer.GetAsync($"/queries/{b.QueryId}?window=24h")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await developer.GetAsync($"/queries/{b.QueryId}/plans/{b.PlanId}")).StatusCode);
     }
 
     [Fact]
@@ -206,11 +229,12 @@ public sealed class DeveloperAccessEndpointsTests(PostgresFixture postgres) : ID
         await db.SaveChangesAsync();
     }
 
-    private sealed record Seeded(Guid ConnectionId, Guid QueryId);
+    private sealed record Seeded(Guid ConnectionId, Guid QueryId, Guid PlanId);
 
     /// <summary>Conexión activa con perfil, una ingesta, una consulta con plan y un análisis con un hallazgo.</summary>
     private async Task<Seeded> SeedConnectionAsync()
     {
+        var encryptor = _api.Services.GetRequiredService<IFieldEncryptor>();
         await using var db = postgres.CreateContext();
         var now = DateTimeOffset.UtcNow;
         var connection = new Connection
@@ -264,11 +288,11 @@ public sealed class DeveloperAccessEndpointsTests(PostgresFixture postgres) : ID
             SchemaVersion = "1.0.0",
             Severity = FindingSeverity.Alta,
             EvidenceClass = EvidenceClass.Estimada,
-            EncryptedEvidenceJson = "no-se-descifra-en-la-api",
+            EncryptedEvidenceJson = encryptor.Encrypt("{}"),
             AnalyzedAt = now,
         });
         await db.SaveChangesAsync();
 
-        return new Seeded(connection.Id, query.Id);
+        return new Seeded(connection.Id, query.Id, plan.Id);
     }
 }

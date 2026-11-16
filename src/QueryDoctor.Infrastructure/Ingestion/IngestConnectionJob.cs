@@ -177,6 +177,53 @@ public sealed class HangfireIngestionJobScheduler : IIngestionJobScheduler
                 && id == connectionId);
 }
 
+/// <summary>
+/// Administra los trabajos recurrentes de ingesta en Hangfire por conexión (S1-10, RF-ING-06, DA-03).
+/// </summary>
+public sealed class HangfireRecurringIngestionScheduler : IRecurringIngestionScheduler
+{
+    private static readonly RecurringJobOptions UtcOptions = new() { TimeZone = TimeZoneInfo.Utc };
+
+    private readonly IRecurringJobManager _recurringJobs;
+
+    public HangfireRecurringIngestionScheduler(IRecurringJobManager recurringJobs)
+    {
+        _recurringJobs = recurringJobs ?? throw new ArgumentNullException(nameof(recurringJobs));
+    }
+
+    public void ScheduleOrUpdate(Guid connectionId, int? intervalLengthMinutes)
+    {
+        var cron = IngestionCronSchedule.FromIntervalMinutes(intervalLengthMinutes);
+        _recurringJobs.AddOrUpdate<IngestConnectionJob>(
+            IngestionCronSchedule.JobId(connectionId),
+            JobQueues.Ingest,
+            job => job.RunScheduledAsync(connectionId, CancellationToken.None),
+            cron,
+            UtcOptions);
+    }
+
+    public void Remove(Guid connectionId) =>
+        _recurringJobs.RemoveIfExists(IngestionCronSchedule.JobId(connectionId));
+}
+
+/// <summary>Implementación neutra para entornos o pruebas que no registran el servidor de Hangfire.</summary>
+public sealed class NoOpRecurringIngestionScheduler : IRecurringIngestionScheduler
+{
+    public static readonly NoOpRecurringIngestionScheduler Instance = new();
+
+    private NoOpRecurringIngestionScheduler()
+    {
+    }
+
+    public void ScheduleOrUpdate(Guid connectionId, int? intervalLengthMinutes)
+    {
+    }
+
+    public void Remove(Guid connectionId)
+    {
+    }
+}
+
 /// <summary>Lecturas de ejecuciones de ingesta con EF Core, sin rastreo.</summary>
 public sealed class EfIngestionQueries : IIngestionQueries
 {
