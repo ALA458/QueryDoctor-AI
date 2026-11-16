@@ -13,7 +13,28 @@
     consulta del laboratorio tiene dos planes. Aqui la misma consulta compila dos planes: primero con un valor raro
     (seek + lookup) y, tras sp_recompile, con el valor dominante (scan). El hint de nivel 150 desactiva PSP.
   Ninguno devuelve filas al cliente (agregados), para no inflar la salida de sqlcmd.
+  - QD_Lab_Acc (CA-HU01.2): base minima para los casos negativos del sondeo por la Api. La plataforma identifica una
+    conexion por (servidor, base) normalizados, asi que QD_Lab no puede registrarse dos veces; aqui qd_noperm tiene
+    usuario y NINGUN permiso (conecta pero no puede leer Query Store). Requiere 04 (crea los logins).
 */
+USE master;
+GO
+IF DB_ID(N'QD_Lab_Acc') IS NOT NULL
+BEGIN
+    ALTER DATABASE QD_Lab_Acc SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE QD_Lab_Acc;
+END;
+GO
+CREATE DATABASE QD_Lab_Acc;
+GO
+ALTER DATABASE QD_Lab_Acc SET RECOVERY SIMPLE;
+ALTER DATABASE QD_Lab_Acc SET QUERY_STORE = ON;
+GO
+USE QD_Lab_Acc;
+GO
+CREATE USER qd_noperm FOR LOGIN qd_noperm;
+GO
+
 USE QD_Lab;
 GO
 SET NOCOUNT ON;

@@ -22,7 +22,7 @@ namespace QueryDoctor.AcceptanceTests;
 /// </summary>
 /// <remarks>
 /// Sin QD_LAB_SQL no arranca nada (las pruebas salen Skipped). La excepción de TLS del laboratorio (invariante 3) se
-/// declara solo aquí y solo para el servidor del laboratorio y su alias: el certificado del contenedor es autofirmado.
+/// declara solo aquí y solo para el servidor del laboratorio: el certificado del contenedor es autofirmado.
 /// </remarks>
 public sealed class AcceptanceFixture : IAsyncLifetime, IDisposable
 {
@@ -37,12 +37,6 @@ public sealed class AcceptanceFixture : IAsyncLifetime, IDisposable
 
     /// <summary>Servidor del laboratorio tal como lo da QD_LAB_SQL.</summary>
     public static string Server => LabEnvironment.RequiredServer;
-
-    /// <summary>
-    /// El mismo servidor escrito de otra forma. La unicidad de conexiones es por (servidor, base) en texto, sin DNS (D1
-    /// de S1-09): con el alias se registra QD_Lab otra vez con otra cuenta sin chocar con la conexión principal.
-    /// </summary>
-    public static string ServerAlias => "tcp:" + Server;
 
     public string PostgresConnectionString => _postgres?.GetConnectionString()
         ?? throw new InvalidOperationException(LabEnvironment.SkipReason);
@@ -77,6 +71,34 @@ public sealed class AcceptanceFixture : IAsyncLifetime, IDisposable
             }
 
             return _qdLab;
+        }
+        finally
+        {
+            _qdLabGate.Release();
+        }
+    }
+
+    private Guid? _noQueryStore;
+
+    /// <summary>
+    /// QD_Lab_NoQS (Query Store apagado, lab/sql/11) registrada y sondeada por el mismo DBA: la conexión que un
+    /// Desarrollador no tiene asignada y la de CA-HU02.2. Devuelve su id.
+    /// </summary>
+    internal async Task<Guid> NoQueryStoreAsync()
+    {
+        var lab = await QdLabAsync();
+        await _qdLabGate.WaitAsync();
+        try
+        {
+            if (_noQueryStore is null)
+            {
+                var id = await Platform.RegisterAsync(lab.Dba, Server, LabEnvironment.DatabaseWithoutQueryStore, LabEnvironment.Reader, Platform.LabPassword);
+                var probed = await Platform.ProbedConnectionAsync(lab.Dba, id);
+                Assert.True(probed.GetProperty("status").GetString() == "Active", $"QD_Lab_NoQS no quedó Active: {probed}");
+                _noQueryStore = id;
+            }
+
+            return _noQueryStore.Value;
         }
         finally
         {
@@ -153,7 +175,6 @@ public sealed class AcceptanceFixture : IAsyncLifetime, IDisposable
             ["ConnectionStrings:QueryDoctor"] = PostgresConnectionString,
             ["Security:SecretProtector:MasterKey"] = _masterKey,
             ["Probe:LabTrustedCertificateServers:0"] = Server,
-            ["Probe:LabTrustedCertificateServers:1"] = ServerAlias,
             ["AiService:BaseUrl"] = AiServiceDouble.BaseAddress.ToString(),
 
             // CA-HU12.1: corte corto para que "el proveedor no responde" no espere los 200 s de producción.
