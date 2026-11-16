@@ -187,20 +187,26 @@ internal static class ConnectionEndpoints
 
     private static async Task<IResult> DeleteDataAsync(
         Guid id,
-        DeleteConnectionTelemetry useCase,
+        DeleteEvidence useCase,
         ClaimsPrincipal principal,
         CancellationToken cancellationToken)
     {
-        var outcome = await useCase.ExecuteAsync(id, AuditTrail.UserId(principal), AuditTrail.UserName(principal), cancellationToken);
+        // Alias de DELETE /connections/{id}/evidence (S2-13, RNF-SEG-10): mismo borrado y misma auditoría en una
+        // transacción. Conserva el contrato con conteos que publicó #65.
+        var outcome = await useCase.ExecuteAsync(
+            EvidenceScope.ForConnection(id),
+            new EvidenceDeletionActor(AuditTrail.UserId(principal), AuditTrail.UserName(principal)),
+            cancellationToken);
         return outcome switch
         {
-            DeleteConnectionTelemetryOutcome.Found found => Results.Ok(new
+            DeleteEvidenceResult.Deleted deleted => Results.Ok(new
             {
-                connectionId = found.ConnectionId,
-                textsCleared = found.TextsCleared,
-                plansCleared = found.PlansCleared,
+                connectionId = id,
+                textsCleared = deleted.Counts.SqlTexts,
+                plansCleared = deleted.Counts.Plans,
+                findingsCleared = deleted.Counts.Findings,
             }),
-            DeleteConnectionTelemetryOutcome.NotFound => Results.Problem(
+            DeleteEvidenceResult.NotFound => Results.Problem(
                 statusCode: StatusCodes.Status404NotFound,
                 detail: "La conexión no existe."),
             _ => throw new InvalidOperationException("Resultado de borrado no contemplado."),

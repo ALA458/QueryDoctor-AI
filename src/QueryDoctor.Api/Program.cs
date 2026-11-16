@@ -38,8 +38,6 @@ builder.Services.AddConnectionAssignments();
 builder.Services.AddQueryViews();
 // S2-13 (RNF-SEG-10): borrado a pedido del DBA de texto SQL, planes y evidencia, auditado.
 builder.Services.AddEvidenceDeletion();
-// S2-13: borrado bajo demanda de texto SQL y planes XML de una conexión (RNF-SEG-10).
-builder.Services.AddRetentionRequests();
 
 // OWASP A07: límite de tasa en /auth/login por dirección IP para mitigar fuerza bruta.
 var loginRateLimit = Math.Max(1, builder.Configuration.GetValue("Auth:LoginRateLimitPerMinute", 30));

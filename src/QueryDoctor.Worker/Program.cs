@@ -1,9 +1,7 @@
 using Hangfire;
 using QueryDoctor.Application.Jobs;
-using QueryDoctor.Application.Retention;
 using QueryDoctor.Infrastructure;
 using QueryDoctor.Infrastructure.Connections;
-using QueryDoctor.Infrastructure.Retention;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -72,15 +70,6 @@ if (!string.IsNullOrWhiteSpace(postgresConn))
 {
     // S2-13: valida el plazo antes de arrancar (fuera de rango, el Worker no arranca) y programa retention a diario.
     DependencyInjection.ScheduleRetention(host.Services);
-    using var scope = host.Services.CreateScope();
-    var retention = scope.ServiceProvider.GetRequiredService<RetentionOptions>();
-    var recurring = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
-    recurring.AddOrUpdate<RetentionPurgeJob>(
-        "retention-purge",
-        JobQueues.Retention,
-        job => job.RunAsync(CancellationToken.None),
-        retention.Cron,
-        new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
 }
 
 host.Run();

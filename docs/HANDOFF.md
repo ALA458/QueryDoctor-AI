@@ -3,11 +3,11 @@
 > **Se sobrescribe, no se acumula.** Máximo ~50 líneas. Lo escribe quien cierra una
 > sesión (humano o agente). La historia vive en los PR y en git.
 
-**Actualizado:** 2026-11-15 · **Por:** Álvaro (con agente) · **Rama:** `feat/S2-13-retencion` (sale de `main` en `68f38f1`)
+**Actualizado:** 2026-11-15 · **Por:** Álvaro (con agente) · **Rama:** `feat/S2-13-retencion` (PR #67, con `main` en `26a8363` ya mergeado)
 
 ## Estado
-- ✅ En `main`: S1-01 a S1-19 (salvo S1-20), S2-01 a S2-12.
-- 🔄 **S2-13** (Álvaro, esta rama, sin commits; PR por abrir): retención (RNF-SEG-10). El trabajo recurrente
+- ✅ En `main`: S1-01 a S1-19 (salvo S1-20), S2-01 a S2-12 y lo de #65 (pre-Sprint 3).
+- 🔄 **S2-13** (Álvaro, PR #67): retención (RNF-SEG-10). El trabajo recurrente
   `retention` del Worker purga a diario el texto SQL, los planes y la evidencia de sus hallazgos cuando vence
   `Retention:SqlTextAndPlanDays` (30 por defecto). El DBA puede borrarlos a pedido con
   `DELETE /queries/{id}/evidence` y `DELETE /connections/{id}/evidence`, y cada borrado queda en `/audit` como `DataDeleted`.
@@ -17,6 +17,10 @@
   (sección S2-13).
 - Auditoría (`/audit`, sesión aparte) hecha: sin bloqueantes. Corregidos M1 (un recálculo concurrente podía dejar
   evidencia con literales en un plan purgado) y B1 (un `TooLarge` salía expirado después de purgar), con pruebas.
+- #65 trajo a `main` otra implementación de S2-13 (`PurgeExpiredTelemetry`, `EfRetentionStore`, `RetentionPurgeJob`).
+  Duplicaba tipos y no compilaba junto a esta, así que se quitó. `DELETE /connections/{id}/data` sigue como alias del
+  borrado por conexión, con la misma respuesta con conteos. El Worker da de baja el trabajo `retention-purge` al
+  arrancar. `RetentionEndpointsTests` (de Joel) se adaptó a la purga que queda.
 
 ## Cómo probarla
 - `dotnet test tests/QueryDoctor.IntegrationTests --filter "FullyQualifiedName~RetentionTests"`.

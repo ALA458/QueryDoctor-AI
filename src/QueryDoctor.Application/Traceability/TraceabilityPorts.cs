@@ -25,7 +25,6 @@ public sealed record AuditEventDraft(
 
     /// <summary>S2-13: el borrado a pedido no encontró nada por borrar (ya estaba purgado). Se audita igual.</summary>
     public const string OutcomeNothingToDelete = "nothing_to_delete";
-    public const string SubjectRetention = "retention";
     public const string SubjectUser = "user";
 }
 
