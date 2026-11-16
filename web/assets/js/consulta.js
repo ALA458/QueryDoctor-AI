@@ -509,7 +509,6 @@
     section.appendChild(chartsHost);
 
     var details = el("details", "details-toggle");
-    details.setAttribute("open", "");
     details.appendChild(el("summary", null, "Tabla de intervalos por plan (" + series.length + " muestras)"));
 
     var wrap = el("div", "table-wrap");
@@ -1093,8 +1092,31 @@
     });
   }
 
+  var detailTabState = {
+    active: "overview",
+    buttons: {},
+    panels: {}
+  };
+
+  function activateDetailTab(tabId) {
+    if (!detailTabState.panels[tabId]) { return; }
+    detailTabState.active = tabId;
+    Object.keys(detailTabState.buttons).forEach(function (id) {
+      detailTabState.buttons[id].setAttribute("aria-selected", id === tabId ? "true" : "false");
+    });
+    Object.keys(detailTabState.panels).forEach(function (id) {
+      detailTabState.panels[id].hidden = id !== tabId;
+    });
+    try {
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search + "#tab=" + tabId);
+      }
+    } catch (_) { /* noop */ }
+  }
+
   function focusNodeInPlanViewer(planId, nodeId) {
     if (!planId) { return; }
+    activateDetailTab("plan");
     selectAndLoadPlan(planId, nodeId);
   }
 
@@ -1169,6 +1191,7 @@
 
   function focusFindingCard(findingCode) {
     if (!findingCode) { return; }
+    activateDetailTab("findings");
     if (explanationState.highlightedFindingCode) {
       var prev = document.getElementById("finding-card-" + explanationState.highlightedFindingCode);
       if (prev) { prev.classList.remove("is-target-highlight"); }
@@ -1305,6 +1328,117 @@
     return section;
   }
 
+  function renderSummaryStrip(detail) {
+    var strip = el("div", "detail-summary-strip");
+    var score = detail.score;
+
+    // 1. Score Card con mini indicador radial
+    var sCard = el("article", "summary-pill-card");
+    if (score) {
+      var val = typeof score.score === "number" ? Math.max(0, Math.min(100, score.score)) : 0;
+      var r = 22;
+      var circ = 2 * Math.PI * r;
+      var svg = svgEl("svg", { viewBox: "0 0 56 56", width: "56", height: "56", "aria-hidden": "true" });
+      svg.appendChild(svgEl("circle", { cx: "28", cy: "28", r: r, fill: "none", stroke: "var(--color-border)", "stroke-width": "5.5" }));
+      var arc = svgEl("circle", {
+        cx: "28",
+        cy: "28",
+        r: r,
+        fill: "none",
+        stroke: "var(--color-accent)",
+        "stroke-width": "5.5",
+        "stroke-linecap": "round",
+        "stroke-dasharray": circ.toFixed(1),
+        "stroke-dashoffset": (circ * (1 - val / 100)).toFixed(1),
+        transform: "rotate(-90 28 28)"
+      });
+      var tone = BAND_TONE[score.band];
+      if (tone === "danger") { arc.setAttribute("stroke", "var(--color-danger)"); }
+      else if (tone === "warn") { arc.setAttribute("stroke", "var(--color-warning)"); }
+      else if (tone === "ok") { arc.setAttribute("stroke", "var(--color-success)"); }
+      svg.appendChild(arc);
+      sCard.appendChild(svg);
+
+      var sMeta = el("div", "summary-pill-meta");
+      sMeta.appendChild(el("span", "summary-pill-label", "Health Score · #" + score.rankInWindow + "/" + score.totalQueriesInWindow));
+      var row = el("div", "q-score-cell");
+      row.appendChild(el("span", "summary-pill-val", formatNum(score.score, 1)));
+      row.appendChild(badge(score.bandLabel || score.band, tone || "neutral"));
+      sMeta.appendChild(row);
+      sCard.appendChild(sMeta);
+    } else {
+      var emptyMeta = el("div", "summary-pill-meta");
+      emptyMeta.appendChild(el("span", "summary-pill-label", "Health Score"));
+      emptyMeta.appendChild(el("span", "summary-pill-val", "Pendiente"));
+      sCard.appendChild(emptyMeta);
+    }
+    strip.appendChild(sCard);
+
+    // 2. Consumo ponderado
+    var cCard = el("article", "summary-pill-card");
+    var cMeta = el("div", "summary-pill-meta");
+    cMeta.appendChild(el("span", "summary-pill-label", "Consumo ponderado"));
+    cMeta.appendChild(el("span", "summary-pill-val", score ? (formatNum(score.weightedConsumptionPct, 1) + " %") : "—"));
+    cCard.appendChild(cMeta);
+    strip.appendChild(cCard);
+
+    // 3. Ejecuciones
+    var eCard = el("article", "summary-pill-card");
+    var eMeta = el("div", "summary-pill-meta");
+    eMeta.appendChild(el("span", "summary-pill-label", "Ejecuciones en ventana"));
+    eMeta.appendChild(el("span", "summary-pill-val", score ? formatNum(score.totalExecutions, 0) : "—"));
+    eCard.appendChild(eMeta);
+    strip.appendChild(eCard);
+
+    // 4. Hallazgos y Planes
+    var fCount = (detail.findings || []).length;
+    var pCount = (detail.plans || []).length;
+    var fCard = el("article", "summary-pill-card");
+    var fMeta = el("div", "summary-pill-meta");
+    fMeta.appendChild(el("span", "summary-pill-label", "Señales y planes"));
+    fMeta.appendChild(el("span", "summary-pill-val", fCount + " hallazgo(s) · " + pCount + " plan(es)"));
+    fCard.appendChild(fMeta);
+    strip.appendChild(fCard);
+
+    return strip;
+  }
+
+  function renderQuickFindingsOverview(detail) {
+    var findings = detail.findings || [];
+    if (!findings.length) { return null; }
+
+    var box = el("section", "panel");
+    var head = el("div", "panel-head");
+    var titleWrap = el("div");
+    titleWrap.appendChild(el("h2", null, "Resumen rápido de hallazgos"));
+    titleWrap.appendChild(el("p", "panel-note", "Pulsa un hallazgo para ver su evidencia o saltar directo al nodo del plan."));
+    head.appendChild(titleWrap);
+
+    var allBtn = el("button", "btn btn-sm btn-secondary", "Ver desglose y Score →");
+    allBtn.type = "button";
+    allBtn.addEventListener("click", function () { activateDetailTab("findings"); });
+    head.appendChild(allBtn);
+    box.appendChild(head);
+
+    var row = el("div", "node-jump-list");
+    findings.forEach(function (f) {
+      var sev = SEVERITY_TONE[f.severity];
+      var btn = el("button", "node-jump-btn", f.ruleId + " (" + (sev ? sev[0] : f.severity) + ") · " + f.ruleName);
+      btn.type = "button";
+      btn.addEventListener("click", function () {
+        focusFindingCard(f.findingCode || f.id);
+      });
+      row.appendChild(btn);
+    });
+    box.appendChild(row);
+    return box;
+  }
+
+  function initialTabFromHash() {
+    var m = (window.location.hash || "").match(/tab=(overview|plan|series|findings)/);
+    return m ? m[1] : "overview";
+  }
+
   function renderDetail(detail) {
     $("q-context").textContent = (detail.server || "") + " / " + (detail.databaseName || "");
     var metaText = "Query Store ID: " + detail.queryStoreQueryId +
@@ -1315,8 +1449,45 @@
     var root = $("detail-root");
     root.replaceChildren();
     var stack = el("div", "detail-stack");
-    stack.appendChild(renderScorePanel(detail.score));
+    stack.appendChild(renderSummaryStrip(detail));
 
+    var plansCount = (detail.plans || []).length;
+    var seriesCount = (detail.series || []).length;
+    var findingsCount = (detail.findings || []).length;
+
+    var tabDefs = [
+      { id: "overview", label: "SQL y Diagnóstico IA", count: null },
+      { id: "plan", label: "Plan de Ejecución", count: plansCount },
+      { id: "series", label: "Series Temporales", count: seriesCount },
+      { id: "findings", label: "Hallazgos y Score", count: findingsCount }
+    ];
+
+    var tabBar = el("div", "detail-tabs");
+    tabBar.setAttribute("role", "tablist");
+    tabBar.setAttribute("aria-label", "Secciones del diagnóstico");
+
+    detailTabState.buttons = {};
+    detailTabState.panels = {};
+    var startTab = initialTabFromHash();
+
+    tabDefs.forEach(function (t) {
+      var btn = el("button", "detail-tab-btn");
+      btn.type = "button";
+      btn.setAttribute("role", "tab");
+      btn.setAttribute("aria-selected", t.id === startTab ? "true" : "false");
+      btn.appendChild(el("span", null, t.label));
+      if (t.count !== null) {
+        btn.appendChild(el("span", "detail-tab-count", String(t.count)));
+      }
+      btn.addEventListener("click", function () { activateDetailTab(t.id); });
+      detailTabState.buttons[t.id] = btn;
+      tabBar.appendChild(btn);
+    });
+    stack.appendChild(tabBar);
+
+    // Panel 1: SQL y Diagnóstico IA
+    var pOverview = el("div", "detail-tab-panel");
+    pOverview.setAttribute("role", "tabpanel");
     var workbench = el("div", "detail-workbench");
     var leftCol = el("div", "detail-col");
     leftCol.appendChild(renderSqlPanel(detail));
@@ -1324,12 +1495,39 @@
     rightCol.appendChild(renderExplanationPanel(detail));
     workbench.appendChild(leftCol);
     workbench.appendChild(rightCol);
-    stack.appendChild(workbench);
+    pOverview.appendChild(workbench);
+    var quickFind = renderQuickFindingsOverview(detail);
+    if (quickFind) { pOverview.appendChild(quickFind); }
 
-    stack.appendChild(renderPlanTreePanel(detail));
-    stack.appendChild(renderSeriesPanel(detail));
-    stack.appendChild(renderFindingsPanel(detail.findings));
+    // Panel 2: Plan de Ejecución
+    var pPlan = el("div", "detail-tab-panel");
+    pPlan.setAttribute("role", "tabpanel");
+    pPlan.appendChild(renderPlanTreePanel(detail));
+
+    // Panel 3: Series Temporales
+    var pSeries = el("div", "detail-tab-panel");
+    pSeries.setAttribute("role", "tabpanel");
+    pSeries.appendChild(renderSeriesPanel(detail));
+
+    // Panel 4: Hallazgos y Score
+    var pFindings = el("div", "detail-tab-panel");
+    pFindings.setAttribute("role", "tabpanel");
+    pFindings.appendChild(renderFindingsPanel(detail.findings));
+    pFindings.appendChild(renderScorePanel(detail.score));
+
+    detailTabState.panels = {
+      overview: pOverview,
+      plan: pPlan,
+      series: pSeries,
+      findings: pFindings
+    };
+
+    [pOverview, pPlan, pSeries, pFindings].forEach(function (panel) {
+      stack.appendChild(panel);
+    });
+
     root.appendChild(stack);
+    activateDetailTab(startTab);
   }
 
   function getQueryIdFromUrl() {

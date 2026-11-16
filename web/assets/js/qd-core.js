@@ -252,7 +252,7 @@
     var dba = isDba(me);
     var items = [
       { id: "connections", href: "/", label: "Centro de control", code: "01", show: true },
-      { id: "connect", href: "/conectar", label: "Asistente de conexión", code: "02", show: dba },
+      { id: "connect", href: "/?new=1", label: "Nueva conexión", code: "02", show: dba },
       { id: "queries", href: "/consultas", label: "Explorador de consultas", code: dba ? "03" : "02", show: true },
       { id: "access", href: "/accesos", label: "Accesos y usuarios", code: "04", show: dba },
       { id: "trace", href: "/trazabilidad", label: "Trazabilidad y auditoría", code: "05", show: dba }
@@ -374,6 +374,13 @@
       }
       link.appendChild(renderNavIcon(item.id));
       link.appendChild(el("span", "nav-label", item.label));
+      if (item.id === "connect" && document.body.getAttribute("data-page") === "connections") {
+        link.addEventListener("click", function (ev) {
+          ev.preventDefault();
+          document.body.classList.remove("nav-open");
+          document.dispatchEvent(new CustomEvent("qd:open-wizard"));
+        });
+      }
       nav.appendChild(link);
     });
     top.appendChild(nav);

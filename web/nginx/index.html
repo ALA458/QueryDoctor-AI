@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="/assets/css/auth.css">
   <link rel="stylesheet" href="/assets/css/workbench.css">
   <script src="/assets/js/qd-core.js" defer></script>
+  <script src="/assets/js/wizard-state.js" defer></script>
+  <script src="/assets/js/wizard-ui.js" defer></script>
   <script src="/assets/js/app.js" defer></script>
 </head>
 <body data-page="connections" data-nav="connections">
@@ -25,18 +27,29 @@
         </div>
         <div class="btn-row" id="head-actions">
           <a class="btn btn-auto btn-secondary" href="/consultas">Explorar consultas →</a>
-          <a class="btn btn-auto" href="/conectar" id="btn-wizard" hidden>
-            <span>Asistente de conexión</span><span class="arrow" aria-hidden="true">+</span>
-          </a>
+          <button type="button" class="btn btn-auto" id="btn-wizard" hidden>
+            <span>+ Nueva conexión</span>
+          </button>
         </div>
       </header>
 
       <section class="kpi-strip" id="kpi-strip" aria-label="Indicadores generales"></section>
-      <section id="spotlight-host"></section>
       <div id="notice" class="notice" role="status" aria-live="polite"></div>
       <section id="list" aria-live="polite"></section>
     </main>
   </div>
+
+  <!-- Modal directo paso a paso de nueva conexión -->
+  <dialog class="wizard-dialog" id="wizard-dialog" aria-labelledby="wizard-dialog-title">
+    <div class="wizard-dialog-head">
+      <div>
+        <p class="eyebrow" id="wizard-dialog-kicker">Nueva conexión · Paso a paso</p>
+        <h2 id="wizard-dialog-title">Conectar instancia SQL Server</h2>
+      </div>
+      <button type="button" class="drawer-close" id="wizard-dialog-close">Cerrar ✕</button>
+    </div>
+    <div class="wizard-dialog-body" id="wizard-modal-host"></div>
+  </dialog>
 
   <!-- Drawer lateral de detalle de conexión -->
   <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>

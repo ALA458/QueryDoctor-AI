@@ -1,4 +1,4 @@
-/* Query Doctor AI — Centro de control (/): KPIs de flota, onboarding y drawer de conexión. */
+/* Query Doctor AI — Centro de control (/): KPIs, alta directa en modal paso a paso y drawer de conexión. */
 (function () {
   "use strict";
 
@@ -13,7 +13,8 @@
     ingestPollTimer: null,
     ingestPollCount: 0,
     detail: null,
-    runs: []
+    runs: [],
+    wizardController: null
   };
 
   function showNotice(node, message, ok) {
@@ -50,50 +51,54 @@
     strip.appendChild(buildKpiCard("Última ingesta", latestIngest ? C.formatRelativeTime(latestIngest) : "Sin ingestas", issues > 0 ? (issues + " con alertas de configuración") : "Sin incidencias críticas", issues > 0 ? "danger" : "ok"));
   }
 
-  function renderSpotlight(items) {
-    var host = $("spotlight-host");
-    C.clear(host);
-    if (items.length > 0) { return; }
-
-    var box = C.el("section", "spotlight");
-    var left = C.el("div");
-
-    if (C.isDba(appState.me)) {
-      left.appendChild(C.el("p", "eyebrow", "Primeros pasos"));
-      left.appendChild(C.el("h2", null, "Conecta tu primera base SQL Server en menos de 3 minutos"));
-      left.appendChild(C.el("p", null, "El asistente guiado prepara la cuenta de solo lectura, cifra credenciales en envío, verifica Query Store en vivo y dispara la primera ingesta para diagnosticar consultas."));
-      var cta = C.el("a", "btn btn-auto spotlight-cta", "Iniciar asistente de conexión →");
-      cta.href = "/conectar";
-      left.appendChild(cta);
-      box.appendChild(left);
-
-      var steps = C.el("ol", "spotlight-steps");
-      [
-        ["1", "Copia el script T-SQL de privilegio mínimo (VIEW DATABASE STATE)."],
-        ["2", "Ingresa servidor, base y credenciales cifradas por TLS."],
-        ["3", "Verifica el sondeo en vivo de capacidades y Query Store."],
-        ["4", "Lanza la primera ingesta e inspecciona hallazgos y Health Score."]
-      ].forEach(function (pair) {
-        var li = C.el("li");
-        li.appendChild(C.el("span", "step-num", pair[0]));
-        li.appendChild(C.el("span", null, pair[1]));
-        steps.appendChild(li);
+  function openWizardModal() {
+    var dlg = $("wizard-dialog");
+    if (!dlg || !C.isDba(appState.me)) { return; }
+    if (!appState.wizardController && window.QDWizardUI) {
+      appState.wizardController = window.QDWizardUI.mount($("wizard-modal-host"), {
+        onChanged: function () { loadConnections(); },
+        onClose: function () { closeWizardModal(); }
       });
-      box.appendChild(steps);
-    } else {
-      left.appendChild(C.el("p", "eyebrow", "Acceso de Desarrollador"));
-      left.appendChild(C.el("h2", null, "Aún no tienes conexiones asignadas"));
-      left.appendChild(C.el("p", null, "Solicita al administrador (DBA) que te asigne una instancia monitoreada para consultar su telemetría, planes de ejecución y explicaciones IA."));
-      box.appendChild(left);
+    } else if (appState.wizardController) {
+      appState.wizardController.reset();
     }
+    if (!dlg.open && typeof dlg.showModal === "function") {
+      dlg.showModal();
+    }
+  }
 
-    host.appendChild(box);
+  function closeWizardModal() {
+    var dlg = $("wizard-dialog");
+    if (appState.wizardController) { appState.wizardController.destroy(); }
+    if (dlg && dlg.open) { dlg.close(); }
+    loadConnections();
+  }
+
+  function renderEmptyState() {
+    var list = $("list");
+    C.clear(list);
+    var card = C.el("section", "surface-card empty");
+    if (C.isDba(appState.me)) {
+      card.appendChild(C.el("h2", null, "Aún no hay conexiones registradas"));
+      card.appendChild(C.el("p", null, "Registra tu primera instancia SQL Server o Azure SQL con una cuenta de solo lectura para comenzar la ingesta y el diagnóstico."));
+      var cta = C.el("button", "btn btn-auto", "+ Nueva conexión");
+      cta.type = "button";
+      cta.addEventListener("click", openWizardModal);
+      card.appendChild(cta);
+    } else {
+      card.appendChild(C.el("h2", null, "Aún no tienes conexiones asignadas"));
+      card.appendChild(C.el("p", null, "Solicita al administrador (DBA) que te asigne una instancia monitoreada para consultar su telemetría y diagnósticos."));
+    }
+    list.appendChild(card);
   }
 
   function renderTable(items) {
     var list = $("list");
     C.clear(list);
-    if (!items.length) { return; }
+    if (!items.length) {
+      renderEmptyState();
+      return;
+    }
 
     var card = C.el("div", "table-card");
     var wrap = C.el("div", "table-wrap");
@@ -181,7 +186,6 @@
       if (!res.ok) { throw new Error("connections " + res.status); }
       appState.connections = res.data || [];
       renderKpis(appState.connections);
-      renderSpotlight(appState.connections);
       renderTable(appState.connections);
     }).catch(function () {
       showNotice($("notice"), "No pudimos cargar las conexiones en este momento.", false);
@@ -326,12 +330,12 @@
 
     var info = C.el("div", "surface-card");
     info.appendChild(C.el("p", "eyebrow", "Política de retención (RNF-SEG-10)"));
-    info.appendChild(C.el("p", "panel-note", "La purga automática elimina textos SQL y planes XML cifrados al cumplirse el plazo de retención (por defecto 30 días). Desde aquí puedes ejecutar un borrado inmediato de texto SQL y planes XML de esta conexión."));
+    info.appendChild(C.el("p", "panel-note", "La purga automática elimina textos SQL y planes XML cifrados al cumplirse el plazo de retención (30 días). Desde aquí puedes purgar de inmediato los datos de esta conexión."));
     host.appendChild(info);
 
     var zone = C.el("div", "danger-zone");
     zone.appendChild(C.el("h3", null, "Purgar evidencia SQL y planes XML"));
-    zone.appendChild(C.el("p", null, "Esta acción limpia EncryptedSqlText y EncryptedPlanXml de la base '" + d.databaseName + "'. La cadena de auditoría audit.* y los metadatos numéricos permanecen intactos y verificables."));
+    zone.appendChild(C.el("p", null, "Limpia EncryptedSqlText y EncryptedPlanXml de la base '" + d.databaseName + "'. La cadena audit.* permanece intacta."));
 
     var confirmField = C.el("div", "field");
     var lbl = C.el("label", null, "Escribe PURGAR para habilitar el borrado:");
@@ -360,7 +364,7 @@
         if (res.ok && res.data) {
           input.value = "";
           showNotice($("drawer-notice"), "Purga completada: " + res.data.textsCleared + " textos SQL y " + res.data.plansCleared + " planes XML eliminados.", true);
-          C.showToast("Evidencia SQL/XML purgada y registrada en auditoría.", "ok");
+          C.showToast("Evidencia SQL/XML purgada.", "ok");
           loadConnections();
           return;
         }
@@ -438,20 +442,30 @@
     });
   }
 
-  function wireDrawerEvents() {
+  function wireEvents() {
+    $("btn-wizard").addEventListener("click", openWizardModal);
+    $("wizard-dialog-close").addEventListener("click", closeWizardModal);
+    $("wizard-dialog").addEventListener("cancel", function (ev) {
+      ev.preventDefault();
+      closeWizardModal();
+    });
+
     $("drawer-close").addEventListener("click", closeDrawer);
     $("drawer-backdrop").addEventListener("click", closeDrawer);
     document.addEventListener("keydown", function (ev) {
       if (ev.key === "Escape" && !$("drawer").hidden) { closeDrawer(); }
     });
-    document.querySelectorAll(".tab-btn").forEach(function (btn) {
+    document.querySelectorAll("#drawer .tab-btn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         setDrawerTab(btn.getAttribute("data-tab"));
       });
     });
+
+    // Evento emitido por qd-core cuando se pulsa "Nueva conexión" estando ya en /
+    document.addEventListener("qd:open-wizard", openWizardModal);
   }
 
-  wireDrawerEvents();
+  wireEvents();
 
   C.mountShell({ activeNav: "connections" }).then(function (ctx) {
     if (!ctx) { return; }
@@ -463,7 +477,12 @@
       $("page-eyebrow").textContent = "Mis instancias asignadas";
       $("page-sub").textContent = "Conexiones SQL Server autorizadas para tu usuario. Inspecciona su estado o salta directo al explorador de consultas.";
     }
-    return loadConnections();
+    return loadConnections().then(function () {
+      var params = new URLSearchParams(window.location.search);
+      if (dba && params.get("new") === "1") {
+        openWizardModal();
+      }
+    });
   }).catch(function () {
     $("main").hidden = false;
     showNotice($("notice"), "El servicio no está disponible. Inténtalo de nuevo en unos minutos.", false);
