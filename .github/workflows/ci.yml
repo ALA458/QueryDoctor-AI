@@ -73,7 +73,7 @@ jobs:
 
             - name: Instalar dependencias verificadas
               working-directory: ai-service
-              run: pip install --require-hashes --only-binary=:all: -r requirements.lock
+              run: "pip install --require-hashes --only-binary=:all: -r requirements.lock"
 
             - name: Pruebas de ai-service
               working-directory: ai-service
