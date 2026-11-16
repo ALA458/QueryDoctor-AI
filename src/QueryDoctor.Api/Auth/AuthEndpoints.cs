@@ -19,7 +19,7 @@ internal static class AuthEndpoints
     {
         var group = app.MapGroup("/auth");
 
-        group.MapPost("/login", LoginAsync).AllowAnonymous();
+        group.MapPost("/login", LoginAsync).AllowAnonymous().RequireRateLimiting("login");
         group.MapPost("/logout", LogoutAsync).RequireAuthorization(AuthConstants.SessionPolicy);
         group.MapPost("/change-password", ChangePasswordAsync).RequireAuthorization(AuthConstants.SessionPolicy);
         group.MapGet("/me", MeAsync).RequireAuthorization(AuthConstants.SessionPolicy);

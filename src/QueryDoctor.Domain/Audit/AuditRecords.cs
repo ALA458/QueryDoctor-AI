@@ -76,6 +76,9 @@ public enum AuditEventType
 
     /// <summary>Un DBA quitó la asignación de una conexión a un Desarrollador (S2-12).</summary>
     ConnectionUnassigned = 12,
+
+    /// <summary>Un DBA dio de alta a un usuario con rol Desarrollador (S2-12 D6).</summary>
+    DeveloperUserCreated = 13,
 }
 
 /// <summary>

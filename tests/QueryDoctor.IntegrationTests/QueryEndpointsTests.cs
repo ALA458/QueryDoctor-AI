@@ -315,15 +315,20 @@ public sealed class QueryEndpointsTests(PostgresFixture postgres) : IDisposable
     }
 
     [Fact]
-    public async Task EndpointsConsultasExigenAutenticacionYRolDba()
+    public async Task EndpointsConsultasExigenAutenticacionYFiltranPorAcceso()
     {
         using var anon = _api.CreateClient();
-        using var dev = await _api.ClientAsync(RoleNames.Developer);
+        using var devSinAsignaciones = await _api.ClientAsync(RoleNames.Developer);
 
         Assert.Equal(HttpStatusCode.Unauthorized, (await anon.GetAsync("/queries")).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await anon.GetAsync($"/queries/{Guid.NewGuid()}")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await dev.GetAsync("/queries")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await dev.GetAsync($"/queries/{Guid.NewGuid()}")).StatusCode);
+
+        // El Desarrollador accede a /queries vía ConnectionReaderPolicy, pero sin asignaciones solo ve [] y 404.
+        using var devList = await devSinAsignaciones.GetAsync("/queries");
+        Assert.Equal(HttpStatusCode.OK, devList.StatusCode);
+        var items = await devList.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(0, items.GetArrayLength());
+        Assert.Equal(HttpStatusCode.NotFound, (await devSinAsignaciones.GetAsync($"/queries/{Guid.NewGuid()}")).StatusCode);
     }
 
     [Fact]
@@ -397,10 +402,10 @@ public sealed class QueryEndpointsTests(PostgresFixture postgres) : IDisposable
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/queries/{q2Id}/plans/{planId1}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/queries/{q1Id}/plans/{Guid.NewGuid()}")).StatusCode);
 
-        // Permisos en endpoint de plan.
+        // Permisos en endpoint de plan: anónimo -> 401; Desarrollador sin asignación -> 404 (filtro ConnectionAccess).
         using var anon = _api.CreateClient();
         using var dev = await _api.ClientAsync(RoleNames.Developer);
         Assert.Equal(HttpStatusCode.Unauthorized, (await anon.GetAsync($"/queries/{q1Id}/plans/{planId1}")).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await dev.GetAsync($"/queries/{q1Id}/plans/{planId1}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await dev.GetAsync($"/queries/{q1Id}/plans/{planId1}")).StatusCode);
     }
 }

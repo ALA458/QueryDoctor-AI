@@ -2,6 +2,7 @@ using Hangfire;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using QueryDoctor.Application.Connections;
+using QueryDoctor.Application.Ingestion;
 using QueryDoctor.Application.Jobs;
 using QueryDoctor.Domain.Core;
 
@@ -29,17 +30,20 @@ public sealed partial class ProbeConnectionJob
     private readonly IServiceScopeFactory _scopes;
     private readonly TimeProvider _clock;
     private readonly ILogger<ProbeConnectionJob> _logger;
+    private readonly IRecurringIngestionScheduler? _recurringScheduler;
 
     public ProbeConnectionJob(
         ProbeConnection probe,
         IServiceScopeFactory scopes,
         TimeProvider clock,
-        ILogger<ProbeConnectionJob> logger)
+        ILogger<ProbeConnectionJob> logger,
+        IRecurringIngestionScheduler? recurringScheduler = null)
     {
         _probe = probe ?? throw new ArgumentNullException(nameof(probe));
         _scopes = scopes ?? throw new ArgumentNullException(nameof(scopes));
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _recurringScheduler = recurringScheduler;
     }
 
     [Queue(JobQueues.Probe)]
@@ -82,10 +86,19 @@ public sealed partial class ProbeConnectionJob
         }
         else if (outcome.FailureCause is { } cause)
         {
+            _recurringScheduler?.Remove(connectionId);
             LogFailed(_logger, connectionId, outcome.Status, cause);
         }
         else
         {
+            if (_recurringScheduler is not null)
+            {
+                await using var profileScope = _scopes.CreateAsyncScope();
+                var repository = profileScope.ServiceProvider.GetRequiredService<IConnectionRepository>();
+                var profile = await repository.GetProfileAsync(connectionId, CancellationToken.None);
+                _recurringScheduler.ScheduleOrUpdate(connectionId, profile?.IntervalLengthMinutes);
+            }
+
             LogSucceeded(_logger, connectionId);
         }
     }

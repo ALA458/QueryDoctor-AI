@@ -200,4 +200,43 @@ public sealed class LiteralMaskerPlanTests
         Assert.Equal(MaskingFailureCause.InputMissing, result.Plan.FailureCause);
         Assert.Null(result.Plan.Text);
     }
+
+    [Fact]
+    public void AtributosEstructuralesShowplanComoAggTypeYConvertSeConservanSinFalloCerrado()
+    {
+        const string Ns = "http://schemas.microsoft.com/sqlserver/2004/07/showplan";
+        var planXml = $"""
+            <ShowPlanXML xmlns="{Ns}" Version="1.6" Build="16.0.4315.2">
+              <BatchSequence><Batch><Statements>
+                <StmtSimple StatementId="1" StatementType="SELECT" BatchSqlHandle="0x020000001234" StatementText="SELECT COUNT(*) FROM dbo.Orders">
+                  <QueryPlan>
+                    <RelOp NodeId="0" PhysicalOp="Stream Aggregate" LogicalOp="Aggregate">
+                      <StreamAggregate>
+                        <DefinedValues><DefinedValue>
+                          <Aggregate AggType="countstar" />
+                        </DefinedValue></DefinedValues>
+                      </StreamAggregate>
+                    </RelOp>
+                    <Warnings NoJoinPredicate="1" />
+                    <Convert DataType="decimal" Precision="10" Scale="2" />
+                    <Top IsPercent="0" RowCount="0" WithTies="0" />
+                    <Intrinsic FunctionName="charindex" />
+                    <Filter StartupExpression="0" />
+                    <Parallelism PartitioningType="RoundRobin" />
+                    <Spool PrimaryNodeId="4" />
+                    <ComputeScalar ComputeSequence="1" />
+                    <Update DMLRequestSort="0" />
+                  </QueryPlan>
+                </StmtSimple>
+              </Statements></Batch></BatchSequence>
+            </ShowPlanXML>
+            """;
+
+        var result = _sut.Mask(new MaskingInput("SELECT COUNT(*) FROM dbo.Orders", planXml));
+
+        Assert.True(result.Plan.IsSendable, $"{result.Plan.FailureCause}");
+        Assert.Contains("AggType=\"countstar\"", result.Plan.Text, StringComparison.Ordinal);
+        Assert.Contains("NoJoinPredicate=\"1\"", result.Plan.Text, StringComparison.Ordinal);
+        Assert.Contains("Precision=\"10\"", result.Plan.Text, StringComparison.Ordinal);
+    }
 }

@@ -43,7 +43,7 @@ internal static class PlanXmlMasker
         // Raíz y sentencia.
         "Version", "Build", "StatementId", "StatementCompId", "StatementType", "StatementSubTreeCost",
         "StatementEstRows", "StatementOptmLevel", "StatementOptmEarlyAbortReason", "StatementParameterizationType",
-        "StatementSqlHandle", "QueryHash", "QueryPlanHash", "RetrievedFromCache", "ParentObjectId",
+        "StatementSqlHandle", "BatchSqlHandle", "QueryHash", "QueryPlanHash", "RetrievedFromCache", "ParentObjectId",
         "DatabaseContextSettingsId", "CardinalityEstimationModelVersion", "SecurityPolicyApplied", "QueryVariantID",
 
         // Opciones SET de la sentencia.
@@ -65,6 +65,8 @@ internal static class PlanXmlMasker
         "EstimateRewinds", "AvgRowSize", "EstimatedTotalSubtreeCost", "TableCardinality", "IsAdaptive",
         "AdaptiveThresholdRows", "EstimatedJoinType", "ManyToMany", "Partitioned", "Optimized",
         "WithOrderedPrefetch", "WithUnorderedPrefetch", "Distinct", "Operation", "CompareOp", "ScanType",
+        "AggType", "ComputeSequence", "DMLRequestSort", "FunctionName", "IsPercent", "PartitioningType",
+        "PrimaryNodeId", "RowCount", "StartupExpression", "WithTies",
 
         // Contadores reales por hilo.
         "Thread", "Batches", "ActualRows", "ActualRowsRead", "ActualExecutions", "ActualExecutionMode",
@@ -79,8 +81,9 @@ internal static class PlanXmlMasker
         "ForceSeek", "NoExpandHint", "Lookup",
 
         // Conversiones, advertencias y derrames.
-        "DataType", "Length", "Style", "Implicit", "ConvertIssue", "ParameterDataType", "SpillLevel",
-        "SpilledThreadCount", "GrantedMemoryKb", "UsedMemoryKb", "ReadsFromTempDb", "WritesToTempDb",
+        "DataType", "Length", "Precision", "Scale", "Style", "Implicit", "ConvertIssue", "ParameterDataType",
+        "NoJoinPredicate", "SpillLevel", "SpilledThreadCount", "GrantedMemoryKb", "UsedMemoryKb",
+        "ReadsFromTempDb", "WritesToTempDb",
 
         // Estadísticas, índices faltantes y planes sensibles a parámetros.
         "Statistics", "SamplingPercent", "ModificationCount", "LastUpdate", "Impact", "LowBoundary", "HighBoundary",
