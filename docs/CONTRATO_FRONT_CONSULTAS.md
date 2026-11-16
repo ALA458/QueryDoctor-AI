@@ -69,3 +69,34 @@ Consumo desde `/consulta?id={id}` (`RF-DASH-05`, `RF-DASH-06`, `RF-IA-10`, `RF-I
 - `POST /queries/{id}/explanations`: responde `202` (`PENDIENTE`) o `409` (`AlreadyInProgress`) para iniciar polling sobre `/latest`, o `200` (`SIN_HALLAZGOS`) sin encolar cuando no hay hallazgos (`CA-HU09.2`).
 - `NO_VERIFICADA`: muestra el código literal, los motivos en `validation_failures[]` y oculta el contenido generado dentro de un bloque colapsado por defecto, manteniendo visibles los hallazgos determinísticos.
 - `IA_NO_DISPONIBLE`: muestra `notice` y `cause` permitiendo reintentar sin ocultar SQL, series, árbol del plan ni hallazgos (`CA-HU12.1`, `CA-HU12.2`).
+
+## Evidencia expirada y borrado a pedido (S2-13, RNF-SEG-10)
+
+El Worker purga el texto SQL, el XML del plan y la evidencia de los hallazgos de esos planes cuando vence el plazo
+de retención (`Retention:SqlTextAndPlanDays`, 30 días por defecto, contados desde la ingesta). El DBA también puede
+borrarlos a pedido. Las filas, ids, hashes, métricas, puntajes, explicaciones y la traza **quedan**. "Expirado"
+sale de una marca explícita (`purged_at`), nunca de que el valor esté vacío.
+
+| Endpoint | Campo | Significado |
+|---|---|---|
+| `GET /queries` | `sqlExpired` | `true` solo si el texto se purgó. `sqlPreview` vale entonces `"[Evidencia expirada]"`. Un texto que nunca llegó da `sqlExpired=false` y `"[Sin texto SQL]"` |
+| `GET /queries/{id}` | `sqlExpired`, `sqlExpiredAt` | Igual, con la fecha de la purga. `sqlText` es `null` |
+| `GET /queries/{id}` | `plans[].planExpired`, `plans[].expiredAt` | El XML de ese plan se purgó |
+| `GET /queries/{id}` | `findings[].evidenceExpired` | La evidencia del hallazgo se vació junto con su plan: `evidence` llega `{}`. Regla, severidad, nodos y contexto siguen |
+| `GET /queries/{id}/plans/{planId}` | `planExpired`, `planExpiredAt` | El plan se purgó: `statements` vacío. Un plan `TooLarge` **no** sale expirado (lo explica `notAnalyzableCause`) |
+| `GET /queries/{id}/explanations/latest` | `status=NO_GENERADA`, `cause=EvidenceExpired`, `notice` | Se pidió una explicación con la evidencia ya expirada: no se llama a la IA. Las explicaciones anteriores a la purga se siguen mostrando |
+
+Pendiente en la web (Daniel): el listado y el detalle ya pintan "Evidencia expirada" con `sqlExpired` y
+`planExpired`. Falta marcar la tarjeta del hallazgo con `evidenceExpired` y mostrar la causa `EvidenceExpired`.
+
+### `DELETE /queries/{id}/evidence` y `DELETE /connections/{id}/evidence` (solo DBA)
+
+- Borran el texto SQL, los planes y la evidencia de la consulta o de todas las consultas de la conexión. **No** borran
+  la consulta, la conexión ni sus asignaciones.
+- `204`: borrado, o ya no quedaba nada (es idempotente). `404`: no existe. `401` sin sesión, `403` para el
+  Desarrollador (también con la conexión asignada) y para otro origen (CSRF, `UseSameOriginForms`).
+- Cada llamada que llega a borrar deja un evento `DataDeleted` en `/audit`, en la misma transacción. El evento lleva
+  el usuario, `subject_type` (`query` | `connection`), `subject_id` y `outcome` (`ok` | `nothing_to_delete`). La
+  purga automática deja uno por conexión con `user_name = "system:retention"` y sin `user_id`.
+- Un texto de Query Store puede pertenecer a varias consultas. Al borrarlo por una, deja de verse en todas.
+- Lo purgado no vuelve con la siguiente ingesta: la ingesta solo inserta.

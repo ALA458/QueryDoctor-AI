@@ -57,7 +57,7 @@ sin E/S**. NetArchTest (S1-03) debe vigilar:
 | ai: retriever, prompt_registry, llm_client, output_schema (Pydantic) | RF-IA-04/06/08/09, RNF-SEG-06/08 | `LLMProvider.generate(request, schema)` | S1-17/18, S2-07 (Maykol) |
 | SPA (6 vistas, §5.4) | RF-DASH-*, RNF-SEG-07 | OpenAPI | S1-15/16, S2-09..11 (Daniel) |
 
-Trabajos Hangfire: `probe_connection`, `ingest`, `analyze`, `score`, `explain`, `retention`.
+Trabajos Hangfire: `probe_connection`, `ingest`, `analyze`, `score`, `explain`, `retention` (S2-13, recurrente diario).
 Endpoints API: `/connections`, `/ingestions`, `/queries`, `/plans/{id}`, `/findings`,
 `/explanations`, `/trace`, `/audit`, `/settings/thresholds`, `/exports`.
 
@@ -322,6 +322,46 @@ Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA (DA-
 - RLS en PostgreSQL como segunda barrera que cubra también el SQL directo. Necesita el rol de aplicación de T4.
 - El listado de conexiones del Desarrollador hace una consulta más por solicitud (sus asignaciones). Medirlo en S3-07.
 - Una asignación a un usuario que después pierde el rol Desarrollador queda en la tabla, inerte.
+
+## Decisiones de implementación de S2-13 (retención, RNF-SEG-10)
+Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA.
+
+| ID | Decisión |
+|---|---|
+| D1 | El recorte del plan ("Solo borrado a pedido del DBA") **no se aplicó**. RNF-SEG-10 es Debe, el punto 4 de SRS 5.3 prohíbe recortar "el tratamiento seguro de datos" y §5.1 dice que los recortes no incluyen la seguridad. Se hizo el borrado automático y el borrado a pedido |
+| D2 | El plazo es `Retention:SqlTextAndPlanDays` (configuración o `Retention__SqlTextAndPlanDays` en el compose, `QD_RETENTION_DAYS`): 30 por defecto, rango 1–3650, contado desde `ingested_at`. Fuera de rango, el Worker no arranca. No se configura desde la UI |
+| D3 | Se borran `core.query_text.encrypted_sql_text`, `core.plan.encrypted_plan_xml` y `analysis.finding.encrypted_evidence_json` de los hallazgos de esos planes (la evidencia lleva literales del plan). Quedan las filas, ids, hashes, estados, `runtime_stat`, `health_score`, los metadatos del hallazgo, las explicaciones y todo `audit.*` |
+| D4 | Migración `RetencionEvidencia`: `purged_at` en `core.query_text` y `core.plan`. "Expirado" sale de la marca y no del nulo, así un plan `TooLarge` deja de verse como expirado (bug de S2-09/S2-10) |
+| D5 | Lo purgado no vuelve: la ingesta solo inserta (`ON CONFLICT DO NOTHING`, I8) |
+| D6 | Un plan purgado conserva sus hallazgos y no se vuelve a analizar. Una explicación pedida con la evidencia expirada termina en `NO_GENERADA` / `EvidenceExpired`, sin llamar a la IA y con su entrada de traza |
+| D7 | `DELETE /queries/{id}/evidence` y `DELETE /connections/{id}/evidence`: solo DBA, CSRF por mismo origen, 204 (idempotente) o 404. El borrado y el evento `DataDeleted` (con usuario, `outcome` `ok` o `nothing_to_delete`) van en una transacción. No borra conexiones ni usuarios, así que no se crea el choque de FK de `AssignAsync` |
+| D8 | La purga automática deja un `DataDeleted` por conexión purgada, sin `user_id` y con `user_name = "system:retention"`, en la misma transacción que esa purga. Los conteos van al log y no al evento |
+| D9 | Contrato "evidencia expirada" en `docs/CONTRATO_FRONT_CONSULTAS.md`. La parte web queda para Daniel |
+| D10 | Trabajo recurrente `retention` en su cola, diario a las 03:00 UTC, sin argumentos y sin reintento automático (la corrida siguiente retoma). **Ajuste:** no hay lotes de 1000, sino un UPDATE por tabla y por conexión, dentro de la transacción de su evento: con lotes, cada lote necesitaría su propio evento o una transacción que los abarque todos, y eso no acorta los bloqueos |
+
+**Mecánica que conviene conocer:**
+- `EfEvidencePurgeStore` usa `ExecuteUpdateAsync` sobre los `DbSet`, que pasa por el filtro por conexión de S2-12. No
+  usa SQL directo ni `IgnoreQueryFilters`. La Api borra con el acceso del DBA; el Worker, con el acceso Sistema.
+- La evidencia que se vacía es la de **todo** hallazgo cuyo plan tiene `purged_at`, también de corridas anteriores.
+- Solo se marca lo que tenía contenido: un plan `TooLarge` o un texto que nunca llegó no reciben `purged_at` y no salen
+  "expirados" (auditoría B1). Un borrado a pedido sobre ellos audita `nothing_to_delete`.
+- Purga contra recálculo (auditoría M1): `EfScoreRecalculationStore.SaveBatchAsync` bloquea las filas de los planes
+  (`SELECT … FOR UPDATE`) y relee `purged_at`. Un plan ya purgado no recibe corrida ni hallazgos nuevos, y una purga que
+  llega después espera ese bloqueo. Como respaldo, `retention` también visita las conexiones que tienen evidencia no
+  vacía en planes purgados, la vacía y lo audita.
+- El borrado a pedido corre en la Api y no en Hangfire: solo toca PostgreSQL, ni bases objetivo ni el LLM (invariante 2).
+- La traza (`audit.trace_entry`) no tiene FK y no se toca, así que `/trace/verify` y `/audit/verify` siguen en verde
+  después de la purga (`RetentionTests`).
+
+**Deuda de S2-13:**
+- La web todavía no marca `findings[].evidenceExpired` ni la causa `EvidenceExpired` (Daniel).
+- Un texto compartido por varias consultas se purga para todas cuando el DBA borra una.
+- Sin índice para la búsqueda de lo vencido (`ingested_at` con `purged_at IS NULL`). Medirlo en S3-07 con volumen real.
+- La auditoría guarda el evento y no los conteos: el detalle de cuántas filas se purgaron está solo en el log del Worker.
+- Un plan purgado mientras seguía `Pending` (venció antes de su primer análisis) queda `Pending` y puntúa sin hallazgos
+  (auditoría B3; improbable con 30 días y `score` tras cada ingesta).
+- Los registros fuente (`QueryFindingSource`, `WindowPlanSnapshot`, …) traen el campo nuevo con valor por omisión: un
+  lector futuro que no lo llene mostraría "no expirado" (auditoría B3).
 
 ## Riesgos que afectan al código (§14.1)
 - **RA-03:** si ScriptDom no puede tokenizar el SQL, se envía solo el contexto de hallazgos,
