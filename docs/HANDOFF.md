@@ -7,6 +7,15 @@
 
 ## Estado
 - ✅ **Sprint 1 y Sprint 2 completos en `main`** (`#1`–`#64`): ingesta, parser, catálogo `REG-01`–`04`/`REG-11`, *Health Score*, `LiteralMasker` (`TSql170Parser`), servicio IA (`openrouter_*`, `gemini_free`), `ExplanationValidator`, traza/auditoría SHA-256, RBAC `Desarrollador` y vistas web base.
+- ✅ Corregidos avisos CSS: valores SVG `rx`/`r` con unidad, `border-top-width` redundante eliminado y `word-break: break-word` sustituido por `overflow-wrap: anywhere`.
+- ✅ Consolidados los selectores duplicados `.panel`, `.panel-head h2`, `.score-dial`, `.sql-code`, `.charts-grid`, `.chart-card`, `.chart-dot` y `.finding-list` en `web/assets/css/consulta.css`, preservando sus estilos efectivos.
+- ✅ La transición y el desplazamiento de la flecha de los botones respetan `prefers-reduced-motion`.
+- ✅ El desplazamiento de nodos del plan respeta `prefers-reduced-motion`.
+- ✅ `[hidden]` prevalece sin `!important`; los selectores de `display` no se aplican a `.btn`, `.drawer` o `.chip-bar` ocultos.
+- ✅ El aviso de consulta usa `<output>` con `aria-live="polite"` para anunciar mensajes accesiblemente.
+- ✅ Los landmarks `aside` de las páginas identifican explícitamente la barra lateral de navegación.
+- ✅ El drawer de conexión usa el elemento `<dialog>` y su comportamiento modal nativo.
+- ✅ Eliminadas etiquetas vacías no asociadas a controles en los filtros de trazabilidad y auditoría.
 - ✅ **Bloqueantes pre-Sprint 3 cerrados en esta rama:**
   - Fix `CA1825` en `ConnectionAccessFilterTests.cs` (`QueryDoctor.slnx` compila limpio con `0` warnings/errors) y ampliado `.github/workflows/ci.yml` (`web` y `ai-service`).
   - **Ingesta programada (`RF-ING-06`):** `IRecurringIngestionScheduler` / `HangfireRecurringIngestionScheduler` programa `RunScheduledAsync` tras cada sondeo `Active`.

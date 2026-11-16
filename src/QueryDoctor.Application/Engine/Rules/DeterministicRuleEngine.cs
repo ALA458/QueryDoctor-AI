@@ -102,7 +102,7 @@ public sealed class DeterministicRuleEngine : IRuleEngine
             QueryConsumptionPct: request.QueryConsumptionPct,
             AvgRowsReturned: request.AvgRowsReturned);
 
-        var findings = new List<FindingContract>();
+        var findingsById = new Dictionary<string, FindingContract>(StringComparer.Ordinal);
         var omittedRules = new List<string>();
 
         foreach (var rule in _ruleCatalog.GetActiveRules())
@@ -151,7 +151,7 @@ public sealed class DeterministicRuleEngine : IRuleEngine
                     Executions: request.QueryExecutionCount,
                     QueryConsumptionPct: request.QueryConsumptionPct);
 
-                findings.Add(new FindingContract(
+                var candidate = new FindingContract(
                     SchemaVersion: FindingContract.CurrentSchemaVersion,
                     FindingId: findingId,
                     CatalogVersion: _ruleCatalog.CatalogVersion,
@@ -166,12 +166,19 @@ public sealed class DeterministicRuleEngine : IRuleEngine
                     Context: contextContract,
                     ThresholdsUsed: ruleThresholds,
                     EngineVersion: engineVersion,
-                    AnalyzedAt: analyzedAt));
+                    AnalyzedAt: analyzedAt);
+
+                // Garantizar unicidad de FindingId dentro de una corrida (índice único IX_finding_analysis_run_id_finding_code).
+                if (!findingsById.TryGetValue(findingId, out var existing) ||
+                    SeverityRank(candidate.Severity) > SeverityRank(existing.Severity))
+                {
+                    findingsById[findingId] = candidate;
+                }
             }
         }
 
         // Orden canónico: por Rule.Id, primer NodeId involucrado (-1 si es de sentencia) y FindingId.
-        var orderedFindings = findings
+        var orderedFindings = findingsById.Values
             .OrderBy(f => f.Rule.Id, StringComparer.Ordinal)
             .ThenBy(f => f.Nodes.Count > 0 ? f.Nodes[0].NodeId : -1)
             .ThenBy(f => f.FindingId, StringComparer.Ordinal)
@@ -234,6 +241,15 @@ public sealed class DeterministicRuleEngine : IRuleEngine
         var hex = Convert.ToHexString(hashBytes);
         return $"F-{hex[..12]}";
     }
+
+    private static int SeverityRank(string severityCode) => severityCode switch
+    {
+        "ALTA" => 4,
+        "MEDIA" => 3,
+        "BAJA" => 2,
+        "INFORMATIVA" => 1,
+        _ => 0,
+    };
 
     private static string ResolvePlanKey(PlanAnalysisRequest request, string? fallbackIdentifier = null)
     {
