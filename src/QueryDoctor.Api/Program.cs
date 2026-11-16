@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Hangfire;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using QueryDoctor.Api.Auth;
 using QueryDoctor.Api.Connections;
@@ -33,6 +35,24 @@ builder.Services.AddExplanationRequests();
 builder.Services.AddConnectionAssignments();
 // S1-16 / S2-09: listado y detalle de consultas con enmascarado seguro de salida.
 builder.Services.AddQueryViews();
+// S2-13: borrado bajo demanda de texto SQL y planes XML de una conexión (RNF-SEG-10).
+builder.Services.AddRetentionRequests();
+
+// OWASP A07: límite de tasa en /auth/login por dirección IP para mitigar fuerza bruta.
+var loginRateLimit = Math.Max(1, builder.Configuration.GetValue("Auth:LoginRateLimitPerMinute", 30));
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("login", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = loginRateLimit,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+            }));
+});
 
 // Enumerados como texto en las respuestas (contrato de S1-15), nunca como número.
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -53,6 +73,7 @@ using (var seedScope = app.Services.CreateScope())
 }
 
 app.UseSameOriginForms();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRequestAccessScope();
@@ -76,6 +97,7 @@ if (app.Environment.IsDevelopment())
 // Healthcheck del contenedor: debe ser anónimo. Todo lo demás exige sesión (FallbackPolicy).
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 app.MapAuthEndpoints();
+app.MapUserEndpoints();
 app.MapConnectionEndpoints();
 app.MapAssignmentEndpoints();
 app.MapQueryEndpoints();

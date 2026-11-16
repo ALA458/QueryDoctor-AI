@@ -199,3 +199,63 @@ public interface IIngestionJobScheduler
     /// <summary>Encola una ingesta manual; false si ya hay una de esa conexión esperando en la cola (no encola otra).</summary>
     bool TryEnqueueManual(Guid connectionId);
 }
+
+/// <summary>
+/// Programa o desprograma la ingesta periódica por conexión (RF-ING-06, DA-03).
+/// El único argumento en Hangfire sigue siendo <c>connectionId</c> (invariante 2).
+/// </summary>
+public interface IRecurringIngestionScheduler
+{
+    void ScheduleOrUpdate(Guid connectionId, int? intervalLengthMinutes);
+
+    void Remove(Guid connectionId);
+}
+
+/// <summary>
+/// Convierte <c>interval_length_minutes</c> de Query Store en una expresión cron de 5 campos (DA-03: ~5 min tras el cierre).
+/// </summary>
+public static class IngestionCronSchedule
+{
+    public const int DefaultIntervalMinutes = 60;
+    public const int CloseGraceMinutes = 5;
+
+    public static string JobId(Guid connectionId) => $"ingest:{connectionId:D}";
+
+    public static string FromIntervalMinutes(int? intervalLengthMinutes)
+    {
+        var interval = intervalLengthMinutes is > 0 ? intervalLengthMinutes.Value : DefaultIntervalMinutes;
+
+        if (interval == 1)
+        {
+            return "* * * * *";
+        }
+
+        if (interval < 60)
+        {
+            if (60 % interval == 0)
+            {
+                var offset = Math.Min(CloseGraceMinutes, interval - 1);
+                var minutes = Enumerable.Range(0, 60 / interval)
+                    .Select(i => ((i * interval) + offset) % 60)
+                    .Distinct()
+                    .OrderBy(m => m);
+                return $"{string.Join(',', minutes)} * * * *";
+            }
+
+            return $"*/{interval} * * * *";
+        }
+
+        if (interval == 60)
+        {
+            return $"{CloseGraceMinutes} * * * *";
+        }
+
+        if (interval < 1440)
+        {
+            var hours = Math.Clamp(interval / 60, 1, 23);
+            return hours == 1 ? $"{CloseGraceMinutes} * * * *" : $"{CloseGraceMinutes} */{hours} * * *";
+        }
+
+        return $"{CloseGraceMinutes} 0 * * *";
+    }
+}

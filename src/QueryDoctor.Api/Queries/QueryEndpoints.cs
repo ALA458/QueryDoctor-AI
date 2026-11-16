@@ -4,14 +4,15 @@ using QueryDoctor.Application.Queries;
 namespace QueryDoctor.Api.Queries;
 
 /// <summary>
-/// Endpoints de consultas y detalle (<c>GET /queries</c> y <c>GET /queries/{queryId}</c>; S1-16, S2-09, RF-DASH-01..03, RF-SCO-04, RF-SCO-06).
-/// Solo DBA por ahora: la asignación de conexiones para Desarrollador llega en S2-12.
+/// Endpoints de consultas, detalle y árbol de plan (<c>GET /queries</c>, <c>GET /queries/{queryId}</c> y
+/// <c>GET /queries/{queryId}/plans/{planId}</c>; S1-16, S2-09, S2-10, S2-12).
+/// Accesibles para DBA y Desarrollador; el Desarrollador solo ve las conexiones asignadas mediante el filtro global de EF.
 /// </summary>
 internal static class QueryEndpoints
 {
     public static IEndpointRouteBuilder MapQueryEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/queries").RequireAuthorization(AuthConstants.DbaOnlyPolicy);
+        var group = app.MapGroup("/queries").RequireAuthorization(AuthConstants.ConnectionReaderPolicy);
 
         group.MapGet("/", ListAsync);
         group.MapGet("/{queryId:guid}", GetDetailAsync);
