@@ -41,12 +41,13 @@ public sealed class GetQueryPlanTree
             return new GetQueryPlanTreeResult.NotFound();
         }
 
-        if (source.DecryptedPlanXml is null)
+        // S2-13: expirado solo si se purgó. Un plan TooLarge tampoco tiene XML, y lo explica notAnalyzableCause.
+        if (source.PurgedAt is not null || source.DecryptedPlanXml is null)
         {
             return new GetQueryPlanTreeResult.Found(BuildEmptyView(
                 source,
                 schemaVersion: null,
-                planExpired: true,
+                planExpired: source.PurgedAt is not null,
                 planMaskingFailure: null,
                 parseFailureReason: null));
         }
@@ -117,6 +118,7 @@ public sealed class GetQueryPlanTree
             AnalysisStatus: source.AnalysisStatus,
             NotAnalyzableCause: source.NotAnalyzableCause,
             PlanExpired: false,
+            PlanExpiredAt: null,
             PlanMaskingFailure: null,
             ParseFailureReason: null,
             TotalOperators: totalOperators,
@@ -140,6 +142,7 @@ public sealed class GetQueryPlanTree
             AnalysisStatus: source.AnalysisStatus,
             NotAnalyzableCause: source.NotAnalyzableCause,
             PlanExpired: planExpired,
+            PlanExpiredAt: source.PurgedAt,
             PlanMaskingFailure: planMaskingFailure,
             ParseFailureReason: parseFailureReason,
             TotalOperators: 0,

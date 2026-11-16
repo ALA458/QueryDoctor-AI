@@ -82,19 +82,20 @@ public sealed class RetentionEndpointsTests(PostgresFixture postgres) : IDisposa
         db.Plans.AddRange(expiredPlan, freshPlan);
         await db.SaveChangesAsync();
 
-        var store = new EfRetentionStore(db);
-        var purge = new PurgeExpiredTelemetry(store, TimeProvider.System, new RetentionOptions { DefaultDays = 30 });
+        // Tras el merge con main, la purga es la de S2-13 (PurgeExpiredEvidence); la de #65 se quitó por duplicada.
+        var purge = new PurgeExpiredEvidence(new EfEvidencePurgeStore(db), new RetentionOptions { SqlTextAndPlanDays = 30 }, TimeProvider.System);
         var outcome = await purge.ExecuteAsync();
 
-        Assert.True(outcome.TextsCleared >= 1);
-        Assert.True(outcome.PlansCleared >= 1);
+        var counts = Assert.Single(outcome.Purged, p => p.ConnectionId == conn.Id).Counts;
+        Assert.Equal(1, counts.SqlTexts);
+        Assert.Equal(1, counts.Plans);
 
         await using var verifyDb = postgres.CreateContext();
         Assert.Null((await verifyDb.QueryTexts.AsNoTracking().SingleAsync(t => t.Id == expiredText.Id)).EncryptedSqlText);
         Assert.NotNull((await verifyDb.QueryTexts.AsNoTracking().SingleAsync(t => t.Id == freshText.Id)).EncryptedSqlText);
         Assert.Null((await verifyDb.Plans.AsNoTracking().SingleAsync(p => p.Id == expiredPlan.Id)).EncryptedPlanXml);
         Assert.NotNull((await verifyDb.Plans.AsNoTracking().SingleAsync(p => p.Id == freshPlan.Id)).EncryptedPlanXml);
-        Assert.True(await verifyDb.AuditEvents.AsNoTracking().AnyAsync(e => e.EventType == AuditEventType.DataDeleted && e.UserName == EfRetentionStore.SystemActorName));
+        Assert.True(await verifyDb.AuditEvents.AsNoTracking().AnyAsync(e => e.EventType == AuditEventType.DataDeleted && e.UserName == PurgeExpiredEvidence.SystemActor));
 
         using var dba = await _api.ClientAsync(RoleNames.Dba);
         var verifyAudit = await dba.GetFromJsonAsync<JsonElement>("/audit/verify");

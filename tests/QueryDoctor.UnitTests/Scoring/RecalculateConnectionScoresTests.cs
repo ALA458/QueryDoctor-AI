@@ -186,6 +186,66 @@ public sealed class RecalculateConnectionScoresTests
     }
 
     [Fact]
+    public async Task UnPlanPurgadoConservaSusHallazgosYNoSeVuelveAAnalizar()
+    {
+        // S2-13 (D6): sin XML, el motor fabricaría un hallazgo de plan no analizable que no corresponde.
+        var clock = new FixedClock(new DateTimeOffset(2026, 11, 14, 10, 0, 0, TimeSpan.Zero));
+        var store = new InMemoryScoreRecalculationStore();
+        var ruleCatalog = new VersionedRuleCatalog();
+        var useCase = new RecalculateConnectionScores(
+            store,
+            new HealthScoreCalculator(),
+            new DeterministicRuleEngine(new ShowplanXmlParser(), ruleCatalog, RuleThresholds.Default),
+            ruleCatalog,
+            new FakeEncryptor(),
+            clock);
+
+        var connectionId = Guid.NewGuid();
+        var withFindings = Guid.NewGuid();
+        var withoutFindings = Guid.NewGuid();
+        WindowPlanSnapshot PurgedPlan(IReadOnlyList<QueryFindingSample> existing) => new(
+            PlanId: Guid.NewGuid(),
+            QueryStorePlanId: 101,
+            EncryptedPlanXml: null,
+            EngineVersion: "16.0.4315.2",
+            AnalysisStatus: PlanAnalysisStatus.Analyzable,
+            NotAnalyzableCause: null,
+            PlanExecutionCount: 10,
+            AvgRowsReturned: 1.0,
+            HasCurrentAnalysisRun: false,
+            ExistingFindings: existing,
+            EvidenceExpired: true);
+
+        store.Snapshot = new ConnectionScoringWindowSnapshot(
+            ConnectionId: connectionId,
+            IngestionRunId: null,
+            WindowStart: clock.Now.AddHours(-24),
+            WindowEnd: clock.Now,
+            EngineVersion: "16.0.4315.2",
+            ActualPlanAvailable: false,
+            Queries:
+            [
+                new WindowQuerySnapshot(
+                    withFindings,
+                    10,
+                    [new QueryResourceSample(100, 600.0, 600.0, 50.0)],
+                    PurgedPlan([new QueryFindingSample("REG-01", "F-1", FindingSeverity.Alta, EvidenceClass.Estimada)])),
+                new WindowQuerySnapshot(
+                    withoutFindings,
+                    20,
+                    [new QueryResourceSample(100, 600.0, 600.0, 50.0)],
+                    PurgedPlan([])),
+            ]);
+
+        var outcome = await useCase.ExecuteAsync(connectionId, ingestionRunId: null);
+
+        Assert.Equal(0, outcome.PlansAnalyzed);
+        Assert.Equal(1, outcome.Scores.Single(s => s.QueryId == withFindings).FindingsCount);
+        Assert.Equal(0, outcome.Scores.Single(s => s.QueryId == withoutFindings).FindingsCount);
+        Assert.Empty(Assert.Single(store.SavedBatches).AnalyzedPlans);
+    }
+
+    [Fact]
     public async Task IngestConnectionEjecutaRecalculoAlFinalizarConExito()
     {
         var encryptor = new FakeEncryptor();

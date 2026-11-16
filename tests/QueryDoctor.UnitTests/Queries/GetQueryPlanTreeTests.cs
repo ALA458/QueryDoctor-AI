@@ -154,6 +154,7 @@ public sealed class GetQueryPlanTreeTests
     {
         var queryId = Guid.NewGuid();
         var planId = Guid.NewGuid();
+        var purgedAt = DateTimeOffset.UtcNow;
         var source = new QueryPlanTreeSource(
             QueryId: queryId,
             PlanId: planId,
@@ -162,6 +163,39 @@ public sealed class GetQueryPlanTreeTests
             EngineVersion: "16.0.1000.6",
             AnalysisStatus: PlanAnalysisStatus.NotAnalyzable,
             NotAnalyzableCause: "MalformedXml",
+            IngestedAt: DateTimeOffset.UtcNow,
+            DecryptedPlanXml: null,
+            Findings: [],
+            PurgedAt: purgedAt);
+
+        var sut = new GetQueryPlanTree(
+            new StubPlanSourceReader(source),
+            new LiteralMasker(),
+            new ShowplanXmlParser(),
+            new VersionedRuleCatalog());
+
+        var found = Assert.IsType<GetQueryPlanTreeResult.Found>(await sut.ExecuteAsync(queryId, planId));
+        Assert.True(found.View.PlanExpired);
+        Assert.Equal(purgedAt, found.View.PlanExpiredAt);
+        Assert.Equal(PlanAnalysisStatus.NotAnalyzable, found.View.AnalysisStatus);
+        Assert.Equal("MalformedXml", found.View.NotAnalyzableCause);
+        Assert.Empty(found.View.Statements);
+    }
+
+    [Fact]
+    public async Task PlanTooLargeSinXmlNoSeMarcaComoExpirado()
+    {
+        // S2-13: antes, todo plan sin XML salía "expirado"; un TooLarge (I8) nunca guardó el XML y no venció nada.
+        var queryId = Guid.NewGuid();
+        var planId = Guid.NewGuid();
+        var source = new QueryPlanTreeSource(
+            QueryId: queryId,
+            PlanId: planId,
+            QueryStorePlanId: 702,
+            QueryPlanHash: "0xDEF",
+            EngineVersion: "16.0.1000.6",
+            AnalysisStatus: PlanAnalysisStatus.NotAnalyzable,
+            NotAnalyzableCause: "TooLarge",
             IngestedAt: DateTimeOffset.UtcNow,
             DecryptedPlanXml: null,
             Findings: []);
@@ -173,9 +207,9 @@ public sealed class GetQueryPlanTreeTests
             new VersionedRuleCatalog());
 
         var found = Assert.IsType<GetQueryPlanTreeResult.Found>(await sut.ExecuteAsync(queryId, planId));
-        Assert.True(found.View.PlanExpired);
-        Assert.Equal(PlanAnalysisStatus.NotAnalyzable, found.View.AnalysisStatus);
-        Assert.Equal("MalformedXml", found.View.NotAnalyzableCause);
+        Assert.False(found.View.PlanExpired);
+        Assert.Null(found.View.PlanExpiredAt);
+        Assert.Equal("TooLarge", found.View.NotAnalyzableCause);
         Assert.Empty(found.View.Statements);
     }
 

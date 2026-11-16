@@ -16,7 +16,8 @@ public sealed record WindowPlanSnapshot(
     long PlanExecutionCount,
     double? AvgRowsReturned,
     bool HasCurrentAnalysisRun,
-    IReadOnlyList<QueryFindingSample> ExistingFindings);
+    IReadOnlyList<QueryFindingSample> ExistingFindings,
+    bool EvidenceExpired = false);
 
 /// <summary>
 /// Instantánea de una consulta capturada y sus muestras de recursos en la ventana de análisis W.

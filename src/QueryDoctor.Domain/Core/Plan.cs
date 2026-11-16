@@ -23,6 +23,12 @@ public sealed class Plan
     /// </summary>
     public string? EncryptedPlanXml { get; set; }
 
+    /// <summary>
+    /// Cuándo se purgó el XML (y la evidencia de sus hallazgos) por retención o a pedido del DBA (S2-13, RNF-SEG-10).
+    /// Un plan <c>TooLarge</c> tampoco tiene XML, pero no está expirado: por eso la marca es explícita.
+    /// </summary>
+    public DateTimeOffset? PurgedAt { get; set; }
+
     public string? EngineVersion { get; set; }
 
     public PlanAnalysisStatus AnalysisStatus { get; set; } = PlanAnalysisStatus.Pending;

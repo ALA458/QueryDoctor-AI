@@ -1661,6 +1661,10 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(512)")
                         .HasColumnName("not_analyzable_cause");
 
+                    b.Property<DateTimeOffset?>("PurgedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("purged_at");
+
                     b.Property<Guid>("QueryId")
                         .HasColumnType("uuid")
                         .HasColumnName("query_id");
@@ -1749,6 +1753,10 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("IngestedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("ingested_at");
+
+                    b.Property<DateTimeOffset?>("PurgedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("purged_at");
 
                     b.Property<long>("QueryStoreTextId")
                         .HasColumnType("bigint")

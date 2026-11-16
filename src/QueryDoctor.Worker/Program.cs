@@ -1,9 +1,7 @@
 using Hangfire;
 using QueryDoctor.Application.Jobs;
-using QueryDoctor.Application.Retention;
 using QueryDoctor.Infrastructure;
 using QueryDoctor.Infrastructure.Connections;
-using QueryDoctor.Infrastructure.Retention;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -26,7 +24,7 @@ builder.Services.AddLiteralMasking();
 // S2-05: trabajo explain (único que habla con el servicio de IA, invariante 2), con degradación si la IA falla.
 builder.Services.AddExplanations(builder.Configuration);
 
-// S2-13: purga automática por retención de texto SQL y planes (RNF-SEG-10).
+// S2-13 (RNF-SEG-10): purga automática del texto SQL y de los planes al vencer Retention:SqlTextAndPlanDays.
 builder.Services.AddRetention(builder.Configuration);
 
 // Invariante 3: la excepción de TLS del laboratorio (docker-compose.lab.yml) no arranca fuera de Development.
@@ -70,15 +68,8 @@ var host = builder.Build();
 
 if (!string.IsNullOrWhiteSpace(postgresConn))
 {
-    using var scope = host.Services.CreateScope();
-    var retention = scope.ServiceProvider.GetRequiredService<RetentionOptions>();
-    var recurring = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
-    recurring.AddOrUpdate<RetentionPurgeJob>(
-        "retention-purge",
-        JobQueues.Retention,
-        job => job.RunAsync(CancellationToken.None),
-        retention.Cron,
-        new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+    // S2-13: valida el plazo antes de arrancar (fuera de rango, el Worker no arranca) y programa retention a diario.
+    DependencyInjection.ScheduleRetention(host.Services);
 }
 
 host.Run();

@@ -23,7 +23,8 @@ public sealed record QueryFindingSource(
     string ContextJson,
     string ThresholdsUsedJson,
     string? EngineVersion,
-    DateTimeOffset AnalyzedAt);
+    DateTimeOffset AnalyzedAt,
+    bool EvidenceExpired = false);
 
 /// <summary>
 /// Fila cruda de consulta leída para el listado <c>GET /queries</c> antes del enmascarado de salida.
@@ -39,7 +40,8 @@ public sealed record QueryListSourceRow(
     long Executions,
     double? Score,
     HealthScoreBand? Band,
-    IReadOnlyList<QueryFindingSource> Findings);
+    IReadOnlyList<QueryFindingSource> Findings,
+    DateTimeOffset? SqlPurgedAt = null);
 
 /// <summary>
 /// Fuente completa de una consulta leída desde persistencia para proyectar su detalle seguro.
@@ -62,7 +64,8 @@ public sealed record QueryDetailSource(
     HealthScore? LatestScore,
     int RankInWindow,
     int TotalQueriesInWindow,
-    IReadOnlyList<HealthScore> ScoreHistory);
+    IReadOnlyList<HealthScore> ScoreHistory,
+    DateTimeOffset? SqlPurgedAt = null);
 
 /// <summary>
 /// Fuente descifrada temporal en memoria del Showplan XML de un plan y sus hallazgos asociados (S2-10).
@@ -77,7 +80,8 @@ public sealed record QueryPlanTreeSource(
     string? NotAnalyzableCause,
     DateTimeOffset IngestedAt,
     string? DecryptedPlanXml,
-    IReadOnlyList<QueryFindingSource> Findings);
+    IReadOnlyList<QueryFindingSource> Findings,
+    DateTimeOffset? PurgedAt = null);
 
 /// <summary>
 /// Puerto de solo lectura para obtener datos crudos descifrados de consultas, series y puntajes desde persistencia.

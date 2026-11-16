@@ -15,6 +15,7 @@ using QueryDoctor.Application.Engine.Parsing;
 using QueryDoctor.Application.Engine.Rules;
 using QueryDoctor.Application.Explanations;
 using QueryDoctor.Application.Ingestion;
+using QueryDoctor.Application.Jobs;
 using QueryDoctor.Application.KnowledgeBase;
 using QueryDoctor.Application.Masking;
 using QueryDoctor.Application.Queries;
@@ -186,42 +187,6 @@ public static class DependencyInjection
     }
 
     /// <summary>
-    /// Borrado bajo demanda de SQL y planes por un DBA (S2-13, RNF-SEG-10, RNF-SEG-12) para la Api.
-    /// </summary>
-    public static IServiceCollection AddRetentionRequests(this IServiceCollection services)
-    {
-        services.TryAddScoped<IRetentionStore, EfRetentionStore>();
-        services.AddScoped<DeleteConnectionTelemetry>();
-        return services;
-    }
-
-    /// <summary>
-    /// Purga periódica de retención (S2-13, RNF-SEG-10) para el Worker. Sin PostgreSQL no se registra.
-    /// </summary>
-    public static IServiceCollection AddRetention(this IServiceCollection services, IConfiguration configuration)
-    {
-        ArgumentNullException.ThrowIfNull(configuration);
-
-        if (string.IsNullOrWhiteSpace(GetPostgresConnectionString(configuration)))
-        {
-            return services;
-        }
-
-        services.Configure<RetentionOptions>(configuration.GetSection(RetentionOptions.SectionName));
-        services.AddSingleton(sp =>
-        {
-            var options = sp.GetRequiredService<IOptions<RetentionOptions>>().Value;
-            options.Validate();
-            return options;
-        });
-
-        services.TryAddScoped<IRetentionStore, EfRetentionStore>();
-        services.AddScoped<PurgeExpiredTelemetry>();
-        services.AddScoped<RetentionPurgeJob>();
-        return services;
-    }
-
-    /// <summary>
     /// Enmascarador de literales (S2-04, RNF-SEG-05): SOLO para el Worker, que es quien arma el contexto hacia la
     /// IA (invariante 2). No recibe configuración a propósito: no existe clave que lo desactive (CA-HU21.4).
     /// </summary>
@@ -291,6 +256,68 @@ public static class DependencyInjection
         services.AddScoped<ExplainQueryJob>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Borrado a pedido del DBA (S2-13, RNF-SEG-10): para la Api. Solo toca PostgreSQL, ni bases objetivo ni el LLM
+    /// (invariante 2), así que no pasa por Hangfire.
+    /// </summary>
+    public static IServiceCollection AddEvidenceDeletion(this IServiceCollection services)
+    {
+        services.TryAddScoped<IEvidencePurgeStore, EfEvidencePurgeStore>();
+        services.AddScoped<DeleteEvidence>();
+        return services;
+    }
+
+    /// <summary>
+    /// Purga automática por retención (S2-13, RNF-SEG-10): SOLO para el Worker. El plazo sale de
+    /// <c>Retention:SqlTextAndPlanDays</c> y se valida al arrancar (<see cref="ScheduleRetention"/>). Sin PostgreSQL no se registra.
+    /// </summary>
+    public static IServiceCollection AddRetention(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        if (string.IsNullOrWhiteSpace(GetPostgresConnectionString(configuration)))
+        {
+            return services;
+        }
+
+        services.Configure<RetentionOptions>(configuration.GetSection(RetentionOptions.SectionName));
+        services.AddSingleton(sp =>
+        {
+            var options = sp.GetRequiredService<IOptions<RetentionOptions>>().Value;
+            options.Validate();
+            return options;
+        });
+
+        services.TryAddScoped<IEvidencePurgeStore, EfEvidencePurgeStore>();
+        services.AddScoped<PurgeExpiredEvidence>();
+        services.AddScoped<RetentionJob>();
+        return services;
+    }
+
+    /// <summary>
+    /// Valida el plazo (un valor fuera de rango impide arrancar) y registra el trabajo recurrente <c>retention</c>, diario
+    /// a las 03:00 UTC en su cola. Lo llama el host del Worker después de construirse.
+    /// </summary>
+    private const string LegacyRetentionPurgeJobId = "retention-purge";
+
+    public static void ScheduleRetention(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        _ = services.GetRequiredService<RetentionOptions>();
+        var recurringJobs = services.GetRequiredService<IRecurringJobManager>();
+
+        // El trabajo "retention-purge" de #65 (implementación duplicada de S2-13, ya quitada) pudo quedar registrado en
+        // Hangfire; su tipo ya no existe y fallaría en cada corrida.
+        recurringJobs.RemoveIfExists(LegacyRetentionPurgeJobId);
+        recurringJobs.AddOrUpdate<RetentionJob>(
+            RetentionJob.RecurringJobId,
+            JobQueues.Retention,
+            job => job.RunAsync(CancellationToken.None),
+            RetentionJob.DailyCron,
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
     }
 
     /// <summary>

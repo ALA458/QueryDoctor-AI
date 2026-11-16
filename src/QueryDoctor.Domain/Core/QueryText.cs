@@ -17,5 +17,11 @@ public sealed class QueryText
     /// </summary>
     public string? EncryptedSqlText { get; set; }
 
+    /// <summary>
+    /// Cuándo se purgó el texto por retención o a pedido del DBA (S2-13, RNF-SEG-10). Distingue "evidencia expirada"
+    /// de un texto que nunca llegó: con valor, <see cref="EncryptedSqlText"/> es null y no vuelve (la ingesta solo inserta).
+    /// </summary>
+    public DateTimeOffset? PurgedAt { get; set; }
+
     public DateTimeOffset IngestedAt { get; set; }
 }

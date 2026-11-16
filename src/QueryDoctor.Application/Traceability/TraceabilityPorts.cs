@@ -19,7 +19,12 @@ public sealed record AuditEventDraft(
     public const string OutcomeLocked = "locked";
     public const string OutcomeUnknownUser = "unknown_user";
     public const string SubjectConnection = "connection";
-    public const string SubjectRetention = "retention";
+
+    /// <summary>S2-13: el borrado a pedido de una sola consulta.</summary>
+    public const string SubjectQuery = "query";
+
+    /// <summary>S2-13: el borrado a pedido no encontró nada por borrar (ya estaba purgado). Se audita igual.</summary>
+    public const string OutcomeNothingToDelete = "nothing_to_delete";
     public const string SubjectUser = "user";
 }
 

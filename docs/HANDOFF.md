@@ -3,33 +3,56 @@
 > **Se sobrescribe, no se acumula.** Máximo ~50 líneas. Lo escribe quien cierra una
 > sesión (humano o agente). La historia vive en los PR y en git.
 
-**Actualizado:** 2026-11-15 · **Rama:** `chore/pre-sprint3-bloqueantes-y-docs` (sale de `main` en `543af12`)
+**Actualizado:** 2026-11-15 · **Por:** Álvaro (con agente) · **Rama:** `feat/S2-13-retencion` (PR #67, con `main` en `26a8363` ya mergeado)
 
 ## Estado
-- ✅ **Sprint 1 y Sprint 2 completos en `main`** (`#1`–`#64`): ingesta, parser, catálogo `REG-01`–`04`/`REG-11`, *Health Score*, `LiteralMasker` (`TSql170Parser`), servicio IA (`openrouter_*`, `gemini_free`), `ExplanationValidator`, traza/auditoría SHA-256, RBAC `Desarrollador` y vistas web base.
-- ✅ Corregidos avisos CSS: valores SVG `rx`/`r` con unidad, `border-top-width` redundante eliminado y `word-break: break-word` sustituido por `overflow-wrap: anywhere`.
-- ✅ Consolidados los selectores duplicados `.panel`, `.panel-head h2`, `.score-dial`, `.sql-code`, `.charts-grid`, `.chart-card`, `.chart-dot` y `.finding-list` en `web/assets/css/consulta.css`, preservando sus estilos efectivos.
-- ✅ La transición y el desplazamiento de la flecha de los botones respetan `prefers-reduced-motion`.
-- ✅ El desplazamiento de nodos del plan respeta `prefers-reduced-motion`.
-- ✅ `[hidden]` prevalece sin `!important`; los selectores de `display` no se aplican a `.btn`, `.drawer` o `.chip-bar` ocultos.
-- ✅ El aviso de consulta usa `<output>` con `aria-live="polite"` para anunciar mensajes accesiblemente.
-- ✅ Los landmarks `aside` de las páginas identifican explícitamente la barra lateral de navegación.
-- ✅ El drawer de conexión usa el elemento `<dialog>` y su comportamiento modal nativo.
-- ✅ Eliminadas etiquetas vacías no asociadas a controles en los filtros de trazabilidad y auditoría.
-- ✅ **Bloqueantes pre-Sprint 3 cerrados en esta rama:**
-  - Fix `CA1825` en `ConnectionAccessFilterTests.cs` (`QueryDoctor.slnx` compila limpio con `0` warnings/errors) y ampliado `.github/workflows/ci.yml` (`web` y `ai-service`).
-  - **Ingesta programada (`RF-ING-06`):** `IRecurringIngestionScheduler` / `HangfireRecurringIngestionScheduler` programa `RunScheduledAsync` tras cada sondeo `Active`.
-  - **Retención (`S2-13`, `RNF-SEG-10`):** `RetentionOptions`, `RetentionPurgeJob` (Hangfire `retention`) y `DELETE /connections/{id}/data` (DBA); limpia `EncryptedSqlText`/`EncryptedPlanXml` manteniendo `audit.*` verificable y `SqlExpired`/`PlanExpired`.
-  - **RBAC y Auth (`S2-12`, `A07`):** `QueryEndpoints` usa `ConnectionReaderPolicy` (Desarrollador lee `/queries` y `/plans` asignados), alta `POST /users` (DBA crea Desarrollador con `MustChangePassword = true` y auditoría) y *rate limit* en `POST /auth/login`.
-  - **Documentación sincronizada + documento final:** actualizados `SPRINTS.md`, `OWASP_TOP10.md`, `ARQUITECTURA_v0.1.md`, `docs/Query Doctor AI.md` y generado `docs/Query_Doctor_AI_Final.tex`.
-  - **Verificación en verde:** `UnitTests` (`778/778`), `IntegrationTests` (`114/114`), `ArchitectureTests` (`21/21`), `ai-service` `pytest` (`68/68`), `tests/web/explanation_view.test.mjs` (`3/3`), `dotnet format` y `docker compose config`.
+- ✅ En `main`: S1-01 a S1-19 (salvo S1-20), S2-01 a S2-12 y lo de #65 (pre-Sprint 3).
+- 🔄 **S2-13** (Álvaro, PR #67): retención (RNF-SEG-10). El trabajo recurrente
+  `retention` del Worker purga a diario el texto SQL, los planes y la evidencia de sus hallazgos cuando vence
+  `Retention:SqlTextAndPlanDays` (30 por defecto). El DBA puede borrarlos a pedido con
+  `DELETE /queries/{id}/evidence` y `DELETE /connections/{id}/evidence`, y cada borrado queda en `/audit` como `DataDeleted`.
+  La Api expone "evidencia expirada". Migración `RetencionEvidencia` (`purged_at`).
+- El recorte del plan ("Solo borrado a pedido") **no** se aplicó: va contra SRS 5.3 punto 4 (D1).
+- Decisiones D1–D10, mecánica y deuda: `docs/ARCHITECTURE_PLAN.md` §S2-13. Contrato: `docs/CONTRATO_FRONT_CONSULTAS.md`
+  (sección S2-13).
+- Auditoría (`/audit`, sesión aparte) hecha: sin bloqueantes. Corregidos M1 (un recálculo concurrente podía dejar
+  evidencia con literales en un plan purgado) y B1 (un `TooLarge` salía expirado después de purgar), con pruebas.
+- #65 trajo a `main` otra implementación de S2-13 (`PurgeExpiredTelemetry`, `EfRetentionStore`, `RetentionPurgeJob`).
+  Duplicaba tipos y no compilaba junto a esta, así que se quitó. `DELETE /connections/{id}/data` sigue como alias del
+  borrado por conexión, con la misma respuesta con conteos. El Worker da de baja el trabajo `retention-purge` al
+  arrancar. `RetentionEndpointsTests` (de Joel) se adaptó a la purga que queda.
 
-## Deuda conocida (fuera de este PR)
-- **UI/UX:** rediseño visual + Wizard de primera conexión + controles en `web/` para ingesta manual, asignaciones, alta de usuarios y vistas `/trace` y `/audit`.
-- **Seguridad/Infra:** rol PostgreSQL restringido sin `UPDATE`/`DELETE` en `audit.*` (`T4`), RLS, mitigación SSRF en `targets`, TLS `:443` en Nginx y `dotnet list package --vulnerable` con salida a red.
-- **Gestión (`S1-20`):** reunión/acta con tutor para ratificar `DA-01`, `DA-06`, `DA-10`, `DA-13`, `DA-14`.
+## Cómo probarla
+- `dotnet test tests/QueryDoctor.IntegrationTests --filter "FullyQualifiedName~RetentionTests"`.
+- Unitarias: `EvidenceRetentionTests`, `ExplainQueryTests.ConLaEvidenciaExpirada…`,
+  `RecalculateConnectionScoresTests.UnPlanPurgado…`, `GetQueryPlanTreeTests.PlanTooLarge…`.
+- Suite completa: `dotnet test -m:1`.
+- Rotura a propósito: si se quita el evento de auditoría de `EfEvidencePurgeStore.PurgeAsync`, las pruebas de
+  `RetentionTests` que miran la auditoría quedan en rojo.
+- Plazo en el compose: `QD_RETENTION_DAYS` (1–3650). Con 0, el Worker no arranca.
+
+## Lo que necesita saber cada uno
+**Daniel**
+- `sqlExpired` y `planExpired` ahora salen de la marca de purga. Un plan `TooLarge` ya no aparece como expirado, y un
+  texto que nunca llegó muestra `"[Sin texto SQL]"`. Hay campos nuevos: `sqlExpiredAt`, `plans[].planExpired`/`expiredAt`,
+  `findings[].evidenceExpired`, `planExpiredAt` y la causa de explicación `EvidenceExpired`. **Falta en la web** marcar la
+  tarjeta del hallazgo con `evidenceExpired` y mostrar la causa nueva. Si quieres el botón de borrar (solo DBA), usa
+  los dos `DELETE …/evidence`.
+- Toqué contratos y casos de uso de `Application/Queries` (S2-09/S2-10, tuyos): solo agregué campos y cambié de dónde
+  sale "expirado". Las rutas nuevas están en un archivo aparte (`Api/Retention/EvidenceEndpoints.cs`).
+**Joel**
+- `RecalculateConnectionScores`: un plan purgado conserva sus hallazgos y no se vuelve a analizar.
+  `EfScoreRecalculationStore.SaveBatchAsync` ahora bloquea las filas de los planes (`FOR UPDATE`) y no escribe corrida
+  ni hallazgos en un plan que se purgó mientras corría el recálculo (auditoría M1).
+**Todos**
+- Nada borra en `audit.*`. La traza y la auditoría verifican después de la purga (`RetentionTests`).
+
+## Deuda y límites conocidos
+- Web sin `evidenceExpired` (Daniel). Un texto compartido por varias consultas se purga para todas. Sin índice para la
+  búsqueda de lo vencido (medir en S3-07). Los conteos de la purga van solo al log.
+- Sigue abierto: `/queries` es solo DBA aunque RNF-SEG-12 deja al Desarrollador ver lo asignado (S2-09, decisión pendiente).
+- Heredado de S2-12: sin alta de Desarrolladores (D6) y sin RLS. DA-14, DA-06 y DA-13 siguen abiertas.
 
 ## Siguiente paso
-1. Abrir y fusionar este PR (`chore/pre-sprint3-bloqueantes-y-docs` → `main`).
-2. Ejecutar rediseño UI/UX + Wizard de primera conexión en rama dedicada antes de medir usabilidad (`RNF-INT-01`).
-3. Iniciar **Sprint 3** (`S2-14` arnés motor + TPC-H, `S3-01` calibración, `S3-02`–`S3-07` evaluación e informe final).
+Revisión por ejes de S2-13 en una sesión aparte (`/audit`) y PR `feat/S2-13-retencion` → `main`. Repetir
+`dotnet list package --vulnerable`.
