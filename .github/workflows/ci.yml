@@ -40,6 +40,45 @@ jobs:
             - name: Pruebas
               run: dotnet test --no-build --configuration Release
 
+    web:
+        name: Frontend (pruebas de vista)
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+
+        steps:
+            - name: Descargar codigo
+              uses: actions/checkout@v7
+
+            - name: Setup de Node
+              uses: actions/setup-node@v4
+              with:
+                node-version: "22"
+
+            - name: Pruebas frontend
+              run: node --test tests/web/explanation_view.test.mjs
+
+    ai-service:
+        name: AI Service (pytest)
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+
+        steps:
+            - name: Descargar codigo
+              uses: actions/checkout@v7
+
+            - name: Setup de Python
+              uses: actions/setup-python@v5
+              with:
+                python-version: "3.12"
+
+            - name: Instalar dependencias verificadas
+              working-directory: ai-service
+              run: pip install --require-hashes --only-binary=:all: -r requirements.lock
+
+            - name: Pruebas de ai-service
+              working-directory: ai-service
+              run: pytest
+
     docker:
         name: Docker (build de imagenes)
         runs-on: ubuntu-latest
