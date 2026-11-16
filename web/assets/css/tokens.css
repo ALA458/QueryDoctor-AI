@@ -142,4 +142,4 @@
 }
 
 /* Garantizar que el atributo HTML [hidden] prevalezca sobre display: flex/grid */
-[hidden] { display: none !important; }
+[hidden] { display: none; }

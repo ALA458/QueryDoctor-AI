@@ -482,25 +482,28 @@ body.nav-collapsed .link-btn { justify-content: center; width: 100%; text-align:
 .dot[data-tone="info"] { background: var(--color-info); }
 
 /* ---------- Drawer lateral de conexión ---------- */
-.drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.36);
-  z-index: 60;
-}
-
-.drawer {
+dialog.drawer:not([open]) { display: none; }
+dialog.drawer {
   position: fixed;
   inset: 0 0 0 auto;
+  margin: 0;
   width: min(40rem, 100vw);
+  height: 100vh;
+  height: 100dvh;
+  max-width: 100vw;
+  max-height: 100dvh;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--color-border);
   background: var(--color-bg);
   color: var(--color-text);
   z-index: 70;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-drawer);
-  border-left: 1px solid var(--color-border);
+  overflow: hidden;
 }
+dialog.drawer::backdrop { background: rgba(15, 23, 42, 0.36); }
 
 .drawer-head {
   display: flex;
@@ -716,7 +719,7 @@ dialog.wizard-dialog::backdrop {
   line-height: 1.55;
   overflow-x: auto;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.65rem; }
@@ -761,7 +764,7 @@ dialog.wizard-dialog::backdrop {
 .verify-card[data-intact="true"] { border-left-color: var(--color-success); }
 .verify-card[data-intact="false"] { border-left-color: var(--color-danger); background: var(--color-danger-soft); }
 
-.chip-bar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.75rem; }
+.chip-bar:not([hidden]) { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-top: 0.75rem; }
 .chip {
   display: inline-flex;
   align-items: center;

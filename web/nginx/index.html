@@ -16,7 +16,7 @@
 </head>
 <body data-page="connections" data-nav="connections">
   <div class="app">
-    <aside class="side"></aside>
+    <aside class="side" aria-label="Barra lateral de navegación"></aside>
 
     <main class="main" id="main" hidden>
       <header class="page-head">
@@ -52,8 +52,7 @@
   </dialog>
 
   <!-- Drawer lateral de detalle de conexión -->
-  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
-  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+  <dialog class="drawer" id="drawer" aria-labelledby="drawer-title">
     <div class="drawer-head">
       <div>
         <p class="eyebrow" id="drawer-eyebrow">Instancia monitoreada</p>
@@ -75,6 +74,6 @@
       <section id="tab-ingest" hidden></section>
       <section id="tab-retention" hidden></section>
     </div>
-  </aside>
+  </dialog>
 </body>
 </html>
