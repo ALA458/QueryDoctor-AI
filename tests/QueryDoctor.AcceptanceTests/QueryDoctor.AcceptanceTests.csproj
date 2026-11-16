@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    S3-06 (RNF-COM-01): suite de aceptación de punta a punta contra un SQL Server real. La Api real (WebApplicationFactory)
+    encola en Hangfire y un Worker armado con AddWorkerServices, dentro del proceso, consume de la misma base PostgreSQL
+    (Testcontainers). La IA es un doble HTTP bajo el cliente real. Sin QD_LAB_SQL las pruebas salen Skipped y un Skipped
+    no es evidencia (D7). Mismas versiones de paquetes que IntegrationTests: ninguno nuevo en la solución.
+  -->
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="10.1.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.15" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
+    <PackageReference Include="Testcontainers.PostgreSql" Version="4.16.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Dónde está el laboratorio y [LabFact]: los mismos que LabTests, sin copiarlos. -->
+  <ItemGroup>
+    <Compile Include="..\QueryDoctor.LabTests\LabEnvironment.cs" Link="Lab\LabEnvironment.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\QueryDoctor.Infrastructure\QueryDoctor.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\QueryDoctor.Api\QueryDoctor.Api.csproj" />
+  </ItemGroup>
+
+</Project>
