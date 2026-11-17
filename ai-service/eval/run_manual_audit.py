@@ -22,20 +22,22 @@ from eval.manual_audit import (  # noqa: E402
 
 def _resolve_repo_path(repo_root: Path, raw_path: str, fallback_rel: str) -> Path:
     """Resuelve rutas garantizando contención dentro de la raíz del repositorio (CWE-22)."""
-    resolved_root = repo_root.resolve()
-    candidate = Path(raw_path).resolve() if Path(raw_path).is_absolute() else (resolved_root / raw_path).resolve()
-    if os.path.commonpath([str(resolved_root), str(candidate)]) != str(resolved_root):
-        return (resolved_root / fallback_rel).resolve()
-    return candidate
+    real_root = os.path.realpath(str(repo_root))
+    raw_joined = raw_path if os.path.isabs(raw_path) else os.path.join(real_root, raw_path)
+    real_candidate = os.path.realpath(raw_joined)
+    if real_candidate != real_root and not real_candidate.startswith(real_root + os.sep):
+        return Path(os.path.realpath(os.path.join(real_root, fallback_rel)))
+    return Path(real_candidate)
 
 
 def _write_repo_text_file(repo_root: Path, target_path: Path, content: str) -> None:
-    resolved_root = repo_root.resolve()
-    resolved_target = target_path.resolve()
-    if os.path.commonpath([str(resolved_root), str(resolved_target)]) != str(resolved_root):
+    real_root = os.path.realpath(str(repo_root))
+    real_target = os.path.realpath(str(target_path))
+    if not real_target.startswith(real_root + os.sep):
         raise ValueError(f"Intento de escritura fuera de la raíz del repositorio: {target_path}")
-    resolved_target.parent.mkdir(parents=True, exist_ok=True)
-    resolved_target.write_text(content, encoding="utf-8")
+    Path(real_target).parent.mkdir(parents=True, exist_ok=True)
+    with open(real_target, "w", encoding="utf-8") as handle:
+        handle.write(content)
 
 
 def _build_parser() -> argparse.ArgumentParser:

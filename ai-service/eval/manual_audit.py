@@ -323,32 +323,28 @@ def _format_blind_case_markdown(audit_id: str, case_obj: EvaluationCase, case_re
     return lines
 
 
-def _resolve_contained_file(base_dir: Path, filename: str) -> Path:
-    """Resuelve un archivo dentro de base_dir validando contención contra Path Traversal (CWE-22)."""
-    clean_name = os.path.basename(filename)
-    if not clean_name or clean_name in {".", ".."}:
-        raise ValueError(f"Nombre de archivo inválido: {filename!r}")
-    resolved_base = base_dir.resolve()
-    resolved_target = (resolved_base / clean_name).resolve()
-    if os.path.commonpath([str(resolved_base), str(resolved_target)]) != str(resolved_base):
-        raise ValueError(f"Intento de escape de directorio detectado para {filename!r}")
-    return resolved_target
-
-
 def _resolve_output_dir(output_dir: Path, allowed_root: Optional[Path]) -> Path:
-    resolved_dir = output_dir.resolve()
+    real_dir = os.path.realpath(str(output_dir))
     if allowed_root is not None:
-        resolved_root = allowed_root.resolve()
-        if os.path.commonpath([str(resolved_root), str(resolved_dir)]) != str(resolved_root):
+        real_root = os.path.realpath(str(allowed_root))
+        if real_dir != real_root and not real_dir.startswith(real_root + os.sep):
             raise ValueError(f"Directorio de salida fuera de la raíz permitida: {output_dir}")
+    resolved_dir = Path(real_dir)
     resolved_dir.mkdir(parents=True, exist_ok=True)
     return resolved_dir
 
 
 def _write_contained_text(base_dir: Path, filename: str, content: str) -> Path:
-    target = _resolve_contained_file(base_dir, filename)
-    target.write_text(content, encoding="utf-8")
-    return target
+    clean_name = os.path.basename(filename)
+    if not clean_name or clean_name in {".", ".."}:
+        raise ValueError(f"Nombre de archivo inválido: {filename!r}")
+    real_base = os.path.realpath(str(base_dir))
+    real_target = os.path.realpath(os.path.join(real_base, clean_name))
+    if not real_target.startswith(real_base + os.sep):
+        raise ValueError(f"Intento de escape de directorio detectado para {filename!r}")
+    with open(real_target, "w", encoding="utf-8") as handle:
+        handle.write(content)
+    return Path(real_target)
 
 
 def _write_reviewer_csv(output_dir: Path, filename: str, rows: Sequence[Dict[str, Any]]) -> None:
@@ -363,8 +359,12 @@ def _write_reviewer_csv(output_dir: Path, filename: str, rows: Sequence[Dict[str
         "summary_error",
         "error_reason",
     ]
-    target = _resolve_contained_file(output_dir, filename)
-    with target.open("w", encoding="utf-8", newline="") as f:
+    clean_name = os.path.basename(filename)
+    real_base = os.path.realpath(str(output_dir))
+    real_target = os.path.realpath(os.path.join(real_base, clean_name))
+    if not real_target.startswith(real_base + os.sep):
+        raise ValueError(f"Intento de escape de directorio detectado para {filename!r}")
+    with open(real_target, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for row in rows:
@@ -380,9 +380,9 @@ def prepare_blind_audit_bundle(
 ) -> Dict[str, Any]:
     """Genera el paquete ciego (cuaderno, rúbrica, manifiesto y 2 planillas CSV independientes)."""
     if allowed_root is not None:
-        resolved_root = allowed_root.resolve()
-        resolved_report = report_json_path.resolve()
-        if os.path.commonpath([str(resolved_root), str(resolved_report)]) != str(resolved_root):
+        real_root = os.path.realpath(str(allowed_root))
+        real_report = os.path.realpath(str(report_json_path))
+        if not real_report.startswith(real_root + os.sep):
             raise ValueError(f"Reporte fuera de la raíz permitida: {report_json_path}")
 
     report = _load_report_json(report_json_path)
