@@ -13,6 +13,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any, Dict
 
 # Asegurar que ai-service esté en sys.path
 root_dir = Path(__file__).resolve().parent.parent
@@ -68,8 +69,71 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _build_report_dict(report) -> Dict[str, Any]:
+    """Serializa los resultados del reporte a un diccionario estructurado."""
+    return {
+        "metadata": report.metadata,
+        "rag_metrics": {
+            "total_cases": report.rag_metrics.total_cases,
+            "total_claims": report.rag_metrics.total_claims,
+            "supported_rate_pct": report.rag_metrics.overall_supported_rate_pct,
+            "unsupported_rate_pct": report.rag_metrics.overall_unsupported_rate_pct,
+            "numeric_concordance_pct": report.rag_metrics.overall_numeric_concordance_pct,
+            "type_distribution_pct": report.rag_metrics.type_distribution_pct,
+            "unsupported_interpretation_rate_pct": report.rag_metrics.overall_unsupported_interpretation_rate_pct,
+            "trazada_cases": report.rag_metrics.trazada_cases_count,
+            "no_verificada_cases": report.rag_metrics.no_verificada_cases_count,
+            "adversarial_success_rate_pct": report.rag_metrics.adversarial_success_rate_pct,
+        },
+        "control_comparison": (
+            {
+                "rag_supported_rate_pct": report.control_comparison.rag_supported_rate_pct,
+                "control_supported_rate_pct": report.control_comparison.control_supported_rate_pct,
+                "hallucination_reduction_delta_pct": report.control_comparison.hallucination_reduction_delta_pct,
+            }
+            if report.control_comparison
+            else None
+        ),
+        "cases": [
+            {
+                "case_id": r.case_id,
+                "name": r.name,
+                "category": r.category,
+                "total_claims": r.total_claims,
+                "supported_rate_pct": r.supported_rate_pct,
+                "numeric_concordance_pct": r.numeric_concordance_pct,
+                "is_trazada": r.is_trazada,
+                "adversarial_contained": r.adversarial_contained,
+            }
+            for r in report.case_results
+        ],
+    }
+
+
+def _write_safe_report_file(base_dir: Path, target_dir_str: str, filename: str, content: str) -> Path:
+    """Escribe un archivo de reporte validando que la ruta no escape de base_dir (CWE-22 / S2083)."""
+    clean_filename = os.path.basename(filename)
+    resolved_base = base_dir.resolve()
+
+    # Sanitización rigurosa de la carpeta destino contra Path Traversal
+    resolved_target_dir = Path(target_dir_str).resolve()
+    if os.path.commonpath([str(resolved_base), str(resolved_target_dir)]) != str(resolved_base):
+        resolved_target_dir = (resolved_base / "lab" / "results").resolve()
+
+    resolved_target_dir.mkdir(parents=True, exist_ok=True)
+    target_file = (resolved_target_dir / clean_filename).resolve()
+
+    # Verificación final de contención antes de la escritura
+    if os.path.commonpath([str(resolved_target_dir), str(target_file)]) != str(resolved_target_dir):
+        raise ValueError(f"Intento de escape de ruta detectado para {clean_filename}")
+
+    target_file.write_text(content, encoding="utf-8")
+    return target_file
+
+
 async def main_async() -> int:
     args = parse_args()
+    repo_root = root_dir.parent.resolve()
 
     settings = Settings(
         APP_ENV=args.env,
@@ -98,55 +162,14 @@ async def main_async() -> int:
     # 1. Imprimir resumen visual en consola (CA-HU20.2)
     print("\n" + report.to_console_summary() + "\n")
 
-    # 2. Guardar reportes en archivos para el informe del laboratorio (RF-EVA-04)
-    out_dir = Path(args.output_dir)
+    # 2. Guardar reportes en archivos de forma segura para el informe del laboratorio (RF-EVA-04)
     try:
-        out_dir.mkdir(parents=True, exist_ok=True)
+        report_dict = _build_report_dict(report)
+        json_content = json.dumps(report_dict, indent=2, ensure_ascii=False)
+        md_content = report.to_markdown()
 
-        json_path = out_dir / "ai_evaluation_report.json"
-        md_path = out_dir / "ai_evaluation_report.md"
-
-        # Exportar JSON
-        report_dict = {
-            "metadata": report.metadata,
-            "rag_metrics": {
-                "total_cases": report.rag_metrics.total_cases,
-                "total_claims": report.rag_metrics.total_claims,
-                "supported_rate_pct": report.rag_metrics.overall_supported_rate_pct,
-                "unsupported_rate_pct": report.rag_metrics.overall_unsupported_rate_pct,
-                "numeric_concordance_pct": report.rag_metrics.overall_numeric_concordance_pct,
-                "type_distribution_pct": report.rag_metrics.type_distribution_pct,
-                "unsupported_interpretation_rate_pct": report.rag_metrics.overall_unsupported_interpretation_rate_pct,
-                "trazada_cases": report.rag_metrics.trazada_cases_count,
-                "no_verificada_cases": report.rag_metrics.no_verificada_cases_count,
-                "adversarial_success_rate_pct": report.rag_metrics.adversarial_success_rate_pct,
-            },
-            "control_comparison": (
-                {
-                    "rag_supported_rate_pct": report.control_comparison.rag_supported_rate_pct,
-                    "control_supported_rate_pct": report.control_comparison.control_supported_rate_pct,
-                    "hallucination_reduction_delta_pct": report.control_comparison.hallucination_reduction_delta_pct,
-                }
-                if report.control_comparison
-                else None
-            ),
-            "cases": [
-                {
-                    "case_id": r.case_id,
-                    "name": r.name,
-                    "category": r.category,
-                    "total_claims": r.total_claims,
-                    "supported_rate_pct": r.supported_rate_pct,
-                    "numeric_concordance_pct": r.numeric_concordance_pct,
-                    "is_trazada": r.is_trazada,
-                    "adversarial_contained": r.adversarial_contained,
-                }
-                for r in report.case_results
-            ],
-        }
-
-        json_path.write_text(json.dumps(report_dict, indent=2, ensure_ascii=False), encoding="utf-8")
-        md_path.write_text(report.to_markdown(), encoding="utf-8")
+        json_path = _write_safe_report_file(repo_root, args.output_dir, "ai_evaluation_report.json", json_content)
+        md_path = _write_safe_report_file(repo_root, args.output_dir, "ai_evaluation_report.md", md_content)
 
         print(f"Reporte JSON guardado en: {json_path}")
         print(f"Reporte Markdown guardado en: {md_path}")
