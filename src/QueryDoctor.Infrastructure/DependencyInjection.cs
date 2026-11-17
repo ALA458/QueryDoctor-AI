@@ -439,6 +439,7 @@ public static class DependencyInjection
         return new RuleThresholds
         {
             Reg03MinEstimatedRows = ReadDouble(section, nameof(RuleThresholds.Reg03MinEstimatedRows), RuleThresholds.DefaultReg03MinEstimatedRows),
+            Reg03MinPredicateVolumeRows = ReadDouble(section, nameof(RuleThresholds.Reg03MinPredicateVolumeRows), RuleThresholds.DefaultReg03MinPredicateVolumeRows),
             Reg03RowsReadToReturnedRatio = ReadDouble(section, nameof(RuleThresholds.Reg03RowsReadToReturnedRatio), RuleThresholds.DefaultReg03RowsReadToReturnedRatio),
             MinQueryConsumptionPct = ReadDouble(section, nameof(RuleThresholds.MinQueryConsumptionPct), RuleThresholds.DefaultMinQueryConsumptionPct),
             Reg04MinEstimatedExecutions = ReadDouble(section, nameof(RuleThresholds.Reg04MinEstimatedExecutions), RuleThresholds.DefaultReg04MinEstimatedExecutions),

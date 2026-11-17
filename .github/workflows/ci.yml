@@ -40,8 +40,8 @@ jobs:
             - name: Pruebas
               run: dotnet test --no-build --configuration Release
 
-            - name: Ejecutar arnes del motor (CA-HU20.1)
-              run: dotnet run --project tools/QueryDoctor.EngineHarness --no-build --configuration Release -- --corpus all
+            - name: Ejecutar arnes del motor (CA-HU20.1, S3-01)
+              run: dotnet run --project tools/QueryDoctor.EngineHarness --no-build --configuration Release -- --corpus all --check-targets
 
     web:
         name: Frontend (pruebas de vista)

@@ -5,14 +5,16 @@ using System.Text;
 namespace QueryDoctor.Domain.Analysis;
 
 /// <summary>
-/// Umbrales configurables por regla del motor determinístico con los valores por defecto documentados en el Cuadro 4.5 del SRS (RF-MOT-14, DA-02).
-/// Todos los valores por defecto son provisionales (†) sujetos a calibración con el laboratorio (S3-01).
+/// Umbrales configurables por regla del motor determinístico con los valores por defecto del Cuadro 4.5 del SRS (RF-MOT-14, DA-02).
+/// Los umbrales de REG-03 y REG-04 están calibrados provisionalmente (†) en S3-01 sobre QD_Lab y TPC-H (SF = 0.1);
+/// REG-07, REG-08 y REG-10 permanecen por calibrar hasta contar con reglas y cargas empíricas equivalentes.
 /// </summary>
 public sealed record RuleThresholds
 {
     public const string SectionName = "RuleThresholds";
 
     public const double DefaultReg03MinEstimatedRows = 10_000.0;
+    public const double DefaultReg03MinPredicateVolumeRows = 1_000.0;
     public const double DefaultReg03RowsReadToReturnedRatio = 10.0;
     public const double DefaultMinQueryConsumptionPct = 1.0;
     public const double DefaultReg04MinEstimatedExecutions = 1_000.0;
@@ -30,6 +32,12 @@ public sealed record RuleThresholds
     /// 50 000 – 100 000 filas en cargas OLAP / Data Warehouse.
     /// </summary>
     public double Reg03MinEstimatedRows { get; init; } = DefaultReg03MinEstimatedRows;
+
+    /// <summary>
+    /// REG-03: Volumen mínimo de filas del recorrido (leídas o devueltas) para activar la condición (a) por razón de predicado
+    /// (por defecto 1 000 †, calibrado provisionalmente en S3-01 sobre QD_Lab y TPC-H SF = 0.1 para evitar falsos positivos en tablas catálogo pequeñas).
+    /// </summary>
+    public double Reg03MinPredicateVolumeRows { get; init; } = DefaultReg03MinPredicateVolumeRows;
 
     /// <summary>REG-03: Razón mínima entre filas leídas estimadas y filas devueltas estimadas cuando hay predicado (por defecto 10 †).</summary>
     public double Reg03RowsReadToReturnedRatio { get; init; } = DefaultReg03RowsReadToReturnedRatio;
@@ -65,6 +73,7 @@ public sealed record RuleThresholds
             "REG-03" => new SortedDictionary<string, double>(StringComparer.Ordinal)
             {
                 ["min_estimated_rows"] = Reg03MinEstimatedRows,
+                ["min_predicate_volume_rows"] = Reg03MinPredicateVolumeRows,
                 ["min_query_consumption_pct"] = MinQueryConsumptionPct,
                 ["rows_read_to_returned_ratio"] = Reg03RowsReadToReturnedRatio,
             },
@@ -98,6 +107,7 @@ public sealed record RuleThresholds
         {
             ["min_query_consumption_pct"] = MinQueryConsumptionPct,
             ["reg03_min_estimated_rows"] = Reg03MinEstimatedRows,
+            ["reg03_min_predicate_volume_rows"] = Reg03MinPredicateVolumeRows,
             ["reg03_rows_read_to_returned_ratio"] = Reg03RowsReadToReturnedRatio,
             ["reg04_min_estimated_executions"] = Reg04MinEstimatedExecutions,
             ["reg07_cardinality_ratio"] = Reg07CardinalityRatio,
