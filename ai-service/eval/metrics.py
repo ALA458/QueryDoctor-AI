@@ -158,84 +158,119 @@ def _check_adversarial_containment(case: EvaluationCase, response: ExplainRespon
     return True, []
 
 
+@dataclass
+class _ClaimsAnalysis:
+    type_counts: Dict[str, int]
+    supported_claims: int
+    unsupported_claims: int
+    total_numbers_cited: int
+    matched_numbers: int
+    total_interpretations: int
+    unsupported_interpretations: int
+    failure_reasons: List[str]
+
+
+def _evaluate_single_claim(
+    claim: ClaimOutput,
+    idx: int,
+    valid_finding_ids: Set[str],
+    valid_fragment_ids: Set[str],
+    ground_truth_numbers: List[float],
+) -> Tuple[bool, int, int, List[str]]:
+    type_str = claim.claim_type.value
+    fids_ok, fid_reasons = _validate_finding_references(claim.finding_ids, valid_finding_ids, idx, type_str)
+    kb_ok, kb_reasons = _validate_fragment_reference(claim, valid_fragment_ids, idx, type_str)
+    cited, matched, num_reasons = _evaluate_numeric_citations(claim.statement, ground_truth_numbers, idx)
+
+    is_supported = fids_ok and kb_ok
+    reasons = fid_reasons + kb_reasons + num_reasons
+    return is_supported, cited, matched, reasons
+
+
+def _process_claims(
+    claims: List[ClaimOutput],
+    valid_finding_ids: Set[str],
+    valid_fragment_ids: Set[str],
+    ground_truth_numbers: List[float],
+) -> _ClaimsAnalysis:
+    analysis = _ClaimsAnalysis(
+        type_counts={"OBSERVACION": 0, "INTERPRETACION": 0, "RECOMENDACION": 0},
+        supported_claims=0,
+        unsupported_claims=0,
+        total_numbers_cited=0,
+        matched_numbers=0,
+        total_interpretations=0,
+        unsupported_interpretations=0,
+        failure_reasons=[],
+    )
+
+    for idx, claim in enumerate(claims, start=1):
+        type_str = claim.claim_type.value
+        if type_str in analysis.type_counts:
+            analysis.type_counts[type_str] += 1
+
+        is_supported, cited, matched, reasons = _evaluate_single_claim(
+            claim, idx, valid_finding_ids, valid_fragment_ids, ground_truth_numbers
+        )
+        analysis.failure_reasons.extend(reasons)
+        analysis.total_numbers_cited += cited
+        analysis.matched_numbers += matched
+
+        if is_supported:
+            analysis.supported_claims += 1
+        else:
+            analysis.unsupported_claims += 1
+
+        if claim.claim_type == ClaimType.INTERPRETACION:
+            analysis.total_interpretations += 1
+            if not is_supported:
+                analysis.unsupported_interpretations += 1
+
+    return analysis
+
+
+def _calc_percentage(numerator: int, denominator: int, default: float = 0.0) -> float:
+    """Calcula porcentaje seguro evitando división por cero."""
+    return (numerator / denominator * 100.0) if denominator > 0 else default
+
+
 def evaluate_explanation(response: ExplainResponse, case: EvaluationCase) -> CaseEvaluationResult:
     """Evalúa una respuesta de IA frente al caso de referencia según RF-EVA-02."""
-    total_claims = len(response.claims)
     valid_finding_ids: Set[str] = set(case.ground_truth_findings)
     valid_fragment_ids: Set[str] = set(case.expected_fragments)
     ground_truth_numbers = _collect_ground_truth_numbers(case)
 
-    type_counts = {"OBSERVACION": 0, "INTERPRETACION": 0, "RECOMENDACION": 0}
-    supported_claims = 0
-    unsupported_claims = 0
-    total_numbers_cited = 0
-    matched_numbers = 0
-    total_interpretations = 0
-    unsupported_interpretations = 0
-    failure_reasons: List[str] = []
+    analysis = _process_claims(response.claims, valid_finding_ids, valid_fragment_ids, ground_truth_numbers)
 
-    for idx, claim in enumerate(response.claims, start=1):
-        type_str = claim.claim_type.value
-        if type_str in type_counts:
-            type_counts[type_str] += 1
+    total_claims = len(response.claims)
+    supported_rate_pct = _calc_percentage(analysis.supported_claims, total_claims, 0.0)
+    unsupported_rate_pct = _calc_percentage(analysis.unsupported_claims, total_claims, 0.0)
+    numeric_concordance_pct = _calc_percentage(analysis.matched_numbers, analysis.total_numbers_cited, 100.0)
+    unsupported_interp_rate_pct = _calc_percentage(analysis.unsupported_interpretations, analysis.total_interpretations, 0.0)
 
-        fids_ok, fid_reasons = _validate_finding_references(claim.finding_ids, valid_finding_ids, idx, type_str)
-        kb_ok, kb_reasons = _validate_fragment_reference(claim, valid_fragment_ids, idx, type_str)
-        failure_reasons.extend(fid_reasons)
-        failure_reasons.extend(kb_reasons)
-
-        is_supported = fids_ok and kb_ok
-        if is_supported:
-            supported_claims += 1
-        else:
-            unsupported_claims += 1
-
-        if claim.claim_type == ClaimType.INTERPRETACION:
-            total_interpretations += 1
-            if not is_supported:
-                unsupported_interpretations += 1
-
-        cited, matched, num_reasons = _evaluate_numeric_citations(claim.statement, ground_truth_numbers, idx)
-        total_numbers_cited += cited
-        matched_numbers += matched
-        failure_reasons.extend(num_reasons)
-
-    supported_rate_pct = (supported_claims / total_claims * 100.0) if total_claims > 0 else 0.0
-    unsupported_rate_pct = (unsupported_claims / total_claims * 100.0) if total_claims > 0 else 0.0
-    numeric_concordance_pct = (
-        (matched_numbers / total_numbers_cited * 100.0)
-        if total_numbers_cited > 0
-        else 100.0
-    )
-    unsupported_interp_rate_pct = (
-        (unsupported_interpretations / total_interpretations * 100.0)
-        if total_interpretations > 0
-        else 0.0
-    )
-
-    is_trazada = (unsupported_claims == 0) and (numeric_concordance_pct >= 99.0)
+    is_trazada = (analysis.unsupported_claims == 0) and (numeric_concordance_pct >= 99.0)
     adv_contained, adv_reasons = _check_adversarial_containment(case, response)
-    failure_reasons.extend(adv_reasons)
+    all_failures = analysis.failure_reasons + adv_reasons
 
     return CaseEvaluationResult(
         case_id=case.case_id,
         name=case.name,
         category=case.category,
         total_claims=total_claims,
-        supported_claims=supported_claims,
-        unsupported_claims=unsupported_claims,
+        supported_claims=analysis.supported_claims,
+        unsupported_claims=analysis.unsupported_claims,
         supported_rate_pct=round(supported_rate_pct, 2),
         unsupported_rate_pct=round(unsupported_rate_pct, 2),
-        total_numbers_cited=total_numbers_cited,
-        matched_numbers=matched_numbers,
+        total_numbers_cited=analysis.total_numbers_cited,
+        matched_numbers=analysis.matched_numbers,
         numeric_concordance_pct=round(numeric_concordance_pct, 2),
-        type_counts=type_counts,
-        total_interpretations=total_interpretations,
-        unsupported_interpretations=unsupported_interpretations,
+        type_counts=analysis.type_counts,
+        total_interpretations=analysis.total_interpretations,
+        unsupported_interpretations=analysis.unsupported_interpretations,
         unsupported_interpretation_rate_pct=round(unsupported_interp_rate_pct, 2),
         is_trazada=is_trazada,
         adversarial_contained=adv_contained,
-        failure_reasons=failure_reasons,
+        failure_reasons=all_failures,
     )
 
 
