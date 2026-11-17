@@ -22,8 +22,8 @@
 | Regla | Descripción | Positivos | TP | FP | FN | Precisión | Exhaustividad | F1 | Meta `RNF-FUN-01` |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|
 | `REG-01` | Conversión implícita que afecta el plan | 3 | 3 | 0 | 0 | 100.0 % | 100.0 % | 100.0 % | OK |
-| `REG-02` | Índice faltante | 30 | 30 | 0 | 0 | 100.0 % | 100.0 % | 100.0 % | OK |
-| `REG-03` | Lectura completa costosa (contextual) | 54 | 54 | 7 | 0 | 88.5 % | 100.0 % | 93.9 % | BAJO META |
+| `REG-02` | Índice faltante | 29 | 29 | 0 | 0 | 100.0 % | 100.0 % | 100.0 % | OK |
+| `REG-03` | Lectura completa costosa (contextual) | 53 | 53 | 6 | 0 | 89.8 % | 100.0 % | 94.6 % | BAJO META |
 | `REG-04` | Búsqueda por clave excesiva (contextual) | 2 | 2 | 0 | 0 | 100.0 % | 100.0 % | 100.0 % | OK |
 
 ### Desglose en escenarios sembrados (`seeded`)
@@ -40,8 +40,8 @@
 | Regla | Descripción | Positivos | TP | FP | FN | Precisión | Exhaustividad | F1 | Meta `RNF-FUN-01` |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|
 | `REG-01` | Conversión implícita que afecta el plan | 0 | 0 | 0 | 0 | N/A | N/A | N/A | Sin muestras |
-| `REG-02` | Índice faltante | 27 | 27 | 0 | 0 | 100.0 % | 100.0 % | 100.0 % | OK |
-| `REG-03` | Lectura completa costosa (contextual) | 49 | 49 | 7 | 0 | 87.5 % | 100.0 % | 93.3 % | BAJO META |
+| `REG-02` | Índice faltante | 26 | 26 | 0 | 0 | 100.0 % | 100.0 % | 100.0 % | OK |
+| `REG-03` | Lectura completa costosa (contextual) | 48 | 48 | 6 | 0 | 88.9 % | 100.0 % | 94.1 % | BAJO META |
 | `REG-04` | Búsqueda por clave excesiva (contextual) | 0 | 0 | 0 | 0 | N/A | N/A | N/A | Sin muestras |
 
 ## Tolerancia a planes no analizables (`REG-11` / `RF-MOT-16`)
@@ -52,11 +52,10 @@
 
 | Tipo | Caso | Corpus / Split | Regla | Nodos | Detalle |
 |---|---|---|---|---|---|
-| `FP` | `TPCH_Q07` | `tpch/calibration` | `REG-03` | 8 | Hallazgo emitido sin anotación esperada (severidad MEDIA). |
-| `FP` | `TPCH_Q07` | `tpch/calibration` | `REG-03` | 19 | Hallazgo emitido sin anotación esperada (severidad MEDIA). |
-| `FP` | `TPCH_Q11` | `tpch/calibration` | `REG-03` | 6 | Hallazgo emitido sin anotación esperada (severidad MEDIA). |
-| `FP` | `TPCH_Q11` | `tpch/calibration` | `REG-03` | 14 | Hallazgo emitido sin anotación esperada (severidad MEDIA). |
-| `FP` | `TPCH_Q16` | `tpch/evaluation` | `REG-03` | 5 | Hallazgo emitido sin anotación esperada (severidad MEDIA). |
+| `FP` | `TPCH_Q07` | `tpch/calibration` | `REG-03` | 3 | Hallazgo emitido sin anotación esperada (severidad MEDIA). |
+| `FP` | `TPCH_Q07` | `tpch/calibration` | `REG-03` | 12 | Hallazgo emitido sin anotación esperada (severidad MEDIA). |
+| `FP` | `TPCH_Q11` | `tpch/calibration` | `REG-03` | 8 | Hallazgo emitido sin anotación esperada (severidad MEDIA). |
+| `FP` | `TPCH_Q11` | `tpch/calibration` | `REG-03` | 16 | Hallazgo emitido sin anotación esperada (severidad MEDIA). |
 | `FP` | `TPCH_Q20` | `tpch/evaluation` | `REG-03` | 2 | Hallazgo emitido sin anotación esperada (severidad MEDIA). |
 | `FP` | `TPCH_Q21` | `tpch/calibration` | `REG-03` | 13 | Hallazgo emitido sin anotación esperada (severidad MEDIA). |
 
@@ -64,4 +63,4 @@
 
 ## Hallazgo accionable para `S3-01` (calibración)
 
-Los 7 falsos positivos observados en `REG-03` ocurren porque la condición `(a)` de `Reg03CostlyFullScanRule` (`hasPredicate && rowsRead / estimatedRows > 10`) no exige un volumen mínimo de tabla: señala recorridos sobre tablas catálogo muy pequeñas (`NATION`, `25` filas en `Q07`, `Q11`, `Q20`, `Q21`; y `SUPPLIER`, `1 000` filas en `Q16`). En **`S3-01`** se calibrará el piso mínimo / umbral sobre `--split calibration` y se medirá su efecto sobre `--split evaluation`.
+Los 6 falsos positivos observados en `REG-03` ocurren porque la condición `(a)` de `Reg03CostlyFullScanRule` (`hasPredicate && rowsRead / estimatedRows > 10`) no exige un volumen mínimo de tabla: señala recorridos sobre la tabla catálogo muy pequeña `NATION` (`25` filas en `Q07`, `Q11`, `Q20` y `Q21`). En **`S3-01`** se calibrará el piso mínimo / umbral sobre `--split calibration` y se medirá su efecto sobre `--split evaluation`.

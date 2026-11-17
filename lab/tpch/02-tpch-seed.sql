@@ -1,11 +1,10 @@
-/*
-  S2-14 (DA-11) - Carga sintetica determinista TPC-H (SF = 0.1, sin PII).
-  Tamanos: REGION=5, NATION=25, SUPPLIER=1.000, PART=20.000, PARTSUPP=80.000,
-           CUSTOMER=15.000, ORDERS=150.000, LINEITEM=600.000 (4 lineas por orden).
-*/
+-- S2-14 (DA-11) - Carga sintetica determinista TPC-H (SF = 0.1, sin PII).
+-- Tamanos: REGION=5, NATION=25, SUPPLIER=1.000, PART=20.000, PARTSUPP=80.000,
+--          CUSTOMER=15.000, ORDERS=150.000, LINEITEM=600.000 (4 lineas por orden).
 USE QD_TPCH;
 GO
 SET NOCOUNT ON;
+DECLARE @zero_pad char(9) = '000000000';
 
 INSERT dbo.REGION (R_REGIONKEY, R_NAME, R_COMMENT) VALUES
 (0, 'AFRICA', 'synthetic region 0'),
@@ -32,7 +31,7 @@ INSERT dbo.NATION (N_NATIONKEY, N_NAME, N_REGIONKEY, N_COMMENT) VALUES
 INSERT dbo.SUPPLIER (S_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, S_ACCTBAL, S_COMMENT)
 SELECT
     i,
-    CONCAT('Supplier#', RIGHT('000000000' + CAST(i AS varchar(9)), 9)),
+    CONCAT('Supplier#', RIGHT(@zero_pad + CAST(i AS varchar(9)), 9)),
     CONCAT('Address ', i),
     (i * 7) % 25,
     CONCAT(10 + ((i * 7) % 25), '-', 100 + (i % 900), '-', 100 + ((i * 3) % 900), '-', 1000 + (i % 9000)),
@@ -78,7 +77,7 @@ FROM n;
 INSERT dbo.CUSTOMER (C_CUSTKEY, C_NAME, C_ADDRESS, C_NATIONKEY, C_PHONE, C_ACCTBAL, C_MKTSEGMENT, C_COMMENT)
 SELECT
     i,
-    CONCAT('Customer#', RIGHT('000000000' + CAST(i AS varchar(9)), 9)),
+    CONCAT('Customer#', RIGHT(@zero_pad + CAST(i AS varchar(9)), 9)),
     CONCAT('CustAddr ', i),
     (i * 11) % 25,
     CONCAT(10 + ((i * 11) % 25), '-', 100 + (i % 900), '-', 100 + ((i * 5) % 900), '-', 1000 + (i % 9000)),
@@ -99,7 +98,7 @@ SELECT
     CAST(1000.0 + ((i * 211) % 35000000) / 100.0 AS decimal(12,2)),
     DATEADD(DAY, i % 2406, '1992-01-01'),
     CASE i % 5 WHEN 0 THEN '1-URGENT' WHEN 1 THEN '2-HIGH' WHEN 2 THEN '3-MEDIUM' WHEN 3 THEN '4-NOT SPECIFIED' ELSE '5-LOW' END,
-    CONCAT('Clerk#', RIGHT('000000000' + CAST(1 + (i % 100) AS varchar(9)), 9)),
+    CONCAT('Clerk#', RIGHT(@zero_pad + CAST(1 + (i % 100) AS varchar(9)), 9)),
     0,
     CASE WHEN i % 30 = 0 THEN 'special requests express' ELSE CONCAT('order_note_', i % 50) END
 FROM n;

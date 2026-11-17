@@ -6,7 +6,7 @@
         "plan_id":  27,
         "execution_count":  1,
         "avg_rows_returned":  3,
-        "consumption_pct":  6.2383
+        "consumption_pct":  5.239
     },
     {
         "label":  "Q02",
@@ -15,7 +15,7 @@
         "plan_id":  28,
         "execution_count":  1,
         "avg_rows_returned":  100,
-        "consumption_pct":  2.7585
+        "consumption_pct":  2.3215
     },
     {
         "label":  "Q03",
@@ -24,7 +24,7 @@
         "plan_id":  29,
         "execution_count":  1,
         "avg_rows_returned":  10,
-        "consumption_pct":  4.5405
+        "consumption_pct":  4.5886
     },
     {
         "label":  "Q04",
@@ -33,7 +33,7 @@
         "plan_id":  30,
         "execution_count":  1,
         "avg_rows_returned":  5,
-        "consumption_pct":  2.5613
+        "consumption_pct":  2.1884
     },
     {
         "label":  "Q05",
@@ -42,7 +42,7 @@
         "plan_id":  31,
         "execution_count":  1,
         "avg_rows_returned":  0,
-        "consumption_pct":  10.8883
+        "consumption_pct":  4.1954
     },
     {
         "label":  "Q06",
@@ -51,7 +51,7 @@
         "plan_id":  32,
         "execution_count":  1,
         "avg_rows_returned":  1,
-        "consumption_pct":  1.4489
+        "consumption_pct":  1.3603
     },
     {
         "label":  "Q07",
@@ -60,7 +60,7 @@
         "plan_id":  33,
         "execution_count":  1,
         "avg_rows_returned":  0,
-        "consumption_pct":  7.3981
+        "consumption_pct":  7.3519
     },
     {
         "label":  "Q08",
@@ -69,7 +69,7 @@
         "plan_id":  34,
         "execution_count":  1,
         "avg_rows_returned":  2,
-        "consumption_pct":  8.9169
+        "consumption_pct":  7.6294
     },
     {
         "label":  "Q09",
@@ -78,7 +78,7 @@
         "plan_id":  35,
         "execution_count":  1,
         "avg_rows_returned":  0,
-        "consumption_pct":  7.906
+        "consumption_pct":  8.3769
     },
     {
         "label":  "Q10",
@@ -87,7 +87,7 @@
         "plan_id":  36,
         "execution_count":  1,
         "avg_rows_returned":  20,
-        "consumption_pct":  2.845
+        "consumption_pct":  3.0177
     },
     {
         "label":  "Q11",
@@ -96,7 +96,7 @@
         "plan_id":  37,
         "execution_count":  1,
         "avg_rows_returned":  381,
-        "consumption_pct":  2.6406
+        "consumption_pct":  2.8958
     },
     {
         "label":  "Q12",
@@ -105,7 +105,7 @@
         "plan_id":  38,
         "execution_count":  1,
         "avg_rows_returned":  2,
-        "consumption_pct":  2.4209
+        "consumption_pct":  2.5823
     },
     {
         "label":  "Q13",
@@ -114,7 +114,7 @@
         "plan_id":  39,
         "execution_count":  1,
         "avg_rows_returned":  2,
-        "consumption_pct":  3.9602
+        "consumption_pct":  4.3702
     },
     {
         "label":  "Q14",
@@ -123,7 +123,7 @@
         "plan_id":  40,
         "execution_count":  1,
         "avg_rows_returned":  1,
-        "consumption_pct":  3.2616
+        "consumption_pct":  3.7829
     },
     {
         "label":  "Q15",
@@ -132,7 +132,7 @@
         "plan_id":  41,
         "execution_count":  1,
         "avg_rows_returned":  1,
-        "consumption_pct":  2.1785
+        "consumption_pct":  2.0406
     },
     {
         "label":  "Q16",
@@ -141,7 +141,7 @@
         "plan_id":  42,
         "execution_count":  1,
         "avg_rows_returned":  42,
-        "consumption_pct":  2.3502
+        "consumption_pct":  4.2777
     },
     {
         "label":  "Q17",
@@ -150,7 +150,7 @@
         "plan_id":  43,
         "execution_count":  1,
         "avg_rows_returned":  1,
-        "consumption_pct":  0.3283
+        "consumption_pct":  0.3275
     },
     {
         "label":  "Q18",
@@ -159,7 +159,7 @@
         "plan_id":  44,
         "execution_count":  1,
         "avg_rows_returned":  100,
-        "consumption_pct":  7.3258
+        "consumption_pct":  8.757
     },
     {
         "label":  "Q19",
@@ -168,7 +168,7 @@
         "plan_id":  45,
         "execution_count":  1,
         "avg_rows_returned":  1,
-        "consumption_pct":  2.0972
+        "consumption_pct":  2.4985
     },
     {
         "label":  "Q20",
@@ -177,7 +177,7 @@
         "plan_id":  46,
         "execution_count":  1,
         "avg_rows_returned":  0,
-        "consumption_pct":  8.1836
+        "consumption_pct":  9.5636
     },
     {
         "label":  "Q21",
@@ -186,7 +186,7 @@
         "plan_id":  47,
         "execution_count":  1,
         "avg_rows_returned":  0,
-        "consumption_pct":  7.6495
+        "consumption_pct":  10.6433
     },
     {
         "label":  "Q22",
@@ -195,7 +195,7 @@
         "plan_id":  48,
         "execution_count":  1,
         "avg_rows_returned":  0,
-        "consumption_pct":  2.0718
+        "consumption_pct":  1.9673
     },
     {
         "label":  "NEG01",
@@ -204,7 +204,7 @@
         "plan_id":  49,
         "execution_count":  1,
         "avg_rows_returned":  5,
-        "consumption_pct":  0.0044
+        "consumption_pct":  0.0051
     },
     {
         "label":  "NEG02",
@@ -213,7 +213,7 @@
         "plan_id":  50,
         "execution_count":  1,
         "avg_rows_returned":  25,
-        "consumption_pct":  0.0044
+        "consumption_pct":  0.0084
     },
     {
         "label":  "NEG03",
@@ -222,7 +222,7 @@
         "plan_id":  51,
         "execution_count":  1,
         "avg_rows_returned":  1,
-        "consumption_pct":  0.008
+        "consumption_pct":  0.0053
     },
     {
         "label":  "NEG04",
@@ -231,6 +231,6 @@
         "plan_id":  52,
         "execution_count":  1,
         "avg_rows_returned":  4,
-        "consumption_pct":  0.0133
+        "consumption_pct":  0.0051
     }
 ]

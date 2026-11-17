@@ -149,14 +149,14 @@ if ($Step -in 'tpch') {
     $tpchLabels = (1..22 | ForEach-Object { ('Q{0:D2}' -f $_) }) + @('NEG01', 'NEG02', 'NEG03', 'NEG04')
     Remove-Item (Join-Path $tpchPlanDir '*.qs.*.sqlplan') -ErrorAction SilentlyContinue
 
-    $totalDurationQuery = "SET NOCOUNT ON; SELECT CAST(ISNULL(SUM(rs.count_executions * rs.avg_duration), 0) AS float) FROM QD_TPCH.sys.query_store_runtime_stats rs JOIN QD_TPCH.sys.query_store_plan p ON p.plan_id = rs.plan_id JOIN QD_TPCH.sys.query_store_query q ON q.query_id = p.query_id JOIN QD_TPCH.sys.query_store_query_text t ON t.query_text_id = q.query_text_id WHERE t.query_sql_text LIKE N'%/* QD-TPCH:%' AND t.query_sql_text NOT LIKE N'%sys.query_store%';"
+    $totalDurationQuery = "SET NOCOUNT ON; SELECT CAST(ISNULL(SUM(rs.count_executions * rs.avg_duration), 0) AS float) FROM QD_TPCH.sys.query_store_runtime_stats rs JOIN QD_TPCH.sys.query_store_plan p ON p.plan_id = rs.plan_id JOIN QD_TPCH.sys.query_store_query q ON q.query_id = p.query_id JOIN QD_TPCH.sys.query_store_query_text t ON t.query_text_id = q.query_text_id WHERE t.query_sql_text LIKE N'%-- QD-TPCH:%:%' AND t.query_sql_text NOT LIKE N'%sys.query_store%';"
     $totalDurationRaw = (Invoke-SqlAsSa -Text $totalDurationQuery | Select-Object -Skip 2 | Where-Object { $_.Trim() -ne '' } | Select-Object -Last 1).Trim()
     $totalDuration = [double]::Parse($totalDurationRaw, [Globalization.CultureInfo]::InvariantCulture)
     if ($totalDuration -le 0) { $totalDuration = 1.0 }
 
     $contextRows = @()
     foreach ($lbl in $tpchLabels) {
-        $idq = "SET NOCOUNT ON; SELECT p.plan_id, q.query_id, CAST(ISNULL(SUM(rs.count_executions), 1) AS bigint) AS execs, CAST(ISNULL(SUM(rs.count_executions * rs.avg_rowcount) / NULLIF(SUM(rs.count_executions), 0), 0) AS float) AS avg_rows, CAST(ISNULL(SUM(rs.count_executions * rs.avg_duration), 0) AS float) AS total_dur FROM QD_TPCH.sys.query_store_plan p JOIN QD_TPCH.sys.query_store_query q ON q.query_id = p.query_id JOIN QD_TPCH.sys.query_store_query_text t ON t.query_text_id = q.query_text_id LEFT JOIN QD_TPCH.sys.query_store_runtime_stats rs ON rs.plan_id = p.plan_id WHERE t.query_sql_text LIKE N'%/* QD-TPCH:$lbl */%' AND t.query_sql_text NOT LIKE N'%sys.query_store%' GROUP BY p.plan_id, q.query_id ORDER BY p.plan_id;"
+        $idq = "SET NOCOUNT ON; SELECT p.plan_id, q.query_id, CAST(ISNULL(SUM(rs.count_executions), 1) AS bigint) AS execs, CAST(ISNULL(SUM(rs.count_executions * rs.avg_rowcount) / NULLIF(SUM(rs.count_executions), 0), 0) AS float) AS avg_rows, CAST(ISNULL(SUM(rs.count_executions * rs.avg_duration), 0) AS float) AS total_dur FROM QD_TPCH.sys.query_store_plan p JOIN QD_TPCH.sys.query_store_query q ON q.query_id = p.query_id JOIN QD_TPCH.sys.query_store_query_text t ON t.query_text_id = q.query_text_id LEFT JOIN QD_TPCH.sys.query_store_runtime_stats rs ON rs.plan_id = p.plan_id WHERE t.query_sql_text LIKE N'%-- QD-TPCH:${lbl}:%' AND t.query_sql_text NOT LIKE N'%sys.query_store%' GROUP BY p.plan_id, q.query_id ORDER BY p.plan_id;"
         $metaLines = @(Invoke-SqlAsSa -Text $idq | Select-Object -Skip 2 | Where-Object { $_.Trim() -ne '' })
         $n = 0
         foreach ($line in $metaLines) {
