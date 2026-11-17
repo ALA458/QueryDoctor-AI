@@ -1,0 +1,24 @@
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.564" Build="16.0.4315.2">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementText="SELECT OrderId FROM dbo.Orders WHERE CustomerCode = @code" StatementId="1" StatementType="SELECT" StatementSubTreeCost="0.45" StatementEstRows="120">
+          <QueryPlan>
+            <Warnings>
+              <PlanAffectingConvert ConvertIssue="Seek Plan" Expression="CONVERT_IMPLICIT(nvarchar(20),[QD_Lab].[dbo].[Orders].[CustomerCode],0)=[@code]" />
+            </Warnings>
+            <RelOp NodeId="2" PhysicalOp="Index Scan" LogicalOp="Index Scan" EstimateRows="120" EstimatedRowsRead="500" EstimateIO="0.04" EstimateCPU="0.01" AvgRowSize="16" EstimatedTotalSubtreeCost="0.05" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+              <OutputList />
+              <IndexScan Ordered="0" Storage="RowStore">
+                <Object Database="[QD_Lab]" Schema="[dbo]" Table="[Orders]" Index="[IX_Orders_CustomerCode]" IndexKind="NonClustered" Storage="RowStore" />
+                <Predicate>
+                  <ScalarOperator ScalarString="CONVERT_IMPLICIT(nvarchar(20),[QD_Lab].[dbo].[Orders].[CustomerCode],0)=[@code]" />
+                </Predicate>
+              </IndexScan>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>

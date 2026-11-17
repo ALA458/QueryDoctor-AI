@@ -46,6 +46,7 @@ Navegador ──443──▶ web (Nginx + React SPA) ──▶ api (ASP.NET Core
 * **`src/QueryDoctor.Worker`:** Host en segundo plano para tareas asíncronas e ingesta periódica con Hangfire.
 * **`tests/QueryDoctor.ArchitectureTests`:** Pruebas de cumplimiento arquitectónico con `NetArchTest`.
 * **`tests/QueryDoctor.UnitTests`:** Pruebas unitarias de las capas de dominio, aplicación e infraestructura.
+* **`tools/QueryDoctor.EngineHarness`:** CLI reproducible de evaluación del motor (`RF-EVA-01`, `CA-HU20.1`) sobre planes sembrados y carga TPC-H.
 
 ---
 
@@ -88,6 +89,14 @@ Navegador ──443──▶ web (Nginx + React SPA) ──▶ api (ASP.NET Core
    * Informe de verificación empírica F1–F8 (`RF-EVA-04`, `DA-07`): [`lab/results/S1-07-verificacion.md`](./lab/results/S1-07-verificacion.md)
    * Fixtures de Showplan XML (`.sqlplan`): `tests/fixtures/plans/`
    * *Nota (`RF-EVA-04`, Invariante 10):* La plataforma no afirma eficacia, precisión ni exhaustividad sin remitir al informe versionado del laboratorio.
+
+6. **Arnés reproducible de evaluación del motor (`S2-14`, `RF-EVA-01`, `CA-HU20.1`):**
+   ```powershell
+   dotnet run --project tools/QueryDoctor.EngineHarness
+   ```
+   * Reproduce la tabla de precisión, exhaustividad y $F_1$ por regla (`REG-01`–`REG-04`) y tolerancia `REG-11` sobre los 44 planes anotados en [`tests/fixtures/engine-ground-truth.json`](./tests/fixtures/engine-ground-truth.json) (`18` escenarios sembrados + `26` planes TPC-H, sin necesidad de Docker en ejecución).
+   * Filtros y exportación opcionales: `--corpus all|seeded|tpch`, `--split all|calibration|evaluation`, `--thresholds <ruta.json>`, `--format table|markdown|json`, `--output-dir <carpeta>`.
+   * Línea base versionada (`RuleThresholds.Default`): [`lab/results/S2-14-arnes-motor.md`](./lab/results/S2-14-arnes-motor.md).
 
 ---
 

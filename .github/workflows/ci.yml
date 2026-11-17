@@ -40,6 +40,9 @@ jobs:
             - name: Pruebas
               run: dotnet test --no-build --configuration Release
 
+            - name: Ejecutar arnes del motor (CA-HU20.1)
+              run: dotnet run --project tools/QueryDoctor.EngineHarness --no-build --configuration Release -- --corpus all
+
     # S3-06 (RNF-COM-01): pruebas de aceptación contra SQL Server real, una vez por plataforma de la matriz de soporte.
     # Corre LabTests y AcceptanceTests con QD_LAB_SQL definida: aquí no hay Skipped por falta de laboratorio (D7).
     # SQL Server se arranca con "docker run" y no como "services:", porque un contenedor de servicio necesita la
@@ -133,7 +136,7 @@ jobs:
                 node-version: "22"
 
             - name: Pruebas frontend
-              run: node --test tests/web/explanation_view.test.mjs tests/web/wizard_and_core.test.mjs tests/web/plan_graph.test.mjs
+              run: node --test tests/web/explanation_view.test.mjs tests/web/wizard_and_core.test.mjs tests/web/plan_graph.test.mjs tests/web/css_and_tabs.test.mjs
 
     ai-service:
         name: AI Service (pytest)
