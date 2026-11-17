@@ -141,5 +141,5 @@
   --shadow-drawer: -14px 0 42px -10px rgba(0, 0, 0, 0.65);
 }
 
-/* Garantizar que el atributo HTML [hidden] prevalezca sobre display: flex/grid */
-[hidden] { display: none; }
+/* Garantizar que el atributo HTML [hidden] prevalezca sobre display: flex/grid sin usar !important */
+[hidden]:not(#_) { display: none; }

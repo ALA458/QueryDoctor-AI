@@ -133,8 +133,8 @@ body {
 }
 .stage-foot span::before { content: "● "; color: var(--color-accent); }
 
-/* ---------- Panel derecho: formulario ---------- */
-.panel {
+/* ---------- Panel derecho: formulario (acotado al shell de acceso) ---------- */
+.shell .panel {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -240,7 +240,7 @@ body {
 .reveal:hover { color: var(--color-text); border-color: var(--color-border-strong); }
 .reveal:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 
-.btn:not([hidden]) {
+.btn {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
@@ -305,5 +305,5 @@ body {
   .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   .stage { gap: 1rem; padding: 1.5rem; }
   .plan-art, .stage-foot, .lede { display: none; }
-  .panel { align-items: flex-start; padding: 1.5rem; }
+  .shell .panel { align-items: flex-start; padding: 1.5rem; }
 }

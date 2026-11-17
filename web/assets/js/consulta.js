@@ -89,6 +89,36 @@
     return d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
   }
 
+  function formatWindowTick(iso, windowKind) {
+    if (!iso) { return ""; }
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) { return ""; }
+    if (windowKind === "24h") {
+      return d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    }
+    var datePart = d.toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit" });
+    if (windowKind === "7d") {
+      return datePart + " " + d.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+    }
+    return datePart;
+  }
+
+  function buildPanelHead(title, subtitle, rightEl) {
+    var head = el("div", "panel-head");
+    var titleCol = el("div", "panel-head-title");
+    titleCol.appendChild(el("h2", null, title));
+    if (subtitle) {
+      titleCol.appendChild(el("p", "panel-note", subtitle));
+    }
+    head.appendChild(titleCol);
+    if (rightEl) {
+      var rightWrap = el("div", "panel-head-actions");
+      rightWrap.appendChild(rightEl);
+      head.appendChild(rightWrap);
+    }
+    return head;
+  }
+
   function loadSession() {
     if (window.QDCore) {
       return window.QDCore.mountShell({ activeNav: "queries" }).then(function (ctx) {
@@ -111,11 +141,19 @@
 
   // ---------- Render: Score ----------
   function renderScorePanel(score) {
-    var section = el("section", "panel");
-    var head = el("div", "panel-head");
-    head.appendChild(el("h2", null, "Query Health Score y desglose"));
-    head.appendChild(el("p", "panel-note", score ? "Calculado el " + formatDateTime(score.calculatedAt) : "Pendiente de cálculo"));
-    section.appendChild(head);
+    var section = el("section", "panel panel-score");
+
+    var headMeta = null;
+    if (score) {
+      headMeta = el("div", "score-head-badges");
+      headMeta.appendChild(badge(score.bandLabel || score.band, BAND_TONE[score.band] || "neutral"));
+      headMeta.appendChild(badge("Puesto #" + score.rankInWindow + " de " + score.totalQueriesInWindow, "neutral"));
+    }
+    section.appendChild(buildPanelHead(
+      "Query Health Score y desglose",
+      score ? "Calculado el " + formatDateTime(score.calculatedAt) : "Pendiente de cálculo",
+      headMeta
+    ));
 
     if (!score) {
       section.appendChild(el("p", "panel-note", "Esta consulta aún no tiene un Query Health Score calculado en la última ventana."));
@@ -145,25 +183,15 @@
 
     var numWrap = el("div");
     numWrap.appendChild(el("span", "score-number", formatNum(score.score, 1)));
-    numWrap.appendChild(el("span", "score-scale-tag", "Escala 0 – 100 · Prioridad P(q): " + formatNum(score.priority, 1)));
+    numWrap.appendChild(el("span", "score-scale-tag", "Escala 0–100 · Prioridad P(q): " + formatNum(score.priority, 1)));
     gaugeRow.appendChild(numWrap);
     dial.appendChild(gaugeRow);
 
-    var badges = el("div", "score-badges");
-    badges.appendChild(badge("Referencia provisional: " + (score.bandLabel || score.band), BAND_TONE[score.band] || "neutral"));
-    dial.appendChild(badges);
-
-    dial.appendChild(el(
-      "p",
-      "score-rank",
-      "Posición relativa: puesto " + score.rankInWindow + " de " + score.totalQueriesInWindow + " consultas en la ventana"
-    ));
+    dial.appendChild(el("p", "scale-direction", "Escala: " + score.scaleDirection + "."));
+    dial.appendChild(el("p", "score-rank", "Posición relativa #" + score.rankInWindow + " en la ventana"));
     hero.appendChild(dial);
 
     var meta = el("div", "score-meta-col");
-    meta.appendChild(el("p", "scale-direction", "Dirección de la escala: " + score.scaleDirection + "."));
-    meta.appendChild(el("p", "disclaimer", score.usageDisclaimer));
-
     var kpis = el("div", "kpi-grid");
     [
       ["Impacto en carga I(q)", formatNum(score.impactComponent, 3)],
@@ -181,20 +209,24 @@
       kpis.appendChild(card);
     });
     meta.appendChild(kpis);
+    meta.appendChild(el("p", "disclaimer", score.usageDisclaimer));
     hero.appendChild(meta);
     section.appendChild(hero);
 
+    var subblocks = el("div", "score-subblocks");
+
     // Desglose de hallazgos contribuyentes a S(q)
-    section.appendChild(el("h3", "sub-title", "Hallazgos que contribuyen a S(q)"));
+    var contribBox = el("div", "subpanel-card");
+    contribBox.appendChild(el("h3", "sub-title", "Hallazgos que contribuyen a S(q)"));
     var contribs = score.contributingFindings || [];
     if (!contribs.length) {
-      section.appendChild(el("p", "panel-note", "Sin hallazgos activos en S(q) para este cálculo (S(q) = 0)."));
+      contribBox.appendChild(el("p", "panel-note", "Sin hallazgos activos en S(q) para este cálculo (S(q) = 0)."));
     } else {
       var wrap = el("div", "table-wrap");
-      var table = el("table", "table");
+      var table = el("table", "table table-compact");
       var thead = el("thead");
       var hrow = el("tr");
-      ["Código", "Regla", "Severidad", "Evidencia", "Peso sev.", "Peso conf.", "Aporte"].forEach(function (col) {
+      ["Código", "Regla", "Severidad", "Evidencia", "Sev.", "Conf.", "Aporte"].forEach(function (col) {
         var th = el("th", null, col);
         th.setAttribute("scope", "col");
         hrow.appendChild(th);
@@ -205,27 +237,29 @@
       var tbody = el("tbody");
       contribs.forEach(function (c) {
         var tr = el("tr");
-        tr.appendChild(el("td", null, c.finding_code));
-        tr.appendChild(el("td", null, c.rule_id));
+        tr.appendChild(el("td", "mono", c.finding_code));
+        tr.appendChild(el("td", "mono", c.rule_id));
         tr.appendChild(el("td", null, c.severity));
         tr.appendChild(el("td", null, c.evidence_class));
-        tr.appendChild(el("td", null, formatNum(c.severity_weight, 2)));
-        tr.appendChild(el("td", null, formatNum(c.confidence_weight, 2)));
-        tr.appendChild(el("td", null, formatNum(c.combined_weight, 3)));
+        tr.appendChild(el("td", "mono tabular", formatNum(c.severity_weight, 2)));
+        tr.appendChild(el("td", "mono tabular", formatNum(c.confidence_weight, 2)));
+        tr.appendChild(el("td", "mono tabular", formatNum(c.combined_weight, 3)));
         tbody.appendChild(tr);
       });
       table.appendChild(tbody);
       wrap.appendChild(table);
-      section.appendChild(wrap);
+      contribBox.appendChild(wrap);
     }
+    subblocks.appendChild(contribBox);
 
     // Historial de scores (RF-SCO-05)
     var history = score.history || [];
     if (history.length > 1) {
+      var histBox = el("div", "subpanel-card");
       var details = el("details", "details-toggle");
       details.appendChild(el("summary", null, "Historial de cálculos (" + history.length + " puntos)"));
       var hWrap = el("div", "table-wrap");
-      var hTable = el("table", "table");
+      var hTable = el("table", "table table-compact");
       var hHead = el("thead");
       var hTr = el("tr");
       ["Fecha", "Score", "I(q)", "S(q)", "Consumo %"].forEach(function (col) {
@@ -239,31 +273,46 @@
       history.forEach(function (h) {
         var row = el("tr");
         row.appendChild(el("td", null, formatDateTime(h.calculatedAt)));
-        row.appendChild(el("td", null, formatNum(h.score, 2)));
-        row.appendChild(el("td", null, formatNum(h.impactComponent, 3)));
-        row.appendChild(el("td", null, formatNum(h.severityComponent, 3)));
-        row.appendChild(el("td", null, formatNum(h.weightedConsumptionPct, 1) + " %"));
+        row.appendChild(el("td", "mono tabular", formatNum(h.score, 2)));
+        row.appendChild(el("td", "mono tabular", formatNum(h.impactComponent, 3)));
+        row.appendChild(el("td", "mono tabular", formatNum(h.severityComponent, 3)));
+        row.appendChild(el("td", "mono tabular", formatNum(h.weightedConsumptionPct, 1) + " %"));
         hBody.appendChild(row);
       });
       hTable.appendChild(hBody);
       hWrap.appendChild(hTable);
       details.appendChild(hWrap);
-      section.appendChild(details);
+      histBox.appendChild(details);
+      subblocks.appendChild(histBox);
     }
 
+    section.appendChild(subblocks);
     return section;
   }
 
   // ---------- Render: SQL ----------
   function renderSqlPanel(detail) {
-    var section = el("section", "panel");
-    var head = el("div", "panel-head");
-    var titleWrap = el("div");
-    titleWrap.appendChild(el("h2", null, "Texto SQL de la consulta"));
-    titleWrap.appendChild(el("p", "panel-note", "Literales enmascarados de forma determinista antes de mostrarse"));
-    head.appendChild(titleWrap);
+    var section = el("section", "panel panel-sql");
+    var actions = el("div", "sql-head-actions");
+    var canShowSql = !detail.sqlMaskingFailure && !detail.sqlExpired && Boolean(detail.sqlText);
+    var sqlText = detail.sqlText || "";
+    var isLongSql = canShowSql && (sqlText.split("\n").length > 8 || sqlText.length > 480);
 
-    if (!detail.sqlMaskingFailure && !detail.sqlExpired && detail.sqlText && window.QDCore) {
+    var pre = null;
+    if (isLongSql) {
+      var expandBtn = el("button", "btn btn-sm btn-secondary", "Expandir SQL");
+      expandBtn.type = "button";
+      expandBtn.setAttribute("aria-expanded", "false");
+      expandBtn.addEventListener("click", function () {
+        if (!pre) { return; }
+        var expanded = pre.classList.toggle("is-expanded");
+        expandBtn.textContent = expanded ? "Contraer SQL" : "Expandir SQL";
+        expandBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
+      });
+      actions.appendChild(expandBtn);
+    }
+
+    if (canShowSql && window.QDCore) {
       var copyBtn = el("button", "btn btn-sm btn-secondary", "Copiar SQL");
       copyBtn.type = "button";
       copyBtn.addEventListener("click", function () {
@@ -271,22 +320,48 @@
           window.QDCore.showToast("SQL enmascarado copiado al portapapeles.", "ok");
         });
       });
-      head.appendChild(copyBtn);
+      actions.appendChild(copyBtn);
     }
-    section.appendChild(head);
+
+    section.appendChild(buildPanelHead(
+      "Texto SQL enmascarado",
+      "Literales reemplazados de forma determinista antes de almacenarse o mostrarse",
+      actions.childNodes.length ? actions : null
+    ));
 
     if (detail.sqlMaskingFailure) {
       section.appendChild(el("p", "panel-note", "No se pudo enmascarar el texto SQL de forma segura (" + detail.sqlMaskingFailure + ")."));
-      return section;
-    }
-    if (detail.sqlExpired || !detail.sqlText) {
+    } else if (detail.sqlExpired || !detail.sqlText) {
       section.appendChild(el("p", "panel-note", "Evidencia expirada o texto SQL no disponible."));
-      return section;
+    } else {
+      pre = el("pre", "sql-code" + (isLongSql ? " is-compact" : ""));
+      pre.appendChild(el("code", null, detail.sqlText));
+      section.appendChild(pre);
     }
 
-    var pre = el("pre", "sql-code");
-    pre.appendChild(el("code", null, detail.sqlText));
-    section.appendChild(pre);
+    var findings = detail.findings || [];
+    if (findings.length) {
+      var strip = el("div", "sql-findings-strip");
+      strip.appendChild(el("span", "sql-findings-label", "Señales detectadas (" + findings.length + "):"));
+      var chips = el("div", "node-jump-list");
+      findings.forEach(function (f) {
+        var sev = SEVERITY_TONE[f.severity];
+        var btn = el("button", "node-jump-btn", f.ruleId + " · " + (sev ? sev[0] : f.severity));
+        btn.type = "button";
+        btn.title = f.ruleName || f.ruleId;
+        btn.addEventListener("click", function () {
+          focusFindingCard(f.findingCode || f.id);
+        });
+        chips.appendChild(btn);
+      });
+      strip.appendChild(chips);
+      var toScoreBtn = el("button", "btn btn-sm btn-secondary sql-score-link", "Score y hallazgos →");
+      toScoreBtn.type = "button";
+      toScoreBtn.addEventListener("click", function () { activateDetailTab("findings"); });
+      strip.appendChild(toScoreBtn);
+      section.appendChild(strip);
+    }
+
     return section;
   }
 
@@ -303,78 +378,74 @@
     return formatNum(val, decimals);
   }
 
-  function buildSvgMetricChart(title, points, planClassMap, valueSelector, decimals, unitKind, activePlanFilter) {
-    var card = el("div", "chart-card");
-    var head = el("div", "chart-card-head");
-    head.appendChild(el("h3", null, title));
-    var readout = el("span", "chart-readout", "Pasa el cursor por un punto para ver el detalle");
-    head.appendChild(readout);
-    card.appendChild(head);
+  var SERIES_METRICS = [
+    { id: "duration", title: "Duración promedio", selector: function (p) { return p.avgDurationMs; }, decimals: 2, unitKind: "ms" },
+    { id: "cpu", title: "CPU promedio", selector: function (p) { return p.avgCpuTimeMs; }, decimals: 2, unitKind: "ms" },
+    { id: "reads", title: "Lecturas lógicas promedio", selector: function (p) { return p.avgLogicalIoReads; }, decimals: 1, unitKind: "count" },
+    { id: "execs", title: "Ejecuciones por intervalo", selector: function (p) { return p.executionCount; }, decimals: 0, unitKind: "count" }
+  ];
 
-    var width = 600;
-    var height = 225;
-    var padLeft = 64;
-    var padRight = 18;
-    var padTop = 16;
-    var padBottom = 34;
-    var plotW = width - padLeft - padRight;
-    var plotH = height - padTop - padBottom;
+  function computeChartSummary(points, valueSelector, activePlanFilter) {
+    var scoped = activePlanFilter
+      ? points.filter(function (p) { return p.planId === activePlanFilter; })
+      : points;
+    var vals = scoped.map(valueSelector).filter(function (v) { return typeof v === "number" && !isNaN(v); });
+    if (!vals.length) { return { count: 0, maxVal: null, avgVal: null }; }
+    var sum = vals.reduce(function (acc, v) { return acc + v; }, 0);
+    return {
+      count: vals.length,
+      maxVal: Math.max.apply(null, vals),
+      avgVal: sum / vals.length
+    };
+  }
 
-    var times = points.map(function (p) { return new Date(p.intervalStart).getTime(); });
-    var minT = Math.min.apply(null, times);
-    var maxT = Math.max.apply(null, times);
-    if (maxT === minT) { maxT = minT + 1; }
-
-    var values = points.map(valueSelector);
-    var maxV = Math.max.apply(null, values);
-    if (!(maxV > 0)) { maxV = 1; }
-
-    var svg = svgEl("svg", {
-      "class": "chart-svg",
-      "viewBox": "0 0 " + width + " " + height,
-      "role": "img",
-      "aria-label": title
-    });
-
-    [0, 0.33, 0.67, 1].forEach(function (ratio) {
-      var y = padTop + plotH * (1 - ratio);
+  function appendChartAxes(svg, cfg, summary) {
+    var yFracs = cfg.ySteps === 5 ? [0, 0.25, 0.5, 0.75, 1] : [0, 0.33, 0.67, 1];
+    yFracs.forEach(function (ratio) {
+      var y = cfg.padTop + cfg.plotH * (1 - ratio);
       svg.appendChild(svgEl("line", {
         "class": "chart-grid-line",
-        "x1": padLeft, "y1": y, "x2": width - padRight, "y2": y
+        "x1": cfg.padLeft, "y1": y, "x2": cfg.width - cfg.padRight, "y2": y
       }));
       var lbl = svgEl("text", {
         "class": "chart-axis-label",
-        "x": padLeft - 8, "y": y + 3, "text-anchor": "end"
+        "x": cfg.padLeft - 8, "y": y + 3, "text-anchor": "end"
       });
-      lbl.textContent = formatChartValue(maxV * ratio, unitKind, decimals);
+      lbl.textContent = formatChartValue(cfg.maxV * ratio, cfg.unitKind, cfg.decimals);
       svg.appendChild(lbl);
     });
 
+    if (summary.avgVal !== null && summary.count > 1) {
+      var avgY = cfg.padTop + cfg.plotH - (summary.avgVal / cfg.maxV) * cfg.plotH;
+      svg.appendChild(svgEl("line", {
+        "class": "chart-avg-line",
+        "x1": cfg.padLeft, "y1": avgY.toFixed(1), "x2": cfg.width - cfg.padRight, "y2": avgY.toFixed(1)
+      }));
+    }
+
     svg.appendChild(svgEl("line", {
       "class": "chart-axis-line",
-      "x1": padLeft, "y1": padTop + plotH, "x2": width - padRight, "y2": padTop + plotH
+      "x1": cfg.padLeft, "y1": cfg.padTop + cfg.plotH, "x2": cfg.width - cfg.padRight, "y2": cfg.padTop + cfg.plotH
     }));
     svg.appendChild(svgEl("line", {
       "class": "chart-axis-line",
-      "x1": padLeft, "y1": padTop, "x2": padLeft, "y2": padTop + plotH
+      "x1": cfg.padLeft, "y1": cfg.padTop, "x2": cfg.padLeft, "y2": cfg.padTop + cfg.plotH
     }));
 
-    // 4 marcas temporales espaciadas sin solaparse
-    [0, 0.33, 0.67, 1].forEach(function (frac) {
-      var tTick = minT + (maxT - minT) * frac;
-      var xTick = padLeft + plotW * frac;
-      var anchor = frac === 0 ? "start" : (frac === 1 ? "end" : "middle");
-      var xLbl = svgEl("text", { "class": "chart-axis-label", "x": xTick, "y": height - 10, "text-anchor": anchor });
-      xLbl.textContent = formatShortTime(new Date(tTick).toISOString());
+    var xFracs = cfg.singleTimestamp
+      ? [0.5]
+      : (cfg.xSteps === 6 ? [0, 0.2, 0.4, 0.6, 0.8, 1] : [0, 0.33, 0.67, 1]);
+    xFracs.forEach(function (frac) {
+      var tTick = cfg.singleTimestamp ? cfg.minT : cfg.minT + (cfg.maxT - cfg.minT) * frac;
+      var xTick = cfg.padLeft + cfg.plotW * frac;
+      var anchor = cfg.singleTimestamp ? "middle" : (frac === 0 ? "start" : (frac === 1 ? "end" : "middle"));
+      var xLbl = svgEl("text", { "class": "chart-axis-label", "x": xTick, "y": cfg.height - 10, "text-anchor": anchor });
+      xLbl.textContent = formatWindowTick(new Date(tTick).toISOString(), cfg.windowKind);
       svg.appendChild(xLbl);
     });
+  }
 
-    var guideLine = svgEl("line", {
-      "class": "chart-hover-guide",
-      "x1": padLeft, "y1": padTop, "x2": padLeft, "y2": padTop + plotH
-    });
-    svg.appendChild(guideLine);
-
+  function appendPlanSeriesLines(svg, points, cfg, planClassMap, activePlanFilter, guideLine, readout) {
     var byPlan = {};
     points.forEach(function (p) {
       if (!byPlan[p.planId]) { byPlan[p.planId] = []; }
@@ -390,15 +461,15 @@
 
       var coords = planPoints.map(function (p) {
         var t = new Date(p.intervalStart).getTime();
-        var x = padLeft + ((t - minT) / (maxT - minT)) * plotW;
-        var y = padTop + plotH - (valueSelector(p) / maxV) * plotH;
+        var x = cfg.singleTimestamp ? (cfg.padLeft + cfg.plotW * 0.5) : (cfg.padLeft + ((t - cfg.minT) / (cfg.maxT - cfg.minT)) * cfg.plotW);
+        var y = cfg.padTop + cfg.plotH - (cfg.valueSelector(p) / cfg.maxV) * cfg.plotH;
         return { x: x.toFixed(1), y: y.toFixed(1), point: p };
       });
 
       if (coords.length > 1) {
         var areaPoints = coords.map(function (c) { return c.x + "," + c.y; }).join(" ") +
-          " " + coords[coords.length - 1].x + "," + (padTop + plotH) +
-          " " + coords[0].x + "," + (padTop + plotH);
+          " " + coords[coords.length - 1].x + "," + (cfg.padTop + cfg.plotH) +
+          " " + coords[0].x + "," + (cfg.padTop + cfg.plotH);
         svg.appendChild(svgEl("polygon", {
           "class": "chart-area " + cls + (dimmed ? " chart-series-dim" : ""),
           "points": areaPoints
@@ -410,15 +481,21 @@
       }
 
       coords.forEach(function (c) {
+        if (coords.length === 1) {
+          svg.appendChild(svgEl("line", {
+            "class": "chart-single-stem " + cls + (dimmed ? " chart-series-dim" : ""),
+            "x1": c.x, "y1": c.y, "x2": c.x, "y2": cfg.padTop + cfg.plotH
+          }));
+        }
         var circle = svgEl("circle", {
           "class": "chart-dot " + cls + (dimmed ? " chart-series-dim" : ""),
           "cx": c.x,
           "cy": c.y,
-          "r": 4.2,
+          "r": coords.length === 1 ? 5.5 : (cfg.expanded ? 5 : 4.2),
           "tabindex": "0"
         });
         var summaryText = "Plan #" + c.point.queryStorePlanId + " · " + formatDateTime(c.point.intervalStart) +
-          " → " + formatChartValue(valueSelector(c.point), unitKind, decimals);
+          " → " + formatChartValue(cfg.valueSelector(c.point), cfg.unitKind, cfg.decimals);
         var tip = svgEl("title");
         tip.textContent = summaryText;
         circle.appendChild(tip);
@@ -434,6 +511,101 @@
         svg.appendChild(circle);
       });
     });
+  }
+
+  function buildPlanLegendPills(container, plans, activePlanFilter, onToggle) {
+    container.replaceChildren();
+    if (!plans.length) { return; }
+    plans.forEach(function (plan, idx) {
+      var cls = "series-" + (idx % 4);
+      var btn = el("button", "legend-pill" + (activePlanFilter && activePlanFilter !== plan.planId ? " is-dimmed" : ""));
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", activePlanFilter === plan.planId ? "true" : "false");
+      btn.appendChild(el("span", "legend-swatch " + cls));
+      var label = "Plan #" + plan.queryStorePlanId + (plan.queryPlanHash ? " (" + plan.queryPlanHash.slice(0, 8) + ")" : "");
+      btn.appendChild(el("span", null, label));
+      btn.addEventListener("click", function () { onToggle(plan.planId); });
+      container.appendChild(btn);
+    });
+  }
+
+  function buildSvgMetricChart(metricSpec, points, planClassMap, activePlanFilter, windowKind, chartOpts) {
+    var opts = chartOpts || {};
+    var expanded = Boolean(opts.expanded);
+    var card = el("div", expanded ? "chart-card chart-card-expanded" : "chart-card");
+    var head = el("div", "chart-card-head");
+    head.appendChild(el("h3", null, metricSpec.title));
+
+    var summary = computeChartSummary(points, metricSpec.selector, activePlanFilter);
+    var headRight = el("div", "chart-card-stats");
+    if (summary.avgVal !== null && summary.maxVal !== null) {
+      headRight.appendChild(el("span", "chart-stat-pill", "Prom: " + formatChartValue(summary.avgVal, metricSpec.unitKind, metricSpec.decimals)));
+      headRight.appendChild(el("span", "chart-stat-pill", "Máx: " + formatChartValue(summary.maxVal, metricSpec.unitKind, metricSpec.decimals)));
+    }
+    if (!expanded && typeof opts.onExpand === "function") {
+      var expandBtn = el("button", "plan-btn chart-expand-btn", "Ampliar ⤢");
+      expandBtn.type = "button";
+      expandBtn.setAttribute("aria-label", "Ampliar gráfico de " + metricSpec.title);
+      expandBtn.addEventListener("click", function () { opts.onExpand(metricSpec.id, expandBtn); });
+      headRight.appendChild(expandBtn);
+    }
+    head.appendChild(headRight);
+    card.appendChild(head);
+
+    var readout = el("div", "chart-readout", "Pasa el cursor o enfoca un punto para inspeccionar la muestra");
+    card.appendChild(readout);
+
+    var width = opts.width || 600;
+    var height = opts.height || 225;
+    var padLeft = expanded ? 72 : 64;
+    var padRight = 20;
+    var padTop = 18;
+    var padBottom = 36;
+    var times = points.map(function (p) { return new Date(p.intervalStart).getTime(); });
+    var minT = Math.min.apply(null, times);
+    var maxT = Math.max.apply(null, times);
+    var singleTimestamp = maxT === minT;
+    if (singleTimestamp) { maxT = minT + 1; }
+    var values = points.map(metricSpec.selector);
+    var maxV = Math.max.apply(null, values);
+    if (!(maxV > 0)) { maxV = 1; }
+
+    var cfg = {
+      width: width,
+      height: height,
+      padLeft: padLeft,
+      padRight: padRight,
+      padTop: padTop,
+      padBottom: padBottom,
+      plotW: width - padLeft - padRight,
+      plotH: height - padTop - padBottom,
+      minT: minT,
+      maxT: maxT,
+      singleTimestamp: singleTimestamp,
+      maxV: maxV,
+      decimals: metricSpec.decimals,
+      unitKind: metricSpec.unitKind,
+      valueSelector: metricSpec.selector,
+      windowKind: windowKind,
+      ySteps: expanded ? 5 : 4,
+      xSteps: expanded ? 6 : 4,
+      expanded: expanded
+    };
+
+    var svg = svgEl("svg", {
+      "class": "chart-svg",
+      "viewBox": "0 0 " + width + " " + height,
+      "role": "img",
+      "aria-label": metricSpec.title
+    });
+
+    appendChartAxes(svg, cfg, summary);
+    var guideLine = svgEl("line", {
+      "class": "chart-hover-guide",
+      "x1": padLeft, "y1": padTop, "x2": padLeft, "y2": padTop + cfg.plotH
+    });
+    svg.appendChild(guideLine);
+    appendPlanSeriesLines(svg, points, cfg, planClassMap, activePlanFilter, guideLine, readout);
 
     svg.addEventListener("mouseleave", function () {
       guideLine.classList.remove("is-visible");
@@ -443,14 +615,98 @@
     return card;
   }
 
-  function renderSeriesPanel(detail) {
-    var section = el("section", "panel");
-    var head = el("div", "panel-head");
-    head.appendChild(el("h2", null, "Series temporales por plan"));
-    head.appendChild(el("p", "panel-note",
-      "Ventana " + detail.window + " (" + formatDateTime(detail.windowStart) + " – " + formatDateTime(detail.windowEnd) + ")"));
-    section.appendChild(head);
+  function openSeriesModal(series, plans, planClassMap, windowKind, initialMetricId, initialPlanFilter, triggerEl) {
+    var existing = document.getElementById("chart-zoom-dialog");
+    if (existing && existing.parentNode) {
+      if (existing.open) { existing.close(); }
+      existing.parentNode.removeChild(existing);
+    }
 
+    var modalState = {
+      metricId: initialMetricId || SERIES_METRICS[0].id,
+      planFilter: initialPlanFilter || null
+    };
+
+    var dialog = el("dialog", "chart-dialog");
+    dialog.id = "chart-zoom-dialog";
+    dialog.setAttribute("aria-labelledby", "chart-dialog-title");
+
+    var head = el("div", "chart-dialog-head");
+    var titleWrap = el("div", "panel-head-title");
+    var titleEl = el("h2", null, "Detalle ampliado de serie temporal");
+    titleEl.id = "chart-dialog-title";
+    titleWrap.appendChild(titleEl);
+    titleWrap.appendChild(el("p", "panel-note", "Cambia entre las 4 métricas o filtra por plan sin cerrar la vista."));
+    head.appendChild(titleWrap);
+
+    var closeBtn = el("button", "drawer-close", "Cerrar · Esc");
+    closeBtn.type = "button";
+    closeBtn.addEventListener("click", function () { dialog.close(); });
+    head.appendChild(closeBtn);
+    dialog.appendChild(head);
+
+    var body = el("div", "chart-dialog-body");
+    var controlsBar = el("div", "chart-dialog-controls");
+    var metricSwitch = el("div", "series-view-switch");
+    metricSwitch.setAttribute("role", "group");
+    metricSwitch.setAttribute("aria-label", "Seleccionar métrica a ampliar");
+
+    var metricButtons = {};
+    var modalLegend = el("div", "plan-legend");
+    var chartHost = el("div", "chart-dialog-stage");
+
+    function renderModalContent() {
+      Object.keys(metricButtons).forEach(function (id) {
+        metricButtons[id].setAttribute("aria-pressed", id === modalState.metricId ? "true" : "false");
+      });
+      buildPlanLegendPills(modalLegend, plans, modalState.planFilter, function (planId) {
+        modalState.planFilter = modalState.planFilter === planId ? null : planId;
+        renderModalContent();
+      });
+      var spec = SERIES_METRICS.filter(function (m) { return m.id === modalState.metricId; })[0] || SERIES_METRICS[0];
+      chartHost.replaceChildren(buildSvgMetricChart(
+        spec,
+        series,
+        planClassMap,
+        modalState.planFilter,
+        windowKind,
+        { width: 920, height: 350, expanded: true }
+      ));
+    }
+
+    SERIES_METRICS.forEach(function (m) {
+      var btn = el("button", "plan-btn", m.title);
+      btn.type = "button";
+      btn.addEventListener("click", function () {
+        modalState.metricId = m.id;
+        renderModalContent();
+      });
+      metricButtons[m.id] = btn;
+      metricSwitch.appendChild(btn);
+    });
+
+    controlsBar.appendChild(metricSwitch);
+    controlsBar.appendChild(modalLegend);
+    body.appendChild(controlsBar);
+    body.appendChild(chartHost);
+    dialog.appendChild(body);
+
+    dialog.addEventListener("click", function (ev) {
+      if (ev.target === dialog) { dialog.close(); }
+    });
+    dialog.addEventListener("close", function () {
+      if (dialog.parentNode) { dialog.parentNode.removeChild(dialog); }
+      if (triggerEl && typeof triggerEl.focus === "function") { triggerEl.focus(); }
+    });
+
+    document.body.appendChild(dialog);
+    renderModalContent();
+    dialog.showModal();
+    closeBtn.focus();
+  }
+
+  function renderSeriesPanel(detail) {
+    var section = el("section", "panel panel-series");
     var plans = detail.plans || [];
     var series = detail.series || [];
     var planClassMap = {};
@@ -459,34 +715,99 @@
     });
 
     var activePlanFilter = null;
+    var activeSeriesView = "charts";
+
+    var headControls = el("div", "series-head-controls");
     var legendHost = el("div", "plan-legend");
+    headControls.appendChild(legendHost);
+
+    var modeSwitch = el("div", "series-view-switch");
+    modeSwitch.setAttribute("role", "group");
+    modeSwitch.setAttribute("aria-label", "Modo de visualización de series");
+    var chartsModeBtn = el("button", "plan-btn", "Gráficos (2×2)");
+    chartsModeBtn.type = "button";
+    chartsModeBtn.setAttribute("aria-pressed", "true");
+    var tableModeBtn = el("button", "plan-btn", "Tabla (" + series.length + ")");
+    tableModeBtn.type = "button";
+    tableModeBtn.setAttribute("aria-pressed", "false");
+    modeSwitch.appendChild(chartsModeBtn);
+    modeSwitch.appendChild(tableModeBtn);
+    if (series.length) {
+      headControls.appendChild(modeSwitch);
+    }
+
+    section.appendChild(buildPanelHead(
+      "Series temporales por plan",
+      "Ventana " + detail.window + " (" + formatDateTime(detail.windowStart) + " – " + formatDateTime(detail.windowEnd) + ")",
+      (plans.length || series.length) ? headControls : null
+    ));
+
     var chartsHost = el("div", "charts-grid");
+    var tableHost = el("div", "subpanel-card series-table-card");
+    tableHost.hidden = true;
 
     function paintCharts() {
-      legendHost.replaceChildren();
+      buildPlanLegendPills(legendHost, plans, activePlanFilter, function (planId) {
+        activePlanFilter = activePlanFilter === planId ? null : planId;
+        paintCharts();
+        paintTable();
+      });
       chartsHost.replaceChildren();
+      SERIES_METRICS.forEach(function (spec) {
+        chartsHost.appendChild(buildSvgMetricChart(
+          spec,
+          series,
+          planClassMap,
+          activePlanFilter,
+          detail.window,
+          {
+            onExpand: function (metricId, btnEl) {
+              openSeriesModal(series, plans, planClassMap, detail.window, metricId, activePlanFilter, btnEl);
+            }
+          }
+        ));
+      });
+    }
 
-      if (plans.length > 0) {
-        plans.forEach(function (plan, idx) {
-          var cls = "series-" + (idx % 4);
-          var btn = el("button", "legend-pill" + (activePlanFilter && activePlanFilter !== plan.planId ? " is-dimmed" : ""));
-          btn.type = "button";
-          btn.setAttribute("aria-pressed", activePlanFilter === plan.planId ? "true" : "false");
-          btn.appendChild(el("span", "legend-swatch " + cls));
-          var label = "Plan #" + plan.queryStorePlanId + (plan.queryPlanHash ? " (" + plan.queryPlanHash.slice(0, 8) + ")" : "");
-          btn.appendChild(el("span", null, label));
-          btn.addEventListener("click", function () {
-            activePlanFilter = activePlanFilter === plan.planId ? null : plan.planId;
-            paintCharts();
-          });
-          legendHost.appendChild(btn);
-        });
-      }
+    function paintTable() {
+      tableHost.replaceChildren();
+      var rows = activePlanFilter
+        ? series.filter(function (p) { return p.planId === activePlanFilter; })
+        : series;
+      var wrap = el("div", "table-wrap");
+      var table = el("table", "table table-compact");
+      var thead = el("thead");
+      var hrow = el("tr");
+      ["Inicio intervalo", "Plan", "Ejecuciones", "Duración prom. (ms)", "CPU prom. (ms)", "Lecturas lógicas prom."].forEach(function (col) {
+        var th = el("th", null, col);
+        th.setAttribute("scope", "col");
+        hrow.appendChild(th);
+      });
+      thead.appendChild(hrow);
+      table.appendChild(thead);
 
-      chartsHost.appendChild(buildSvgMetricChart("Duración promedio", series, planClassMap, function (p) { return p.avgDurationMs; }, 2, "ms", activePlanFilter));
-      chartsHost.appendChild(buildSvgMetricChart("CPU promedio", series, planClassMap, function (p) { return p.avgCpuTimeMs; }, 2, "ms", activePlanFilter));
-      chartsHost.appendChild(buildSvgMetricChart("Lecturas lógicas promedio", series, planClassMap, function (p) { return p.avgLogicalIoReads; }, 1, "count", activePlanFilter));
-      chartsHost.appendChild(buildSvgMetricChart("Ejecuciones por intervalo", series, planClassMap, function (p) { return p.executionCount; }, 0, "count", activePlanFilter));
+      var tbody = el("tbody");
+      rows.forEach(function (p) {
+        var tr = el("tr");
+        tr.appendChild(el("td", null, formatDateTime(p.intervalStart)));
+        tr.appendChild(el("td", "mono", "Plan #" + p.queryStorePlanId));
+        tr.appendChild(el("td", "mono tabular", formatNum(p.executionCount, 0)));
+        tr.appendChild(el("td", "mono tabular", formatNum(p.avgDurationMs, 2)));
+        tr.appendChild(el("td", "mono tabular", formatNum(p.avgCpuTimeMs, 2)));
+        tr.appendChild(el("td", "mono tabular", formatNum(p.avgLogicalIoReads, 1)));
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      tableHost.appendChild(wrap);
+    }
+
+    function syncSeriesView(nextView) {
+      activeSeriesView = nextView;
+      chartsHost.hidden = activeSeriesView !== "charts";
+      tableHost.hidden = activeSeriesView !== "table";
+      chartsModeBtn.setAttribute("aria-pressed", activeSeriesView === "charts" ? "true" : "false");
+      tableModeBtn.setAttribute("aria-pressed", activeSeriesView === "table" ? "true" : "false");
     }
 
     if (!series.length) {
@@ -498,146 +819,184 @@
           item.appendChild(el("span", null, "Plan #" + plan.queryStorePlanId));
           legendHost.appendChild(item);
         });
-        section.appendChild(legendHost);
       }
       section.appendChild(el("p", "panel-note", "No hay intervalos de ejecución registrados en la ventana seleccionada."));
       return section;
     }
 
+    chartsModeBtn.addEventListener("click", function () { syncSeriesView("charts"); });
+    tableModeBtn.addEventListener("click", function () { syncSeriesView("table"); });
+
     paintCharts();
-    section.appendChild(legendHost);
+    paintTable();
     section.appendChild(chartsHost);
-
-    var details = el("details", "details-toggle");
-    details.appendChild(el("summary", null, "Tabla de intervalos por plan (" + series.length + " muestras)"));
-
-    var wrap = el("div", "table-wrap");
-    var table = el("table", "table");
-    var thead = el("thead");
-    var hrow = el("tr");
-    ["Inicio intervalo", "Plan", "Ejecuciones", "Duración prom. (ms)", "CPU prom. (ms)", "Lecturas lógicas prom."].forEach(function (col) {
-      var th = el("th", null, col);
-      th.setAttribute("scope", "col");
-      hrow.appendChild(th);
-    });
-    thead.appendChild(hrow);
-    table.appendChild(thead);
-
-    var tbody = el("tbody");
-    series.forEach(function (p) {
-      var tr = el("tr");
-      tr.appendChild(el("td", null, formatDateTime(p.intervalStart)));
-      tr.appendChild(el("td", null, "Plan #" + p.queryStorePlanId));
-      tr.appendChild(el("td", null, formatNum(p.executionCount, 0)));
-      tr.appendChild(el("td", null, formatNum(p.avgDurationMs, 2)));
-      tr.appendChild(el("td", null, formatNum(p.avgCpuTimeMs, 2)));
-      tr.appendChild(el("td", null, formatNum(p.avgLogicalIoReads, 1)));
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    wrap.appendChild(table);
-    details.appendChild(wrap);
-    section.appendChild(details);
+    section.appendChild(tableHost);
 
     return section;
   }
 
   // ---------- Render: Hallazgos con evidencia ----------
-  function addKv(dl, label, value) {
-    var wrap = el("div", "kv-item");
+  function addKv(dl, label, value, isFullWidth) {
+    var wrap = el("div", isFullWidth ? "kv-item is-full" : "kv-item");
     wrap.appendChild(el("dt", null, label));
-    wrap.appendChild(el("dd", null, value));
+    wrap.appendChild(el("dd", isFullWidth ? "kv-evidence-val" : null, value));
     dl.appendChild(wrap);
   }
 
   function renderFindingsPanel(findings) {
-    var section = el("section", "panel");
-    var head = el("div", "panel-head");
-    head.appendChild(el("h2", null, "Hallazgos y evidencia determinista"));
-    head.appendChild(el("p", "panel-note", "Cada hallazgo es una señal con evidencia a investigar, no un diagnóstico concluyente."));
-    section.appendChild(head);
+    var section = el("section", "panel panel-findings");
+    var list = findings || [];
+    var activeSeverity = "ALL";
 
-    if (!findings || !findings.length) {
+    var sevBuckets = {};
+    list.forEach(function (f) {
+      var entry = SEVERITY_TONE[f.severity];
+      var key = entry ? entry[0].toUpperCase() : (f.severity || "OTRA");
+      sevBuckets[key] = true;
+    });
+    var sevKeys = Object.keys(sevBuckets);
+
+    var headControls = el("div", "findings-head-controls");
+    headControls.appendChild(badge(list.length + " hallazgo(s)", list.length ? "info" : "neutral"));
+
+    var listHost = el("div", "finding-list");
+
+    function paintFindings() {
+      listHost.replaceChildren();
+      var visible = activeSeverity === "ALL"
+        ? list
+        : list.filter(function (f) {
+            var entry = SEVERITY_TONE[f.severity];
+            var key = entry ? entry[0].toUpperCase() : (f.severity || "OTRA");
+            return key === activeSeverity;
+          });
+
+      visible.forEach(function (f) {
+        var card = el("article", "finding-card");
+        card.setAttribute("data-severity", f.severity || "");
+
+        var cardHead = el("div", "finding-card-head");
+        var headTop = el("div", "finding-card-top");
+        headTop.appendChild(el("strong", "finding-card-title", f.ruleId + " · " + f.ruleName));
+        var sevEntry = SEVERITY_TONE[f.severity];
+        headTop.appendChild(badge(sevEntry ? sevEntry[0] : f.severity, sevEntry ? sevEntry[1] : "neutral"));
+        cardHead.appendChild(headTop);
+
+        var metaRow = el("div", "finding-badges");
+        metaRow.appendChild(badge(f.findingCode, "neutral"));
+        metaRow.appendChild(badge(f.kind, "neutral"));
+        metaRow.appendChild(badge("Evidencia: " + f.evidenceClass, "neutral"));
+        metaRow.appendChild(badge("Plan #" + f.queryStorePlanId, "neutral"));
+        cardHead.appendChild(metaRow);
+        card.appendChild(cardHead);
+
+        // Franja numérica uniforme (solo métricas cortas)
+        var numericMetrics = [];
+        if (f.context) {
+          if (f.context.executions !== null && f.context.executions !== undefined) {
+            numericMetrics.push(["Ejecuciones", formatNum(f.context.executions, 0)]);
+          }
+          if (f.context.query_consumption_pct !== null && f.context.query_consumption_pct !== undefined) {
+            numericMetrics.push(["Consumo", formatNum(f.context.query_consumption_pct, 2) + " %"]);
+          }
+          if (f.context.estimated_rows !== null && f.context.estimated_rows !== undefined) {
+            numericMetrics.push(["Filas est.", formatNum(f.context.estimated_rows, 2)]);
+          }
+          if (f.context.estimated_rows_read !== null && f.context.estimated_rows_read !== undefined) {
+            numericMetrics.push(["Filas leídas", formatNum(f.context.estimated_rows_read, 2)]);
+          }
+        }
+        if (numericMetrics.length) {
+          var metricsRow = el("div", "finding-metrics-row");
+          numericMetrics.forEach(function (m) {
+            var box = el("div", "finding-metric-tile");
+            box.appendChild(el("span", null, m[0]));
+            box.appendChild(el("strong", null, m[1]));
+            metricsRow.appendChild(box);
+          });
+          card.appendChild(metricsRow);
+        }
+
+        // Metadatos en 2 columnas compactas y evidencia técnica a ancho completo acotado
+        var dl = el("dl", "kv-details");
+        if (f.nodes && f.nodes.length) {
+          addKv(dl, "Nodos del plan", f.nodes.map(function (n) { return "Nodo " + n.node_id + " (" + n.physical_op + ")"; }).join(", "), false);
+        }
+        if (f.thresholdsUsed && Object.keys(f.thresholdsUsed).length) {
+          var thText = Object.keys(f.thresholdsUsed).map(function (k) { return k + "=" + f.thresholdsUsed[k]; }).join(", ");
+          addKv(dl, "Umbrales aplicados", thText, false);
+        }
+        if (f.engineVersion) {
+          addKv(dl, "Motor / Catálogo", f.engineVersion + " · cat. " + f.catalogVersion, false);
+        }
+        if (f.evidenceMaskingFailure) {
+          addKv(dl, "Evidencia", "Omitida por enmascarado seguro (" + f.evidenceMaskingFailure + ")", true);
+        } else if (f.evidence) {
+          Object.keys(f.evidence).forEach(function (k) {
+            addKv(dl, "Evidencia · " + k, f.evidence[k], true);
+          });
+        }
+
+        card.id = "finding-card-" + (f.findingCode || f.id);
+        card.tabIndex = -1;
+        card.appendChild(dl);
+
+        if (f.nodes && f.nodes.length) {
+          var cardFoot = el("div", "finding-card-foot");
+          var jumpRow = el("div", "node-jump-list");
+          f.nodes.forEach(function (n) {
+            var jumpBtn = el("button", "node-jump-btn", "Ver nodo #" + n.node_id + " en el plan →");
+            jumpBtn.type = "button";
+            jumpBtn.setAttribute("data-target-plan-id", f.planId);
+            jumpBtn.setAttribute("data-target-node-id", String(n.node_id));
+            jumpBtn.addEventListener("click", function () {
+              focusNodeInPlanViewer(f.planId, n.node_id);
+            });
+            jumpRow.appendChild(jumpBtn);
+          });
+          cardFoot.appendChild(jumpRow);
+          card.appendChild(cardFoot);
+        }
+
+        listHost.appendChild(card);
+      });
+    }
+
+    if (sevKeys.length > 1) {
+      var filterGroup = el("div", "findings-filter-group");
+      filterGroup.setAttribute("role", "group");
+      filterGroup.setAttribute("aria-label", "Filtrar hallazgos por severidad");
+      var filterBtns = [];
+      [["ALL", "Todos"]].concat(sevKeys.map(function (k) { return [k, k.charAt(0) + k.slice(1).toLowerCase()]; })).forEach(function (pair) {
+        var btn = el("button", "plan-btn", pair[1]);
+        btn.type = "button";
+        btn.setAttribute("aria-pressed", pair[0] === "ALL" ? "true" : "false");
+        btn.addEventListener("click", function () {
+          activeSeverity = pair[0];
+          filterBtns.forEach(function (b, idx) {
+            b.setAttribute("aria-pressed", (idx === 0 ? "ALL" : sevKeys[idx - 1]) === activeSeverity ? "true" : "false");
+          });
+          paintFindings();
+        });
+        filterBtns.push(btn);
+        filterGroup.appendChild(btn);
+      });
+      headControls.appendChild(filterGroup);
+    }
+
+    section.appendChild(buildPanelHead(
+      "Hallazgos y evidencia determinista",
+      "Cada hallazgo es una señal con evidencia a investigar, no un diagnóstico concluyente.",
+      headControls
+    ));
+
+    if (!list.length) {
       section.appendChild(el("p", "panel-note", "No se detectaron hallazgos determinísticos para los planes analizados de esta consulta."));
       return section;
     }
 
-    var list = el("div", "finding-list");
-    findings.forEach(function (f) {
-      var card = el("article", "finding-card");
-      card.setAttribute("data-severity", f.severity || "");
-
-      var cardHead = el("div", "finding-card-head");
-      var title = el("strong", null, f.ruleId + " · " + f.ruleName + " (" + f.findingCode + ")");
-      cardHead.appendChild(title);
-
-      var badges = el("div", "finding-badges");
-      var sevEntry = SEVERITY_TONE[f.severity];
-      badges.appendChild(badge(sevEntry ? sevEntry[0] : f.severity, sevEntry ? sevEntry[1] : "neutral"));
-      badges.appendChild(badge(f.kind, "neutral"));
-      badges.appendChild(badge("Evidencia: " + f.evidenceClass, "neutral"));
-      badges.appendChild(badge("Plan #" + f.queryStorePlanId, "neutral"));
-      cardHead.appendChild(badges);
-      card.appendChild(cardHead);
-
-      var dl = el("dl", "kv-grid");
-      if (f.nodes && f.nodes.length) {
-        addKv(dl, "Nodos del plan", f.nodes.map(function (n) { return "Nodo " + n.node_id + " (" + n.physical_op + ")"; }).join(", "));
-      }
-      if (f.context) {
-        if (f.context.executions !== null && f.context.executions !== undefined) {
-          addKv(dl, "Ejecuciones", formatNum(f.context.executions, 0));
-        }
-        if (f.context.query_consumption_pct !== null && f.context.query_consumption_pct !== undefined) {
-          addKv(dl, "Consumo en ventana", formatNum(f.context.query_consumption_pct, 2) + " %");
-        }
-        if (f.context.estimated_rows !== null && f.context.estimated_rows !== undefined) {
-          addKv(dl, "Filas estimadas", formatNum(f.context.estimated_rows, 2));
-        }
-        if (f.context.estimated_rows_read !== null && f.context.estimated_rows_read !== undefined) {
-          addKv(dl, "Filas leídas est.", formatNum(f.context.estimated_rows_read, 2));
-        }
-      }
-
-      if (f.evidenceMaskingFailure) {
-        addKv(dl, "Evidencia", "Omitida por enmascarado seguro (" + f.evidenceMaskingFailure + ")");
-      } else if (f.evidence) {
-        Object.keys(f.evidence).forEach(function (k) {
-          addKv(dl, "Evidencia · " + k, f.evidence[k]);
-        });
-      }
-
-      if (f.thresholdsUsed && Object.keys(f.thresholdsUsed).length) {
-        var thText = Object.keys(f.thresholdsUsed).map(function (k) { return k + "=" + f.thresholdsUsed[k]; }).join(", ");
-        addKv(dl, "Umbrales aplicados", thText);
-      }
-    if (f.engineVersion) {
-        addKv(dl, "Versión SQL / Catálogo", f.engineVersion + " · cat. " + f.catalogVersion);
-      }
-
-      card.id = "finding-card-" + (f.findingCode || f.id);
-      card.tabIndex = -1;
-      card.appendChild(dl);
-
-      if (f.nodes && f.nodes.length) {
-        var jumpRow = el("div", "node-jump-list");
-        f.nodes.forEach(function (n) {
-          var jumpBtn = el("button", "node-jump-btn", "Ver nodo #" + n.node_id + " en el plan →");
-          jumpBtn.type = "button";
-          jumpBtn.setAttribute("data-target-plan-id", f.planId);
-          jumpBtn.setAttribute("data-target-node-id", String(n.node_id));
-          jumpBtn.addEventListener("click", function () {
-            focusNodeInPlanViewer(f.planId, n.node_id);
-          });
-          jumpRow.appendChild(jumpBtn);
-        });
-        card.appendChild(jumpRow);
-      }
-
-      list.appendChild(card);
-    });
-
-    section.appendChild(list);
+    paintFindings();
+    section.appendChild(listHost);
     return section;
   }
 
@@ -763,8 +1122,7 @@
         var btn = el("button", "node-jump-btn", "Ir al hallazgo " + f.ruleId + " (" + f.findingCode + ") ↓");
         btn.type = "button";
         btn.addEventListener("click", function () {
-          var card = document.getElementById("finding-card-" + f.findingCode);
-          if (card) { card.scrollIntoView({ behavior: "smooth", block: "center" }); }
+          focusFindingCard(f.findingCode);
         });
         fRow.appendChild(btn);
       });
@@ -864,7 +1222,9 @@
       return;
     }
 
-    var inspector = el("div", "plan-node-inspector");
+    var split = el("div", "plan-workbench-split");
+    var mainCol = el("div", "plan-workbench-main");
+    var inspector = el("aside", "plan-node-inspector");
     var selectedOpRef = null;
     var selectedStmtIdx = 0;
 
@@ -892,7 +1252,7 @@
         stmtBox.appendChild(el("p", "panel-note", stmt.isDispatcherPlan
           ? "Plan Dispatcher sin árbol RelOp directo."
           : "Sin operadores RelOp en esta sentencia."));
-        body.appendChild(stmtBox);
+        mainCol.appendChild(stmtBox);
         return;
       }
 
@@ -919,7 +1279,7 @@
           }
         });
         stmtBox.appendChild(graphView);
-        body.appendChild(stmtBox);
+        mainCol.appendChild(stmtBox);
         return;
       }
 
@@ -1013,14 +1373,16 @@
       });
 
       stmtBox.appendChild(list);
-      body.appendChild(stmtBox);
+      mainCol.appendChild(stmtBox);
     });
 
     if (!selectedOpRef && planView.statements[0] && planView.statements[0].operators[0]) {
       selectedOpRef = planView.statements[0].operators[0];
     }
     renderOperatorInspector(inspector, planView.planId, selectedStmtIdx, selectedOpRef);
-    body.appendChild(inspector);
+    split.appendChild(mainCol);
+    split.appendChild(inspector);
+    body.appendChild(split);
   }
 
   function formatIntText(value) {
@@ -1094,24 +1456,30 @@
 
   var detailTabState = {
     active: "overview",
+    order: [],
     buttons: {},
     panels: {}
   };
 
-  function activateDetailTab(tabId) {
+  function activateDetailTab(tabId, opts) {
     if (!detailTabState.panels[tabId]) { return; }
     detailTabState.active = tabId;
     Object.keys(detailTabState.buttons).forEach(function (id) {
-      detailTabState.buttons[id].setAttribute("aria-selected", id === tabId ? "true" : "false");
+      var isSelected = id === tabId;
+      var btn = detailTabState.buttons[id];
+      btn.setAttribute("aria-selected", isSelected ? "true" : "false");
+      btn.tabIndex = isSelected ? 0 : -1;
     });
     Object.keys(detailTabState.panels).forEach(function (id) {
       detailTabState.panels[id].hidden = id !== tabId;
     });
-    try {
-      if (window.history && window.history.replaceState) {
-        window.history.replaceState(null, "", window.location.pathname + window.location.search + "#tab=" + tabId);
-      }
-    } catch (_) { /* noop */ }
+    if (!(opts && opts.skipHistory)) {
+      try {
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState(null, "", window.location.pathname + window.location.search + "#tab=" + tabId);
+        }
+      } catch (_) { /* noop */ }
+    }
   }
 
   function focusNodeInPlanViewer(planId, nodeId) {
@@ -1128,15 +1496,15 @@
     planViewerState.onlyFlagged = false;
     planViewerState.tabsByPlanId = {};
 
-    var section = el("section", "panel");
+    var section = el("section", "panel panel-plan");
     section.id = "plan-viewer-panel";
-    var head = el("div", "panel-head");
-    head.appendChild(el("h2", null, "Plan de ejecución (árbol jerárquico)"));
-    head.appendChild(el("p", "panel-note", "Operadores en jerarquía con costos estimados, advertencias y nodos asociados a hallazgos."));
-    section.appendChild(head);
 
     var plans = detail.plans || [];
     if (!plans.length) {
+      section.appendChild(buildPanelHead(
+        "Plan de ejecución",
+        "Operadores en jerarquía con costos estimados, advertencias y nodos asociados a hallazgos."
+      ));
       section.appendChild(el("p", "panel-note", "Esta consulta todavía no tiene planes de ejecución ingeridos."));
       return section;
     }
@@ -1146,8 +1514,8 @@
     tabs.setAttribute("aria-label", "Planes de ejecución de la consulta");
 
     plans.forEach(function (plan, index) {
-      var label = "Plan #" + plan.queryStorePlanId +
-        (plan.queryPlanHash ? " (" + plan.queryPlanHash + ")" : "");
+      var shortHash = plan.queryPlanHash ? " (" + plan.queryPlanHash.slice(0, 8) + ")" : "";
+      var label = "Plan #" + plan.queryStorePlanId + shortHash;
       var tab = el("button", "plan-tab", label);
       tab.type = "button";
       tab.setAttribute("role", "tab");
@@ -1161,7 +1529,12 @@
       planViewerState.tabsByPlanId[plan.planId] = tab;
       tabs.appendChild(tab);
     });
-    section.appendChild(tabs);
+
+    section.appendChild(buildPanelHead(
+      "Plan de ejecución",
+      "Operadores en jerarquía con costos estimados, advertencias y nodos asociados a hallazgos.",
+      tabs
+    ));
 
     var body = el("div", "plan-viewer-body");
     planViewerState.renderBody = body;
@@ -1312,12 +1685,12 @@
     explanationState.detail = detail;
     explanationState.highlightedFindingCode = null;
 
-    var section = el("section", "panel");
+    var section = el("section", "panel panel-explanation");
     section.id = "explanation-panel";
-    var head = el("div", "panel-head");
-    head.appendChild(el("h2", null, "Explicación asistida por IA"));
-    head.appendChild(el("p", "panel-note", "Cada afirmación se contrasta contra la evidencia del motor antes de mostrarse."));
-    section.appendChild(head);
+    section.appendChild(buildPanelHead(
+      "Diagnóstico asistido por IA",
+      "Cada afirmación se contrasta contra la evidencia determinista del motor antes de mostrarse."
+    ));
 
     var body = el("div", "exp-body");
     explanationState.bodyEl = body;
@@ -1403,37 +1776,6 @@
     return strip;
   }
 
-  function renderQuickFindingsOverview(detail) {
-    var findings = detail.findings || [];
-    if (!findings.length) { return null; }
-
-    var box = el("section", "panel");
-    var head = el("div", "panel-head");
-    var titleWrap = el("div");
-    titleWrap.appendChild(el("h2", null, "Resumen rápido de hallazgos"));
-    titleWrap.appendChild(el("p", "panel-note", "Pulsa un hallazgo para ver su evidencia o saltar directo al nodo del plan."));
-    head.appendChild(titleWrap);
-
-    var allBtn = el("button", "btn btn-sm btn-secondary", "Ver desglose y Score →");
-    allBtn.type = "button";
-    allBtn.addEventListener("click", function () { activateDetailTab("findings"); });
-    head.appendChild(allBtn);
-    box.appendChild(head);
-
-    var row = el("div", "node-jump-list");
-    findings.forEach(function (f) {
-      var sev = SEVERITY_TONE[f.severity];
-      var btn = el("button", "node-jump-btn", f.ruleId + " (" + (sev ? sev[0] : f.severity) + ") · " + f.ruleName);
-      btn.type = "button";
-      btn.addEventListener("click", function () {
-        focusFindingCard(f.findingCode || f.id);
-      });
-      row.appendChild(btn);
-    });
-    box.appendChild(row);
-    return box;
-  }
-
   function initialTabFromHash() {
     var m = (window.location.hash || "").match(/tab=(overview|plan|series|findings)/);
     return m ? m[1] : "overview";
@@ -1466,6 +1808,7 @@
     tabBar.setAttribute("role", "tablist");
     tabBar.setAttribute("aria-label", "Secciones del diagnóstico");
 
+    detailTabState.order = tabDefs.map(function (t) { return t.id; });
     detailTabState.buttons = {};
     detailTabState.panels = {};
     var startTab = initialTabFromHash();
@@ -1473,47 +1816,65 @@
     tabDefs.forEach(function (t) {
       var btn = el("button", "detail-tab-btn");
       btn.type = "button";
+      btn.id = "detail-tab-" + t.id;
       btn.setAttribute("role", "tab");
+      btn.setAttribute("aria-controls", "detail-panel-" + t.id);
       btn.setAttribute("aria-selected", t.id === startTab ? "true" : "false");
+      btn.tabIndex = t.id === startTab ? 0 : -1;
       btn.appendChild(el("span", null, t.label));
       if (t.count !== null) {
         btn.appendChild(el("span", "detail-tab-count", String(t.count)));
       }
       btn.addEventListener("click", function () { activateDetailTab(t.id); });
+      btn.addEventListener("keydown", function (ev) {
+        var order = detailTabState.order;
+        var idx = order.indexOf(t.id);
+        if (idx === -1) { return; }
+        var nextId = null;
+        if (ev.key === "ArrowRight") { nextId = order[(idx + 1) % order.length]; }
+        else if (ev.key === "ArrowLeft") { nextId = order[(idx - 1 + order.length) % order.length]; }
+        else if (ev.key === "Home") { nextId = order[0]; }
+        else if (ev.key === "End") { nextId = order[order.length - 1]; }
+        if (nextId) {
+          ev.preventDefault();
+          activateDetailTab(nextId);
+          if (detailTabState.buttons[nextId]) { detailTabState.buttons[nextId].focus(); }
+        }
+      });
       detailTabState.buttons[t.id] = btn;
       tabBar.appendChild(btn);
     });
     stack.appendChild(tabBar);
 
-    // Panel 1: SQL y Diagnóstico IA
+    // Panel 1: SQL y Diagnóstico IA (Opción A: bandas horizontales sin espacios muertos)
     var pOverview = el("div", "detail-tab-panel");
+    pOverview.id = "detail-panel-overview";
     pOverview.setAttribute("role", "tabpanel");
-    var workbench = el("div", "detail-workbench");
-    var leftCol = el("div", "detail-col");
-    leftCol.appendChild(renderSqlPanel(detail));
-    var rightCol = el("div", "detail-col");
-    rightCol.appendChild(renderExplanationPanel(detail));
-    workbench.appendChild(leftCol);
-    workbench.appendChild(rightCol);
-    pOverview.appendChild(workbench);
-    var quickFind = renderQuickFindingsOverview(detail);
-    if (quickFind) { pOverview.appendChild(quickFind); }
+    pOverview.setAttribute("aria-labelledby", "detail-tab-overview");
+    pOverview.appendChild(renderSqlPanel(detail));
+    pOverview.appendChild(renderExplanationPanel(detail));
 
     // Panel 2: Plan de Ejecución
     var pPlan = el("div", "detail-tab-panel");
+    pPlan.id = "detail-panel-plan";
     pPlan.setAttribute("role", "tabpanel");
+    pPlan.setAttribute("aria-labelledby", "detail-tab-plan");
     pPlan.appendChild(renderPlanTreePanel(detail));
 
     // Panel 3: Series Temporales
     var pSeries = el("div", "detail-tab-panel");
+    pSeries.id = "detail-panel-series";
     pSeries.setAttribute("role", "tabpanel");
+    pSeries.setAttribute("aria-labelledby", "detail-tab-series");
     pSeries.appendChild(renderSeriesPanel(detail));
 
-    // Panel 4: Hallazgos y Score
+    // Panel 4: Hallazgos y Score (Score arriba → Hallazgos abajo)
     var pFindings = el("div", "detail-tab-panel");
+    pFindings.id = "detail-panel-findings";
     pFindings.setAttribute("role", "tabpanel");
-    pFindings.appendChild(renderFindingsPanel(detail.findings));
+    pFindings.setAttribute("aria-labelledby", "detail-tab-findings");
     pFindings.appendChild(renderScorePanel(detail.score));
+    pFindings.appendChild(renderFindingsPanel(detail.findings));
 
     detailTabState.panels = {
       overview: pOverview,
@@ -1527,7 +1888,7 @@
     });
 
     root.appendChild(stack);
-    activateDetailTab(startTab);
+    activateDetailTab(startTab, { skipHistory: !window.location.hash });
   }
 
   function getQueryIdFromUrl() {
@@ -1570,6 +1931,12 @@
   }
 
   $("f-window").addEventListener("change", loadDetail);
+  window.addEventListener("hashchange", function () {
+    var target = initialTabFromHash();
+    if (detailTabState.panels[target] && detailTabState.active !== target) {
+      activateDetailTab(target, { skipHistory: true });
+    }
+  });
 
   var initialWindow = new URLSearchParams(window.location.search).get("window");
   if (initialWindow === "24h" || initialWindow === "7d" || initialWindow === "30d") {
