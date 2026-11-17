@@ -29,13 +29,16 @@ class MockProvider(BaseLLMProvider):
         fallback_fragment = request.kb_fragments[0] if request.kb_fragments else None
 
         for finding in request.findings:
-            # 1. OBSERVACION
+            # 1. OBSERVACION (cita evidencias y métricas numéricas verificables de finding.metrics)
             nodes_desc = ", ".join(finding.target_nodes) if finding.target_nodes else "la consulta"
+            metrics_parts = [f"{k}={v}" for k, v in finding.metrics.items() if isinstance(v, (int, float))]
+            metrics_text = f" Evidencia métrica: {', '.join(metrics_parts)}." if metrics_parts else ""
+
             obs_claim = ClaimOutput(
                 claim_type=ClaimType.OBSERVACION,
                 statement=(
                     f"El motor determinístico detectó {finding.rule_id} ({finding.rule_name}) "
-                    f"con severidad {finding.severity} sobre {nodes_desc}. {finding.description}"
+                    f"con severidad {finding.severity} sobre {nodes_desc}. {finding.description}.{metrics_text}"
                 ),
                 finding_ids=[finding.finding_id],
                 kb_fragment_id=None,
