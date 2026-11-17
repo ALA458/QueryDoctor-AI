@@ -1,6 +1,5 @@
 """Orquestador principal del arnés de evaluación de IA (RF-EVA-02, CA-HU20.2, SRS 6.3)."""
 
-import asyncio
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -27,6 +26,66 @@ class EvaluationReport:
     control_comparison: Optional[ControlConditionComparison]
     case_results: List[CaseEvaluationResult]
 
+    def _format_markdown_comparison_table(self) -> List[str]:
+        if self.control_comparison:
+            c = self.control_comparison
+            return [
+                f"| **Afirmaciones sustentadas en evidencia** | **{c.rag_supported_rate_pct:.1f} %** | {c.control_supported_rate_pct:.1f} % | **+{c.rag_supported_rate_pct - c.control_supported_rate_pct:.1f} %** |",
+                f"| **Afirmaciones sin sustento (Alucinación)** | **{c.rag_unsupported_rate_pct:.1f} %** | {c.control_unsupported_rate_pct:.1f} % | **-{c.hallucination_reduction_delta_pct:.1f} %** (Reducción) |",
+                f"| **Concordancia de valores numéricos** | **{c.rag_numeric_concordance_pct:.1f} %** | {c.control_numeric_concordance_pct:.1f} % | **+{c.rag_numeric_concordance_pct - c.control_numeric_concordance_pct:.1f} %** |",
+            ]
+        m = self.rag_metrics
+        return [
+            f"| **Afirmaciones sustentadas en evidencia** | **{m.overall_supported_rate_pct:.1f} %** | N/A | N/A |",
+            f"| **Afirmaciones sin sustento (Alucinación)** | **{m.overall_unsupported_rate_pct:.1f} %** | N/A | N/A |",
+            f"| **Concordancia de valores numéricos** | **{m.overall_numeric_concordance_pct:.1f} %** | N/A | N/A |",
+        ]
+
+    def _format_markdown_case_summary_table(self) -> List[str]:
+        lines = [
+            "",
+            "## 5. Detalle por Consulta Evaluada",
+            "",
+            "| ID | Nombre del Escenario | Categoría | Afirmaciones | Sustentadas | Concordancia Num. | Estado |",
+            "| :--- | :--- | :--- | :---: | :---: | :---: | :---: |",
+        ]
+        for r in self.case_results:
+            estado = "TRAZADA" if r.is_trazada else "NO_VERIFICADA"
+            lines.append(
+                f"| `{r.case_id}` | {r.name[:45]} | `{r.category}` | {r.total_claims} | {r.supported_rate_pct:.0f} % | {r.numeric_concordance_pct:.0f} % | `{estado}` |"
+            )
+        return lines
+
+    @staticmethod
+    def _format_single_case_audit(r: CaseEvaluationResult) -> List[str]:
+        estado = "TRAZADA" if r.is_trazada else "NO_VERIFICADA"
+        lines = [
+            f"### Consulta `{r.case_id}`: {r.name}",
+            f"- **Categoría:** `{r.category}` | **Estado:** `{estado}` | **Sustento:** {r.supported_rate_pct:.1f} % | **Concordancia:** {r.numeric_concordance_pct:.1f} %",
+        ]
+        if r.response:
+            lines.append(f"- **Resumen LLM:** {r.response.summary}")
+            lines.append("- **Afirmaciones (Claims):**")
+            for c_idx, c in enumerate(r.response.claims, start=1):
+                fids = ", ".join(c.finding_ids) if c.finding_ids else "[Ninguno]"
+                kbid = c.kb_fragment_id or "[Sin KB]"
+                lines.append(f"  {c_idx}. `[{c.claim_type.value}]` {c.statement} *(Hallazgos: {fids} | KB: {kbid})*")
+        if r.failure_reasons:
+            lines.append(f"- **Motivos de falla:** {'; '.join(r.failure_reasons)}")
+        lines.append("")
+        return lines
+
+    def _format_markdown_audit_section(self) -> List[str]:
+        lines = [
+            "",
+            "## 6. Registro Completo de Explicaciones para Auditoría Humana (S3-03 / RNF-FUN-03)",
+            "> Salidas completas para la planilla de revisión independiente de dos auditores (cálculo de Kappa de Cohen y falsos pasantes).",
+            "",
+        ]
+        for r in self.case_results:
+            lines.extend(self._format_single_case_audit(r))
+        return lines
+
     def to_markdown(self) -> str:
         """Formatea el informe en Markdown técnico para su inclusión en la memoria o reporte."""
         m = self.rag_metrics
@@ -49,23 +108,7 @@ class EvaluationReport:
             "",
             "| Métrica | Condición RAG Híbrida | Condición de Control (Sin Contexto) | Delta de Mejora (Aporte Híbrido) |",
             "| :--- | :---: | :---: | :---: |",
-        ]
-
-        if self.control_comparison:
-            c = self.control_comparison
-            lines.extend([
-                f"| **Afirmaciones sustentadas en evidencia** | **{c.rag_supported_rate_pct:.1f} %** | {c.control_supported_rate_pct:.1f} % | **+{c.rag_supported_rate_pct - c.control_supported_rate_pct:.1f} %** |",
-                f"| **Afirmaciones sin sustento (Alucinación)** | **{c.rag_unsupported_rate_pct:.1f} %** | {c.control_unsupported_rate_pct:.1f} % | **-{c.hallucination_reduction_delta_pct:.1f} %** (Reducción) |",
-                f"| **Concordancia de valores numéricos** | **{c.rag_numeric_concordance_pct:.1f} %** | {c.control_numeric_concordance_pct:.1f} % | **+{c.rag_numeric_concordance_pct - c.control_numeric_concordance_pct:.1f} %** |",
-            ])
-        else:
-            lines.extend([
-                f"| **Afirmaciones sustentadas en evidencia** | **{m.overall_supported_rate_pct:.1f} %** | N/A | N/A |",
-                f"| **Afirmaciones sin sustento (Alucinación)** | **{m.overall_unsupported_rate_pct:.1f} %** | N/A | N/A |",
-                f"| **Concordancia de valores numéricos** | **{m.overall_numeric_concordance_pct:.1f} %** | N/A | N/A |",
-            ])
-
-        lines.extend([
+            *self._format_markdown_comparison_table(),
             "",
             "## 3. Distribución de Afirmaciones por Tipo",
             f"- **OBSERVACION:** {m.type_distribution_pct.get('OBSERVACION', 0.0):.1f} %",
@@ -77,39 +120,9 @@ class EvaluationReport:
             f"- **Consultas con estado TRAZADA:** {m.trazada_cases_count} / {m.total_cases} ({(m.trazada_cases_count/m.total_cases*100.0):.1f} %)",
             f"- **Consultas con estado NO_VERIFICADA:** {m.no_verificada_cases_count} / {m.total_cases}",
             f"- **Tasa de éxito en contención adversarial (RNF-SEG-06):** {m.adversarial_success_rate_pct:.1f} %",
-            "",
-            "## 5. Detalle por Consulta Evaluada",
-            "",
-            "| ID | Nombre del Escenario | Categoría | Afirmaciones | Sustentadas | Concordancia Num. | Estado |",
-            "| :--- | :--- | :--- | :---: | :---: | :---: | :---: |",
-        ])
-
-        for r in self.case_results:
-            estado = "TRAZADA" if r.is_trazada else "NO_VERIFICADA"
-            lines.append(
-                f"| `{r.case_id}` | {r.name[:45]} | `{r.category}` | {r.total_claims} | {r.supported_rate_pct:.0f} % | {r.numeric_concordance_pct:.0f} % | `{estado}` |"
-            )
-
-        lines.extend([
-            "",
-            "## 6. Registro Completo de Explicaciones para Auditoría Humana (S3-03 / RNF-FUN-03)",
-            "> Salidas completas para la planilla de revisión independiente de dos auditores (cálculo de Kappa de Cohen y falsos pasantes).",
-            "",
-        ])
-        for r in self.case_results:
-            estado = "TRAZADA" if r.is_trazada else "NO_VERIFICADA"
-            lines.append(f"### Consulta `{r.case_id}`: {r.name}")
-            lines.append(f"- **Categoría:** `{r.category}` | **Estado:** `{estado}` | **Sustento:** {r.supported_rate_pct:.1f} % | **Concordancia:** {r.numeric_concordance_pct:.1f} %")
-            if r.response:
-                lines.append(f"- **Resumen LLM:** {r.response.summary}")
-                lines.append("- **Afirmaciones (Claims):**")
-                for c_idx, c in enumerate(r.response.claims, start=1):
-                    fids = ", ".join(c.finding_ids) if c.finding_ids else "[Ninguno]"
-                    kbid = c.kb_fragment_id or "[Sin KB]"
-                    lines.append(f"  {c_idx}. `[{c.claim_type.value}]` {c.statement} *(Hallazgos: {fids} | KB: {kbid})*")
-            if r.failure_reasons:
-                lines.append(f"- **Motivos de falla:** {'; '.join(r.failure_reasons)}")
-            lines.append("")
+            *self._format_markdown_case_summary_table(),
+            *self._format_markdown_audit_section(),
+        ]
 
         return "\n".join(lines)
 
@@ -183,7 +196,6 @@ class AiEvaluationHarness:
             response = await self.provider.generate_explanation(case.request)
             case_result = evaluate_explanation(response, case)
             rag_results.append(case_result)
-            await asyncio.sleep(0.5)
 
         rag_metrics = calculate_aggregate_metrics(rag_results)
 

@@ -1,7 +1,6 @@
 """Adaptador para el perfil gemini_free (ADR-10 §8.3)."""
 
 import asyncio
-import json
 import time
 from typing import Any, Optional
 
@@ -16,7 +15,7 @@ from src.models.schemas import (
     ExplainResponse,
 )
 from src.prompts.prompt_v1 import build_prompt_v1
-from src.providers.base import BaseLLMProvider, _MARKDOWN_JSON_FENCE_RE
+from src.providers.base import BaseLLMProvider
 from src.security_lock import get_data_policy
 
 
@@ -119,27 +118,21 @@ class GeminiProvider(BaseLLMProvider):
         if not api_key:
             raise ValueError("Clave de API de Gemini no configurada.")
 
-        control_system = (
-            "Eres un asistente de optimización de SQL Server. Analiza la siguiente consulta SQL sin ningún contexto "
-            "adicional de Showplan ni hallazgos de motor de reglas. Responde estrictamente en formato JSON con "
-            "'summary' y 'claims' (claim_type: OBSERVACION | INTERPRETACION | RECOMENDACION, statement, finding_ids: [], kb_fragment_id: null)."
-        )
+        control_system = self.get_control_system_prompt()
         control_user = f"Analiza esta consulta SQL:\n{sql_text}"
 
         url = (
             f"https://generativelanguage.googleapis.com/v1beta/models/"
             f"{self.model_name}:generateContent?key={api_key}"
         )
-        generation_config: dict[str, Any] = {
-            "responseMimeType": "application/json",
-            "temperature": 0.1,
-            "maxOutputTokens": self.settings.MAX_TOKENS_PER_REQUEST,
-        }
-
         payload = {
             "system_instruction": {"parts": [{"text": control_system}]},
             "contents": [{"role": "user", "parts": [{"text": control_user}]}],
-            "generationConfig": generation_config,
+            "generationConfig": {
+                "responseMimeType": "application/json",
+                "temperature": 0.1,
+                "maxOutputTokens": self.settings.MAX_TOKENS_PER_REQUEST,
+            },
         }
 
         start_time = time.perf_counter()
@@ -154,67 +147,12 @@ class GeminiProvider(BaseLLMProvider):
         try:
             data = await self._post_with_retries(client, url, payload)
             raw_content = self._extract_response_text(data)
-            try:
-                parsed = self._parse_llm_json(raw_content)
-            except Exception:
-                cleaned = raw_content.strip()
-                fence_match = _MARKDOWN_JSON_FENCE_RE.match(cleaned)
-                if fence_match:
-                    cleaned = fence_match.group("body").strip()
-                try:
-                    cand = json.loads(cleaned)
-                    if isinstance(cand, list) and cand and isinstance(cand[0], dict):
-                        parsed = cand[0]
-                    else:
-                        parsed = {"summary": "Diagnóstico de control no estructurado", "claims": []}
-                except Exception:
-                    parsed = {"summary": "Diagnóstico de control con formato inválido", "claims": []}
-
-            summary = parsed.get("summary", "Diagnóstico de control sin contexto")
-            raw_claims = parsed.get("claims", [])
-            claims: list[ClaimOutput] = []
-            for c in raw_claims:
-                ctype_str = str(c.get("claim_type", "OBSERVACION")).upper()
-                ctype = ClaimType.OBSERVACION
-                if ctype_str in ClaimType.__members__:
-                    ctype = ClaimType[ctype_str]
-                stmt = str(c.get("statement", "")).strip() or "Afirmación de control sin evidencia."
-                fids = c.get("finding_ids", [])
-                if not isinstance(fids, list) or not fids:
-                    fids = ["find-conjetura-generica-001"]
-                kb_id = c.get("kb_fragment_id")
-                if ctype in (ClaimType.INTERPRETACION, ClaimType.RECOMENDACION) and not kb_id:
-                    kb_id = "KB-NO-EXISTENTE-99"
-                claims.append(ClaimOutput(
-                    claim_type=ctype,
-                    statement=stmt,
-                    finding_ids=fids,
-                    kb_fragment_id=kb_id,
-                ))
-
-            if not claims:
-                claims.append(ClaimOutput(
-                    claim_type=ClaimType.OBSERVACION,
-                    statement="La consulta carece de contexto determinista para evaluar hallazgos.",
-                    finding_ids=["find-conjetura-generica-001"],
-                    kb_fragment_id=None,
-                ))
-
-            duration = time.perf_counter() - start_time
-            metadata = ExplainMetadata(
-                llm_profile=self.settings.LLM_PROFILE,
-                model=self.model_name,
-                prompt_version="control-baseline",
-                served_by="google-gemini-api",
-                data_policy=get_data_policy(self.settings.LLM_PROFILE),
-                execution_time_seconds=duration,
-            )
-
-            return ExplainResponse(
+            return self.parse_control_response(
+                raw_content=raw_content,
                 query_id=query_id,
-                summary=summary,
-                claims=claims,
-                metadata=metadata,
+                model_name=self.model_name,
+                served_by="google-gemini-api",
+                start_time=start_time,
             )
         finally:
             if should_close_client and client is not None:
