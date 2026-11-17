@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import json
 import math
+import os
 import random
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -14,6 +15,7 @@ from eval.dataset import EvaluationCase, build_evaluation_dataset
 
 AUDIT_VERDICTS: Tuple[str, ...] = ("verdadera", "parcialmente_verdadera", "incorrecta")
 _WILSON_Z_95 = 1.959963984540054
+_MAX_CLAIMS_PER_CASE = 100
 
 _DEFAULT_RUBRIC_MD = """# Rúbrica de Auditoría Manual — `S3-03` (`RNF-FUN-03` / `SRS §6.3`)
 
@@ -146,7 +148,7 @@ def _build_confusion_matrix(
     categories: Sequence[str],
 ) -> Dict[str, Dict[str, int]]:
     matrix: Dict[str, Dict[str, int]] = {
-        c1: {c2: 0 for c2 in categories} for c1 in categories
+        c1: dict.fromkeys(categories, 0) for c1 in categories
     }
     for l1, l2 in zip(labels_r1, labels_r2):
         matrix[l1][l2] += 1
@@ -321,7 +323,35 @@ def _format_blind_case_markdown(audit_id: str, case_obj: EvaluationCase, case_re
     return lines
 
 
-def _write_reviewer_csv(path: Path, rows: Sequence[Dict[str, Any]]) -> None:
+def _resolve_contained_file(base_dir: Path, filename: str) -> Path:
+    """Resuelve un archivo dentro de base_dir validando contención contra Path Traversal (CWE-22)."""
+    clean_name = os.path.basename(filename)
+    if not clean_name or clean_name in {".", ".."}:
+        raise ValueError(f"Nombre de archivo inválido: {filename!r}")
+    resolved_base = base_dir.resolve()
+    resolved_target = (resolved_base / clean_name).resolve()
+    if os.path.commonpath([str(resolved_base), str(resolved_target)]) != str(resolved_base):
+        raise ValueError(f"Intento de escape de directorio detectado para {filename!r}")
+    return resolved_target
+
+
+def _resolve_output_dir(output_dir: Path, allowed_root: Optional[Path]) -> Path:
+    resolved_dir = output_dir.resolve()
+    if allowed_root is not None:
+        resolved_root = allowed_root.resolve()
+        if os.path.commonpath([str(resolved_root), str(resolved_dir)]) != str(resolved_root):
+            raise ValueError(f"Directorio de salida fuera de la raíz permitida: {output_dir}")
+    resolved_dir.mkdir(parents=True, exist_ok=True)
+    return resolved_dir
+
+
+def _write_contained_text(base_dir: Path, filename: str, content: str) -> Path:
+    target = _resolve_contained_file(base_dir, filename)
+    target.write_text(content, encoding="utf-8")
+    return target
+
+
+def _write_reviewer_csv(output_dir: Path, filename: str, rows: Sequence[Dict[str, Any]]) -> None:
     fieldnames = [
         "audit_id",
         "claim_index",
@@ -333,7 +363,8 @@ def _write_reviewer_csv(path: Path, rows: Sequence[Dict[str, Any]]) -> None:
         "summary_error",
         "error_reason",
     ]
-    with path.open("w", encoding="utf-8", newline="") as f:
+    target = _resolve_contained_file(output_dir, filename)
+    with target.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for row in rows:
@@ -345,8 +376,15 @@ def prepare_blind_audit_bundle(
     output_dir: Path,
     seed: int = 20261117,
     dataset_builder: Callable[[], List[EvaluationCase]] = build_evaluation_dataset,
+    allowed_root: Optional[Path] = None,
 ) -> Dict[str, Any]:
     """Genera el paquete ciego (cuaderno, rúbrica, manifiesto y 2 planillas CSV independientes)."""
+    if allowed_root is not None:
+        resolved_root = allowed_root.resolve()
+        resolved_report = report_json_path.resolve()
+        if os.path.commonpath([str(resolved_root), str(resolved_report)]) != str(resolved_root):
+            raise ValueError(f"Reporte fuera de la raíz permitida: {report_json_path}")
+
     report = _load_report_json(report_json_path)
     cases_by_id = {c.case_id: c for c in dataset_builder()}
     report_cases: List[Dict[str, Any]] = list(report.get("cases", []))
@@ -360,7 +398,7 @@ def prepare_blind_audit_bundle(
     shuffled_cases = list(report_cases)
     random.Random(seed).shuffle(shuffled_cases)
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    safe_output_dir = _resolve_output_dir(output_dir, allowed_root)
     notebook_lines: List[str] = [
         "# Cuaderno de Evidencia Ciega — Auditoría Manual `S3-03` (`RNF-FUN-03`)",
         "",
@@ -375,15 +413,18 @@ def prepare_blind_audit_bundle(
         audit_id = f"AUD-{idx:02d}"
         case_obj = cases_by_id[case_report["case_id"]]
         notebook_lines.extend(_format_blind_case_markdown(audit_id, case_obj, case_report))
+        raw_claims = list(case_report.get("claims", []))
+        if not raw_claims or len(raw_claims) > _MAX_CLAIMS_PER_CASE:
+            raise ValueError(f"Número de afirmaciones inválido en {case_obj.case_id}: {len(raw_claims)}")
         manifest_entries.append({
             "audit_id": audit_id,
             "case_id": case_obj.case_id,
             "category": case_obj.category,
             "name": case_obj.name,
             "is_trazada": bool(case_report.get("is_trazada", False)),
-            "claim_count": len(case_report.get("claims", [])),
+            "claim_count": len(raw_claims),
         })
-        for claim in case_report.get("claims", []):
+        for claim in raw_claims:
             csv_rows.append({
                 "audit_id": audit_id,
                 "claim_index": claim["claim_index"],
@@ -396,21 +437,22 @@ def prepare_blind_audit_bundle(
                 "error_reason": "",
             })
 
-    (output_dir / "RUBRICA_AUDITORIA.md").write_text(_DEFAULT_RUBRIC_MD, encoding="utf-8")
-    (output_dir / "cuaderno_evidencia_ciega.md").write_text("\n".join(notebook_lines), encoding="utf-8")
-    _write_reviewer_csv(output_dir / "planilla_revisor_1.csv", csv_rows)
-    _write_reviewer_csv(output_dir / "planilla_revisor_2.csv", csv_rows)
+    _write_contained_text(safe_output_dir, "RUBRICA_AUDITORIA.md", _DEFAULT_RUBRIC_MD)
+    _write_contained_text(safe_output_dir, "cuaderno_evidencia_ciega.md", "\n".join(notebook_lines))
+    _write_reviewer_csv(safe_output_dir, "planilla_revisor_1.csv", csv_rows)
+    _write_reviewer_csv(safe_output_dir, "planilla_revisor_2.csv", csv_rows)
 
     manifest = {
         "seed": seed,
-        "report_metadata": report.get("metadata", {}),
+        "report_metadata": dict(report.get("metadata", {})),
         "total_cases": len(manifest_entries),
         "total_claims": len(csv_rows),
         "entries": manifest_entries,
     }
-    (output_dir / "audit_manifest.json").write_text(
+    _write_contained_text(
+        safe_output_dir,
+        "audit_manifest.json",
         json.dumps(manifest, indent=2, ensure_ascii=False),
-        encoding="utf-8",
     )
     return manifest
 
@@ -465,13 +507,21 @@ def _load_adjudication_csv(path: Optional[Path]) -> Dict[str, Tuple[str, str]]:
     return resolved
 
 
+def _parse_claim_count(raw_value: Any) -> int:
+    count = int(raw_value)
+    if count < 1 or count > _MAX_CLAIMS_PER_CASE:
+        raise ValueError(f"claim_count fuera de rango permitido (1..{_MAX_CLAIMS_PER_CASE}): {count}")
+    return count
+
+
 def _build_expected_keys(manifest: Dict[str, Any]) -> Tuple[List[Tuple[str, int]], Dict[str, Dict[str, Any]]]:
     entries_by_audit: Dict[str, Dict[str, Any]] = {}
     expected_keys: List[Tuple[str, int]] = []
     for entry in manifest.get("entries", []):
         audit_id = entry["audit_id"]
         entries_by_audit[audit_id] = entry
-        for claim_idx in range(1, int(entry["claim_count"]) + 1):
+        bounded_count = min(_parse_claim_count(entry["claim_count"]), _MAX_CLAIMS_PER_CASE)
+        for claim_idx in range(1, bounded_count + 1):
             expected_keys.append((audit_id, claim_idx))
     return expected_keys, entries_by_audit
 
@@ -510,7 +560,7 @@ def _evaluate_cases_from_claims(
 
     for entry in manifest["entries"]:
         audit_id = entry["audit_id"]
-        claim_count = int(entry["claim_count"])
+        claim_count = min(_parse_claim_count(entry["claim_count"]), _MAX_CLAIMS_PER_CASE)
         c1 = [r1_rows[(audit_id, idx)] for idx in range(1, claim_count + 1)]
         c2 = [r2_rows[(audit_id, idx)] for idx in range(1, claim_count + 1)]
 

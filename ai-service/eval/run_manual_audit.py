@@ -29,7 +29,16 @@ def _resolve_repo_path(repo_root: Path, raw_path: str, fallback_rel: str) -> Pat
     return candidate
 
 
-def _build_parser(repo_root: Path) -> argparse.ArgumentParser:
+def _write_repo_text_file(repo_root: Path, target_path: Path, content: str) -> None:
+    resolved_root = repo_root.resolve()
+    resolved_target = target_path.resolve()
+    if os.path.commonpath([str(resolved_root), str(resolved_target)]) != str(resolved_root):
+        raise ValueError(f"Intento de escritura fuera de la raíz del repositorio: {target_path}")
+    resolved_target.parent.mkdir(parents=True, exist_ok=True)
+    resolved_target.write_text(content, encoding="utf-8")
+
+
+def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Herramienta de auditoría manual por dos revisores independientes (S3-03 / RNF-FUN-03)"
     )
@@ -95,19 +104,24 @@ def _build_parser(repo_root: Path) -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> int:
+def main() -> None:
     repo_root = root_dir.parent.resolve()
-    args = _build_parser(repo_root).parse_args()
+    args = _build_parser().parse_args()
 
     if args.command == "prepare":
         report_path = _resolve_repo_path(repo_root, args.report, "lab/results/ai_evaluation_report.json")
         out_dir = _resolve_repo_path(repo_root, args.out_dir, "lab/results/auditoria")
-        manifest = prepare_blind_audit_bundle(report_path, out_dir, seed=args.seed)
+        manifest = prepare_blind_audit_bundle(
+            report_path,
+            out_dir,
+            seed=args.seed,
+            allowed_root=repo_root,
+        )
         print(
             f"[OK] Paquete ciego generado en {out_dir}: "
             f"{manifest['total_cases']} casos, {manifest['total_claims']} afirmaciones (seed={manifest['seed']})."
         )
-        return 0
+        return
 
     manifest_path = _resolve_repo_path(repo_root, args.manifest, "lab/results/auditoria/audit_manifest.json")
     r1_path = _resolve_repo_path(repo_root, args.r1, "lab/results/auditoria/planilla_revisor_1.csv")
@@ -122,10 +136,8 @@ def main() -> int:
 
     audit_report = score_manual_audit(manifest_path, r1_path, r2_path, adjudication_csv=adj_path)
 
-    out_md.parent.mkdir(parents=True, exist_ok=True)
-    out_json.parent.mkdir(parents=True, exist_ok=True)
-    out_md.write_text(render_audit_markdown(audit_report), encoding="utf-8")
-    out_json.write_text(json.dumps(report_to_dict(audit_report), indent=2, ensure_ascii=False), encoding="utf-8")
+    _write_repo_text_file(repo_root, out_md, render_audit_markdown(audit_report))
+    _write_repo_text_file(repo_root, out_json, json.dumps(report_to_dict(audit_report), indent=2, ensure_ascii=False))
 
     strict_pct = audit_report.strict_false_passer_ci.proportion * 100.0
     print(
@@ -136,8 +148,7 @@ def main() -> int:
     )
     print(f"     Informe Markdown: {out_md}")
     print(f"     Métricas JSON:    {out_json}")
-    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
