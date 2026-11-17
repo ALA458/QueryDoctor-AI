@@ -42,6 +42,7 @@ public sealed class RuleCatalogAndContractTests
         var defaults = RuleThresholds.Default;
 
         Assert.Equal(10_000.0, defaults.Reg03MinEstimatedRows);
+        Assert.Equal(1_000.0, defaults.Reg03MinPredicateVolumeRows);
         Assert.Equal(10.0, defaults.Reg03RowsReadToReturnedRatio);
         Assert.Equal(1.0, defaults.MinQueryConsumptionPct);
         Assert.Equal(1_000.0, defaults.Reg04MinEstimatedExecutions);
@@ -52,6 +53,7 @@ public sealed class RuleCatalogAndContractTests
 
         var reg03Thresholds = defaults.GetThresholdsForRule("REG-03");
         Assert.Equal(10_000.0, reg03Thresholds["min_estimated_rows"]);
+        Assert.Equal(1_000.0, reg03Thresholds["min_predicate_volume_rows"]);
         Assert.Equal(10.0, reg03Thresholds["rows_read_to_returned_ratio"]);
         Assert.Equal(1.0, reg03Thresholds["min_query_consumption_pct"]);
 

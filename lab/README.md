@@ -38,9 +38,11 @@ El contenedor `sqlserver` lee la contraseña de `sa` desde un Docker secret y el
 | `sql/08-checks-noperm.sql` y `sql/09-grant-perf-state.sql` | Verificación de **F4(b)** (rechazo sin permisos) y **F4(c)** (`VIEW DATABASE PERFORMANCE STATE` en SQL Server 2022). |
 | `sql/10-whitelist-validation.sql` | Ejecuta las 6 sentencias de `TelemetryStatementWhitelist` (S1-08) contra `QD_Lab` usando `qd_reader`. |
 | `Run-Lab.ps1` | Orquestador por pasos (`defaults`, `build`, `login`, `workload`, `extract`, `checks`, `repro`, `tpch`, `all`). |
+| `Run-CalibrationSweep.ps1` | **S3-01 (`DA-02`):** Barrido reproducible de sensibilidad sobre `--split calibration` y validación con `--check-targets` sobre `evaluation` y `all`. |
 | `tpch/01..04-*.sql` | **S2-14 (`DA-11`):** Crea `QD_TPCH` (esquema estándar TPC-H a escala `SF = 0.1`, compatibilidad `160`), carga sintética determinista, ejecuta `Q01`–`Q22` + `NEG01`–`NEG04` y extrae planes `.sqlplan` + contexto en `tests/fixtures/plans/tpch/` y `results/raw/tpch-runtime-context.json`. |
 | `results/S1-07-verificacion.md` | Informe versionado con la tabla de hallazgos por escenario y el veredicto F1–F8. |
 | `results/S2-14-arnes-motor.md` | Resultados de línea base del arnés del motor (`RF-EVA-01`, `CA-HU20.1`) sobre planes sembrados + TPC-H con `RuleThresholds.Default`. |
+| `results/S3-01-calibracion-umbrales.md` | Informe versionado de calibración empírica de umbrales (`DA-02`, `RF-MOT-14`), barrido en `calibration`, validación ciega en `evaluation` y declaración de provisionalidad. |
 | `results/raw/` | Salidas crudas (`F5-defaults.txt`, `checks.txt`, `reproducibility-3runs.txt`). |
 
 Los planes Showplan XML extraídos se guardan en `tests/fixtures/plans/` en pares:

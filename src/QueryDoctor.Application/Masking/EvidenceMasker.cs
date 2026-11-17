@@ -62,6 +62,7 @@ internal static class EvidenceMasker
         ["impact_pct"] = FieldClass.Preserved,
         ["min_estimated_executions_threshold"] = FieldClass.Preserved,
         ["min_estimated_rows_threshold"] = FieldClass.Preserved,
+        ["min_predicate_volume_rows_threshold"] = FieldClass.Preserved,
         ["min_query_consumption_pct_threshold"] = FieldClass.Preserved,
         ["rows_read_to_returned_ratio"] = FieldClass.Preserved,
         ["rows_read_to_returned_ratio_threshold"] = FieldClass.Preserved,

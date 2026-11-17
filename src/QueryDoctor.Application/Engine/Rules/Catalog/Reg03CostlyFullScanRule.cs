@@ -8,7 +8,8 @@ namespace QueryDoctor.Application.Engine.Rules.Catalog;
 /// Regla REG-03: Lectura completa costosa — contextual (RF-MOT-05 v1.1, CA-HU05.4, Cuadro 4.5, Cuadro 4.11).
 /// Señala un recorrido completo de tabla o de índice (<c>Table Scan</c>, <c>Clustered Index Scan</c> e <c>Index Scan</c>)
 /// únicamente cuando se cumple alguna de estas condiciones:
-/// (a) el operador tiene predicado y la razón entre filas leídas estimadas y filas devueltas estimadas supera
+/// (a) el operador tiene predicado, su volumen alcanza o supera el piso mínimo (<see cref="RuleThresholds.Reg03MinPredicateVolumeRows"/>)
+///     y la razón entre filas leídas estimadas y filas devueltas estimadas supera
 ///     el umbral configurable (<see cref="RuleThresholds.Reg03RowsReadToReturnedRatio"/>);
 /// (b) el volumen de filas estimadas del recorrido alcanza o supera <see cref="RuleThresholds.Reg03MinEstimatedRows"/> y
 ///     la consulta alcanza o supera <see cref="RuleThresholds.MinQueryConsumptionPct"/> en la ventana.
@@ -29,6 +30,7 @@ public sealed class Reg03CostlyFullScanRule : IRule
         ArgumentNullException.ThrowIfNull(context);
 
         var minRowsThreshold = context.Thresholds.Reg03MinEstimatedRows;
+        var minPredicateVolumeThreshold = context.Thresholds.Reg03MinPredicateVolumeRows;
         var ratioThreshold = context.Thresholds.Reg03RowsReadToReturnedRatio;
         var minConsumptionThreshold = context.Thresholds.MinQueryConsumptionPct;
         var hasRequiredConsumption =
@@ -59,6 +61,7 @@ public sealed class Reg03CostlyFullScanRule : IRule
 
                 var matchedByPredicateRatio =
                     hasPredicate &&
+                    volumeRows >= minPredicateVolumeThreshold &&
                     rowsReadToReturnedRatio.HasValue &&
                     rowsReadToReturnedRatio.Value > ratioThreshold;
 
@@ -85,6 +88,7 @@ public sealed class Reg03CostlyFullScanRule : IRule
                     ["has_predicate"] = hasPredicate ? "true" : "false",
                     ["logical_op"] = op.LogicalOp,
                     ["min_estimated_rows_threshold"] = minRowsThreshold.ToString("G", CultureInfo.InvariantCulture),
+                    ["min_predicate_volume_rows_threshold"] = minPredicateVolumeThreshold.ToString("G", CultureInfo.InvariantCulture),
                     ["min_query_consumption_pct_threshold"] = minConsumptionThreshold.ToString("G", CultureInfo.InvariantCulture),
                     ["physical_op"] = op.PhysicalOp,
                     ["rows_read_to_returned_ratio_threshold"] = ratioThreshold.ToString("G", CultureInfo.InvariantCulture),
