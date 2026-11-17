@@ -5,9 +5,16 @@ import time
 from typing import Any, Dict, Optional
 import httpx
 from src.config import Settings
-from src.models.schemas import ExplainRequest, ExplainResponse
+from src.models.schemas import (
+    ClaimOutput,
+    ClaimType,
+    ExplainMetadata,
+    ExplainRequest,
+    ExplainResponse,
+)
 from src.prompts.prompt_v1 import build_prompt_v1
 from src.providers.base import BaseLLMProvider
+from src.security_lock import get_data_policy
 
 
 class OpenRouterProvider(BaseLLMProvider):
@@ -106,6 +113,62 @@ class OpenRouterProvider(BaseLLMProvider):
                     ) from exc
 
             raise RuntimeError(f"Fallo inesperado con OpenRouter: {last_exception}")
+        finally:
+            if should_close_client and client is not None:
+                await client.aclose()
+
+    async def generate_control_explanation(self, sql_text: str, query_id: str) -> ExplainResponse:
+        """Invoca la API de OpenRouter sin contexto determinista para la condición de control (SRS 6.3)."""
+        api_key = self.settings.get_openrouter_api_key()
+        if not api_key:
+            raise ValueError("Clave de API de OpenRouter no configurada.")
+
+        control_system = self.get_control_system_prompt()
+        control_user = f"Analiza esta consulta SQL:\n{sql_text}"
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "https://github.com/QueryDoctor/QueryDoctor-AI",
+            "X-Title": "Query Doctor AI Evaluation Harness",
+            "Content-Type": "application/json",
+        }
+        if self.is_paid:
+            headers["X-OpenRouter-Data-Collection"] = "deny"
+            headers["X-OpenRouter-ZDR"] = "true"
+
+        payload: Dict[str, Any] = {
+            "model": self.model_name,
+            "messages": [
+                {"role": "system", "content": control_system},
+                {"role": "user", "content": control_user},
+            ],
+            "temperature": 0.1,
+            "max_tokens": self.settings.MAX_TOKENS_PER_REQUEST,
+            "response_format": {"type": "json_object"},
+        }
+
+        start_time = time.perf_counter()
+        timeout = httpx.Timeout(self.settings.LLM_TIMEOUT_SECONDS, connect=10.0)
+
+        should_close_client = False
+        client = self._client
+        if client is None:
+            client = httpx.AsyncClient(timeout=timeout)
+            should_close_client = True
+
+        try:
+            url = f"{self.settings.OPENROUTER_BASE_URL.rstrip('/')}/chat/completions"
+            response = await client.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+            data = response.json()
+            raw_content = data["choices"][0]["message"]["content"]
+            return self.parse_control_response(
+                raw_content=raw_content,
+                query_id=query_id,
+                model_name=self.model_name,
+                served_by="openrouter.ai",
+                start_time=start_time,
+            )
         finally:
             if should_close_client and client is not None:
                 await client.aclose()

@@ -91,3 +91,40 @@ class MockProvider(BaseLLMProvider):
             claims=claims,
             metadata=metadata,
         )
+
+    async def generate_control_explanation(self, sql_text: str, query_id: str) -> ExplainResponse:
+        """Genera respuesta de control sin contexto determinista para pruebas offline (SRS 6.3)."""
+        claims = [
+            ClaimOutput(
+                claim_type=ClaimType.OBSERVACION,
+                statement="Aparentemente la consulta podría realizar un escaneo de tabla según la sintaxis WHERE.",
+                finding_ids=["find-conjetura-generica-001"],
+                kb_fragment_id=None,
+            ),
+            ClaimOutput(
+                claim_type=ClaimType.INTERPRETACION,
+                statement="La falta de un índice adecuado podría elevar el uso de CPU a 9999 ms estimados.",
+                finding_ids=["find-conjetura-generica-001"],
+                kb_fragment_id="KB-NO-EXISTENTE-99",
+            ),
+            ClaimOutput(
+                claim_type=ClaimType.RECOMENDACION,
+                statement="Se sugiere evaluar la creación de un índice sobre las columnas del filtro.",
+                finding_ids=["find-conjetura-generica-001"],
+                kb_fragment_id="KB-NO-EXISTENTE-99",
+            ),
+        ]
+        metadata = ExplainMetadata(
+            llm_profile=self.settings.LLM_PROFILE,
+            model="mock-gemma-2",
+            prompt_version="control-baseline",
+            served_by="mock-engine",
+            data_policy=get_data_policy(self.settings.LLM_PROFILE),
+            execution_time_seconds=0.01,
+        )
+        return ExplainResponse(
+            query_id=query_id,
+            summary="Diagnóstico genérico basado únicamente en la sintaxis SQL sin contexto de Showplan.",
+            claims=claims,
+            metadata=metadata,
+        )

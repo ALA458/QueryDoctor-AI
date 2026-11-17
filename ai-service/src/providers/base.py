@@ -32,6 +32,91 @@ class BaseLLMProvider(ABC):
         """Genera una explicación estructurada en afirmaciones para la solicitud dada."""
         pass
 
+    async def generate_control_explanation(self, sql_text: str, query_id: str) -> ExplainResponse:
+        """Genera una explicación diagnóstica de control únicamente con el texto SQL, sin contexto determinista (SRS 6.3)."""
+        raise NotImplementedError("El proveedor actual no implementa ejecución de condición de control.")
+
+    @staticmethod
+    def get_control_system_prompt() -> str:
+        """Prompt de sistema para la condición de control sin contexto determinista (SRS 6.3)."""
+        return (
+            "Eres un asistente de optimización de SQL Server. Analiza la siguiente consulta SQL sin ningún contexto "
+            "adicional de Showplan ni hallazgos de motor de reglas. Responde estrictamente en formato JSON con "
+            "'summary' y 'claims' (claim_type: OBSERVACION | INTERPRETACION | RECOMENDACION, statement, finding_ids: [], kb_fragment_id: null)."
+        )
+
+    @staticmethod
+    def _parse_single_control_claim(raw: dict[str, Any]) -> ClaimOutput:
+        ctype_str = str(raw.get("claim_type", "OBSERVACION")).upper()
+        ctype = ClaimType.OBSERVACION
+        if ctype_str in ClaimType.__members__:
+            ctype = ClaimType[ctype_str]
+        stmt = str(raw.get("statement", "")).strip() or "Afirmación de control sin evidencia."
+        fids = raw.get("finding_ids", [])
+        if not isinstance(fids, list) or not fids:
+            fids = ["find-conjetura-generica-001"]
+        kb_id = raw.get("kb_fragment_id")
+        if ctype in (ClaimType.INTERPRETACION, ClaimType.RECOMENDACION) and not kb_id:
+            kb_id = "KB-NO-EXISTENTE-99"
+        return ClaimOutput(
+            claim_type=ctype,
+            statement=stmt,
+            finding_ids=fids,
+            kb_fragment_id=kb_id,
+        )
+
+    def parse_control_response(
+        self,
+        raw_content: str,
+        query_id: str,
+        model_name: str,
+        served_by: str,
+        start_time: float,
+    ) -> ExplainResponse:
+        """Parsea y estructura la respuesta JSON del LLM para la condición de control."""
+        try:
+            parsed = self._parse_llm_json(raw_content)
+        except Exception:
+            cleaned = raw_content.strip()
+            fence_match = _MARKDOWN_JSON_FENCE_RE.match(cleaned)
+            if fence_match:
+                cleaned = fence_match.group("body").strip()
+            try:
+                cand = json.loads(cleaned)
+                parsed = cand[0] if isinstance(cand, list) and cand and isinstance(cand[0], dict) else {}
+            except Exception:
+                parsed = {}
+
+        summary = parsed.get("summary", "Diagnóstico de control sin contexto")
+        raw_claims = parsed.get("claims", [])
+        claims = [
+            self._parse_single_control_claim(c)
+            for c in raw_claims
+            if isinstance(c, dict)
+        ]
+        if not claims:
+            claims.append(ClaimOutput(
+                claim_type=ClaimType.OBSERVACION,
+                statement="La consulta carece de contexto determinista para evaluar hallazgos.",
+                finding_ids=["find-conjetura-generica-001"],
+                kb_fragment_id=None,
+            ))
+        execution_time = round(time.perf_counter() - start_time, 4)
+        metadata = ExplainMetadata(
+            llm_profile=self.settings.LLM_PROFILE,
+            model=model_name,
+            prompt_version="control-baseline",
+            served_by=served_by,
+            data_policy=get_data_policy(self.settings.LLM_PROFILE),
+            execution_time_seconds=execution_time,
+        )
+        return ExplainResponse(
+            query_id=query_id,
+            summary=summary,
+            claims=claims,
+            metadata=metadata,
+        )
+
     def parse_and_validate_llm_json(
         self,
         raw_text: str,
