@@ -165,6 +165,12 @@ def _write_safe_report_file(base_dir: Path, target_dir_str: str, filename: str, 
     return target_file
 
 
+_DEFAULT_DELAY_BY_PROFILE: dict[str, float] = {
+    "gemini_free": 6.5,
+    "mock": 0.0,
+}
+
+
 async def main_async() -> int:
     args = parse_args()
     repo_root = root_dir.parent.resolve()
@@ -185,7 +191,7 @@ async def main_async() -> int:
     provider = get_llm_provider(settings)
     harness = AiEvaluationHarness(settings=settings, provider=provider)
 
-    default_delay = 6.5 if settings.LLM_PROFILE == "gemini_free" else (0.0 if settings.LLM_PROFILE == "mock" else 1.5)
+    default_delay = _DEFAULT_DELAY_BY_PROFILE.get(settings.LLM_PROFILE, 1.5)
     request_delay = args.delay if args.delay is not None else default_delay
     checkpoint_path = Path(args.checkpoint).resolve() if args.checkpoint else None
 

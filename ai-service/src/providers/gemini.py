@@ -20,6 +20,9 @@ from src.providers.base import BaseLLMProvider
 from src.security_lock import get_data_policy
 
 
+_RETRYABLE_STATUS_CODES = frozenset({429, 500, 502, 503, 504})
+
+
 _GEMINI_RESPONSE_SCHEMA: dict[str, Any] = {
     "type": "OBJECT",
     "required": ["summary", "claims"],
@@ -157,10 +160,7 @@ class GeminiProvider(BaseLLMProvider):
         for attempt in range(1, max_attempts + 1):
             try:
                 response = await client.post(url, json=payload)
-                if (
-                    response.status_code in (429, 500, 502, 503, 504)
-                    and attempt < max_attempts
-                ):
+                if response.status_code in _RETRYABLE_STATUS_CODES and attempt < max_attempts:
                     await self._wait_before_retry(
                         attempt,
                         status_code=response.status_code,
@@ -170,20 +170,25 @@ class GeminiProvider(BaseLLMProvider):
                 response.raise_for_status()
                 return response.json()
             except (httpx.RequestError, httpx.HTTPStatusError) as exc:
-                if attempt < max_attempts:
-                    err_resp = exc.response if isinstance(exc, httpx.HTTPStatusError) else None
-                    await self._wait_before_retry(
-                        attempt,
-                        status_code=err_resp.status_code if err_resp is not None else None,
-                        retry_after=err_resp.headers.get("Retry-After") if err_resp is not None else None,
-                    )
-                    continue
-                safe_exc = re.sub(r"key=[^&\s'\"]+", "key=***", str(exc))
-                raise RuntimeError(
-                    f"Fallo al conectar con Gemini tras {max_attempts} intentos: {safe_exc}"
-                ) from None
+                if attempt >= max_attempts:
+                    raise self._build_connection_error(max_attempts, exc) from None
+                status_code, retry_after = self._extract_error_retry_info(exc)
+                await self._wait_before_retry(attempt, status_code=status_code, retry_after=retry_after)
 
         raise RuntimeError("Fallo inesperado al invocar Gemini.")
+
+    @staticmethod
+    def _extract_error_retry_info(exc: Exception) -> tuple[Optional[int], Optional[str]]:
+        if not isinstance(exc, httpx.HTTPStatusError):
+            return None, None
+        return exc.response.status_code, exc.response.headers.get("Retry-After")
+
+    @staticmethod
+    def _build_connection_error(max_attempts: int, exc: Exception) -> RuntimeError:
+        safe_exc = re.sub(r"key=[^&\s'\"]+", "key=***", str(exc))
+        return RuntimeError(
+            f"Fallo al conectar con Gemini tras {max_attempts} intentos: {safe_exc}"
+        )
 
     @staticmethod
     async def _wait_before_retry(

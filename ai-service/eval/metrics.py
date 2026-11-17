@@ -19,19 +19,54 @@ from src.models.schemas import ClaimOutput, ClaimType, ExplainResponse
 _GUID_REGEX = re.compile(r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b")
 _RULE_REGEX = re.compile(r"\bREG-\d{1,3}\b", re.IGNORECASE)
 _QUERY_ID_REGEX = re.compile(r"\bq-(?:std|adv)-\d+\b", re.IGNORECASE)
-_SQL_TYPE_REGEX = re.compile(
-    r"\b(?:n?varchar|n?char|varbinary|binary|decimal|numeric|datetime2|datetimeoffset|time|float)\s*\(\s*\d+(?:\s*,\s*\d+)?\s*\)",
-    re.IGNORECASE,
-)
+_SQL_TYPE_NAMES = frozenset({
+    "varchar",
+    "nvarchar",
+    "char",
+    "nchar",
+    "varbinary",
+    "binary",
+    "decimal",
+    "numeric",
+    "datetime2",
+    "datetimeoffset",
+    "time",
+    "float",
+})
+_SQL_TYPE_CALL_REGEX = re.compile(r"\b([a-z]+\d?)\s*\(([\d,\s]+)\)", re.IGNORECASE)
 _MASKER_REGEX = re.compile(r"@qd_(?:str|num|bin|date|guid)_\w+\b", re.IGNORECASE)
 _FINDING_ID_REGEX = re.compile(r"\bfind-[\w-]+\b", re.IGNORECASE)
 _KB_ID_REGEX = re.compile(r"\bKB-[\w-]+\b", re.IGNORECASE)
 _MULTI_DOT_THOUSANDS_RE = re.compile(r"^[+-]?\d{1,3}(?:\.\d{3}){2,}$")
-_NUMBER_REGEX = re.compile(
-    r"(?<![\w#@-])([+-]?(?:\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d{1,3}(?:\.\d{3}){2,}|\d+(?:\.\d+)?))(?!\w)"
-)
+_COMMA_THOUSANDS_RE = re.compile(r"^[+-]?\d{1,3}(?:,\d{3})+(?:\.\d+)?$")
+_PLAIN_NUMBER_RE = re.compile(r"[+-]?\d+(?:\.\d+)?")
+_NUMBER_CANDIDATE_RE = re.compile(r"(?<![\w#@-])([+-]?\d+(?:[.,]\d+)*)(?!\w)")
 _UNMASKED_EMAIL_REGEX = re.compile(r"\b[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}\b", re.IGNORECASE)
 _UNMASKED_CARD_REGEX = re.compile(r"\b(?:\d[ -]?){13,16}\b")
+
+
+def _strip_sql_types(text: str) -> str:
+    """Remueve declaraciones de tipos SQL con parámetros numéricos (p. ej. varchar(20), decimal(18, 2))."""
+
+    def _replace(match: re.Match[str]) -> str:
+        type_name = match.group(1).lower()
+        if type_name not in _SQL_TYPE_NAMES:
+            return match.group(0)
+        parts = [p.strip() for p in match.group(2).split(",")]
+        if 1 <= len(parts) <= 2 and all(p.isdigit() for p in parts):
+            return " "
+        return match.group(0)
+
+    return _SQL_TYPE_CALL_REGEX.sub(_replace, text)
+
+
+def _extract_candidate_tokens(raw: str) -> List[str]:
+    """Descompone un token numérico candidato en cadenas flotantes parseables."""
+    if _COMMA_THOUSANDS_RE.match(raw):
+        return [raw.replace(",", "")]
+    if _MULTI_DOT_THOUSANDS_RE.match(raw):
+        return [raw.replace(".", "")]
+    return _PLAIN_NUMBER_RE.findall(raw)
 
 
 def extract_numbers_from_text(text: str) -> List[float]:
@@ -40,20 +75,18 @@ def extract_numbers_from_text(text: str) -> List[float]:
     sanitized = _GUID_REGEX.sub(" ", text)
     sanitized = _RULE_REGEX.sub(" ", sanitized)
     sanitized = _QUERY_ID_REGEX.sub(" ", sanitized)
-    sanitized = _SQL_TYPE_REGEX.sub(" ", sanitized)
+    sanitized = _strip_sql_types(sanitized)
     sanitized = _MASKER_REGEX.sub(" ", sanitized)
     sanitized = _FINDING_ID_REGEX.sub(" ", sanitized)
     sanitized = _KB_ID_REGEX.sub(" ", sanitized)
 
     numbers: List[float] = []
-    for match in _NUMBER_REGEX.finditer(sanitized):
-        raw = match.group(1)
-        normalized = raw.replace(".", "") if _MULTI_DOT_THOUSANDS_RE.match(raw) else raw.replace(",", "")
-        try:
-            val = float(normalized)
-            numbers.append(val)
-        except ValueError:
-            continue
+    for match in _NUMBER_CANDIDATE_RE.finditer(sanitized):
+        for normalized in _extract_candidate_tokens(match.group(1)):
+            try:
+                numbers.append(float(normalized))
+            except ValueError:
+                continue
     return numbers
 
 

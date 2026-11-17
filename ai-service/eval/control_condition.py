@@ -56,9 +56,12 @@ class ControlConditionEvaluator:
         delay_seconds: Optional[float] = None,
     ) -> List[CaseEvaluationResult]:
         """Ejecuta la condición de control para todos los casos del conjunto."""
-        effective_delay = delay_seconds if delay_seconds is not None else (
-            1.0 if self.settings.LLM_PROFILE != "mock" else 0.0
-        )
+        if delay_seconds is not None:
+            effective_delay = delay_seconds
+        elif self.settings.LLM_PROFILE != "mock":
+            effective_delay = 1.0
+        else:
+            effective_delay = 0.0
         results: List[CaseEvaluationResult] = []
         for case in dataset:
             res = await self.evaluate_case_control(case)
