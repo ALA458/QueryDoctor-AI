@@ -1,5 +1,6 @@
 """Orquestador principal del arnés de evaluación de IA (RF-EVA-02, CA-HU20.2, SRS 6.3)."""
 
+import asyncio
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -89,6 +90,27 @@ class EvaluationReport:
                 f"| `{r.case_id}` | {r.name[:45]} | `{r.category}` | {r.total_claims} | {r.supported_rate_pct:.0f} % | {r.numeric_concordance_pct:.0f} % | `{estado}` |"
             )
 
+        lines.extend([
+            "",
+            "## 6. Registro Completo de Explicaciones para Auditoría Humana (S3-03 / RNF-FUN-03)",
+            "> Salidas completas para la planilla de revisión independiente de dos auditores (cálculo de Kappa de Cohen y falsos pasantes).",
+            "",
+        ])
+        for r in self.case_results:
+            estado = "TRAZADA" if r.is_trazada else "NO_VERIFICADA"
+            lines.append(f"### Consulta `{r.case_id}`: {r.name}")
+            lines.append(f"- **Categoría:** `{r.category}` | **Estado:** `{estado}` | **Sustento:** {r.supported_rate_pct:.1f} % | **Concordancia:** {r.numeric_concordance_pct:.1f} %")
+            if r.response:
+                lines.append(f"- **Resumen LLM:** {r.response.summary}")
+                lines.append("- **Afirmaciones (Claims):**")
+                for c_idx, c in enumerate(r.response.claims, start=1):
+                    fids = ", ".join(c.finding_ids) if c.finding_ids else "[Ninguno]"
+                    kbid = c.kb_fragment_id or "[Sin KB]"
+                    lines.append(f"  {c_idx}. `[{c.claim_type.value}]` {c.statement} *(Hallazgos: {fids} | KB: {kbid})*")
+            if r.failure_reasons:
+                lines.append(f"- **Motivos de falla:** {'; '.join(r.failure_reasons)}")
+            lines.append("")
+
         return "\n".join(lines)
 
     def to_console_summary(self) -> str:
@@ -161,13 +183,14 @@ class AiEvaluationHarness:
             response = await self.provider.generate_explanation(case.request)
             case_result = evaluate_explanation(response, case)
             rag_results.append(case_result)
+            await asyncio.sleep(0.5)
 
         rag_metrics = calculate_aggregate_metrics(rag_results)
 
         control_comparison: Optional[ControlConditionComparison] = None
         if include_control:
             control_evaluator = ControlConditionEvaluator(self.provider, self.settings)
-            control_results = control_evaluator.run_all(cases_to_evaluate)
+            control_results = await control_evaluator.run_all(cases_to_evaluate)
             ctrl_metrics = calculate_aggregate_metrics(control_results)
 
             reduction_delta = ctrl_metrics.overall_unsupported_rate_pct - rag_metrics.overall_unsupported_rate_pct

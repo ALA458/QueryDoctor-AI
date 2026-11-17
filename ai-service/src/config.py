@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     # Credenciales y modelo de Gemini
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_API_KEY_FILE: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-1.5-flash"
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
 
     # Configuración de Ollama local (ADR-10)
     OLLAMA_BASE_URL: str = "http://localhost:11434/v1"

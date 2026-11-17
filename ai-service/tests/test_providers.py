@@ -358,7 +358,7 @@ async def test_gemini_provider_retries_and_parses_response(
         response = await provider.generate_explanation(sample_request)
 
     assert attempt_count == 2
-    assert "models/gemini-1.5-flash:generateContent" in captured_request["url"]
+    assert f"models/{settings.GEMINI_MODEL}:generateContent" in captured_request["url"]
     assert captured_request["url"].endswith("?key=test-gemini-key")
     assert (
         captured_request["body"]["generationConfig"]["responseMimeType"]

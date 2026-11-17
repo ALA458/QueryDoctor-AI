@@ -29,16 +29,13 @@ class MockProvider(BaseLLMProvider):
         fallback_fragment = request.kb_fragments[0] if request.kb_fragments else None
 
         for finding in request.findings:
-            # 1. OBSERVACION (cita evidencias y métricas numéricas verificables de finding.metrics)
+            # 1. OBSERVACION
             nodes_desc = ", ".join(finding.target_nodes) if finding.target_nodes else "la consulta"
-            metrics_parts = [f"{k}={v}" for k, v in finding.metrics.items() if isinstance(v, (int, float))]
-            metrics_text = f" Evidencia métrica: {', '.join(metrics_parts)}." if metrics_parts else ""
-
             obs_claim = ClaimOutput(
                 claim_type=ClaimType.OBSERVACION,
                 statement=(
                     f"El motor determinístico detectó {finding.rule_id} ({finding.rule_name}) "
-                    f"con severidad {finding.severity} sobre {nodes_desc}. {finding.description}.{metrics_text}"
+                    f"con severidad {finding.severity} sobre {nodes_desc}. {finding.description}"
                 ),
                 finding_ids=[finding.finding_id],
                 kb_fragment_id=None,
@@ -91,6 +88,43 @@ class MockProvider(BaseLLMProvider):
         return ExplainResponse(
             query_id=request.query_id,
             summary=summary,
+            claims=claims,
+            metadata=metadata,
+        )
+
+    async def generate_control_explanation(self, sql_text: str, query_id: str) -> ExplainResponse:
+        """Genera respuesta de control sin contexto determinista para pruebas offline (SRS 6.3)."""
+        claims = [
+            ClaimOutput(
+                claim_type=ClaimType.OBSERVACION,
+                statement="Aparentemente la consulta podría realizar un escaneo de tabla según la sintaxis WHERE.",
+                finding_ids=["find-conjetura-generica-001"],
+                kb_fragment_id=None,
+            ),
+            ClaimOutput(
+                claim_type=ClaimType.INTERPRETACION,
+                statement="La falta de un índice adecuado podría elevar el uso de CPU a 9999 ms estimados.",
+                finding_ids=["find-conjetura-generica-001"],
+                kb_fragment_id="KB-NO-EXISTENTE-99",
+            ),
+            ClaimOutput(
+                claim_type=ClaimType.RECOMENDACION,
+                statement="Se sugiere evaluar la creación de un índice sobre las columnas del filtro.",
+                finding_ids=["find-conjetura-generica-001"],
+                kb_fragment_id="KB-NO-EXISTENTE-99",
+            ),
+        ]
+        metadata = ExplainMetadata(
+            llm_profile=self.settings.LLM_PROFILE,
+            model="mock-gemma-2",
+            prompt_version="control-baseline",
+            served_by="mock-engine",
+            data_policy=get_data_policy(self.settings.LLM_PROFILE),
+            execution_time_seconds=0.01,
+        )
+        return ExplainResponse(
+            query_id=query_id,
+            summary="Diagnóstico genérico basado únicamente en la sintaxis SQL sin contexto de Showplan.",
             claims=claims,
             metadata=metadata,
         )

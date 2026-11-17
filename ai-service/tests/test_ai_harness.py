@@ -111,14 +111,15 @@ def test_groundedness_supported_vs_unsupported():
     assert res_hallucinated.is_trazada is False
 
 
-def test_control_condition_measures_hallucination_delta():
+@pytest.mark.asyncio
+async def test_control_condition_measures_hallucination_delta():
     """La condición de control sin contexto produce alucinaciones y demuestra la reducción del enfoque híbrido."""
     dataset = build_evaluation_dataset()
     settings = Settings(APP_ENV="dev", LLM_PROFILE="mock")
     provider = MockProvider(settings)
 
     control_evaluator = ControlConditionEvaluator(provider, settings)
-    control_results = control_evaluator.run_all(dataset[:5])
+    control_results = await control_evaluator.run_all(dataset[:5])
     control_metrics = calculate_aggregate_metrics(control_results)
 
     # En la condición de control, el 100% de afirmaciones carecen de sustento determinista

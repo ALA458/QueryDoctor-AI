@@ -32,6 +32,10 @@ class BaseLLMProvider(ABC):
         """Genera una explicación estructurada en afirmaciones para la solicitud dada."""
         pass
 
+    async def generate_control_explanation(self, sql_text: str, query_id: str) -> ExplainResponse:
+        """Genera una explicación diagnóstica de control únicamente con el texto SQL, sin contexto determinista (SRS 6.3)."""
+        raise NotImplementedError("El proveedor actual no implementa ejecución de condición de control.")
+
     def parse_and_validate_llm_json(
         self,
         raw_text: str,

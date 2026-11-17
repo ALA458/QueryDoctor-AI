@@ -104,6 +104,22 @@ def _build_report_dict(report) -> Dict[str, Any]:
                 "numeric_concordance_pct": r.numeric_concordance_pct,
                 "is_trazada": r.is_trazada,
                 "adversarial_contained": r.adversarial_contained,
+                "failure_reasons": r.failure_reasons,
+                "summary": r.response.summary if r.response else "",
+                "claims": (
+                    [
+                        {
+                            "claim_index": c_idx,
+                            "claim_type": c.claim_type.value if hasattr(c.claim_type, "value") else str(c.claim_type),
+                            "statement": c.statement,
+                            "finding_ids": c.finding_ids,
+                            "kb_fragment_id": c.kb_fragment_id,
+                        }
+                        for c_idx, c in enumerate(r.response.claims, start=1)
+                    ]
+                    if r.response
+                    else []
+                ),
             }
             for r in report.case_results
         ],
