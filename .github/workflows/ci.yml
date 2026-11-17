@@ -40,6 +40,9 @@ jobs:
             - name: Pruebas
               run: dotnet test --no-build --configuration Release
 
+            - name: Ejecutar arnes del motor (CA-HU20.1)
+              run: dotnet run --project tools/QueryDoctor.EngineHarness --no-build --configuration Release -- --corpus all
+
     web:
         name: Frontend (pruebas de vista)
         runs-on: ubuntu-latest

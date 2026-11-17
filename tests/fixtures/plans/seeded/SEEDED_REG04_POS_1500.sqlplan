@@ -1,0 +1,32 @@
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.564" Build="16.0.4315.2">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementText="SELECT OrderId, Amount, CreatedAt FROM dbo.Orders WHERE CustomerId = @id" StatementId="1" StatementType="SELECT" StatementSubTreeCost="1.8" StatementEstRows="1500">
+          <QueryPlan>
+            <RelOp NodeId="0" PhysicalOp="Nested Loops" LogicalOp="Inner Join" EstimateRows="1500" EstimateIO="0" EstimateCPU="0.01" AvgRowSize="26" EstimatedTotalSubtreeCost="1.8" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+              <OutputList />
+              <NestedLoops Optimized="0">
+                <RelOp NodeId="1" PhysicalOp="Index Seek" LogicalOp="Index Seek" EstimateRows="1500" EstimatedRowsRead="1500" EstimateIO="0.02" EstimateCPU="0.002" AvgRowSize="11" EstimatedTotalSubtreeCost="0.022" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+                  <OutputList />
+                  <IndexScan Ordered="1" Storage="RowStore">
+                    <Object Database="[QD_Lab]" Schema="[dbo]" Table="[Orders]" Index="[IX_Orders_CustomerId]" IndexKind="NonClustered" Storage="RowStore" />
+                  </IndexScan>
+                </RelOp>
+                <RelOp NodeId="3" PhysicalOp="Clustered Index Seek" LogicalOp="Clustered Index Seek" EstimateRows="1" EstimateIO="1.2" EstimateCPU="0.5" AvgRowSize="22" EstimatedTotalSubtreeCost="1.7" Parallel="0" EstimateRebinds="1499" EstimateRewinds="0">
+                  <OutputList>
+                    <ColumnReference Database="[QD_Lab]" Schema="[dbo]" Table="[Orders]" Column="Amount" />
+                    <ColumnReference Database="[QD_Lab]" Schema="[dbo]" Table="[Orders]" Column="CreatedAt" />
+                  </OutputList>
+                  <IndexScan Lookup="1" Ordered="1" Storage="RowStore">
+                    <Object Database="[QD_Lab]" Schema="[dbo]" Table="[Orders]" Index="[PK_Orders]" IndexKind="Clustered" Storage="RowStore" />
+                  </IndexScan>
+                </RelOp>
+              </NestedLoops>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>
