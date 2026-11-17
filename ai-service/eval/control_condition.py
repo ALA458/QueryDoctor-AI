@@ -7,7 +7,7 @@ la reducción de alucinaciones gracias al enfoque híbrido de Query Doctor AI.
 
 import asyncio
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 from eval.dataset import EvaluationCase
 from eval.metrics import CaseEvaluationResult, evaluate_explanation, calculate_aggregate_metrics
 from src.config import Settings
@@ -50,11 +50,19 @@ class ControlConditionEvaluator:
         )
         return evaluate_explanation(response, case)
 
-    async def run_all(self, dataset: List[EvaluationCase]) -> List[CaseEvaluationResult]:
+    async def run_all(
+        self,
+        dataset: List[EvaluationCase],
+        delay_seconds: Optional[float] = None,
+    ) -> List[CaseEvaluationResult]:
         """Ejecuta la condición de control para todos los casos del conjunto."""
+        effective_delay = delay_seconds if delay_seconds is not None else (
+            1.0 if self.settings.LLM_PROFILE != "mock" else 0.0
+        )
         results: List[CaseEvaluationResult] = []
         for case in dataset:
             res = await self.evaluate_case_control(case)
             results.append(res)
-            await asyncio.sleep(0.5)
+            if effective_delay > 0.0:
+                await asyncio.sleep(effective_delay)
         return results

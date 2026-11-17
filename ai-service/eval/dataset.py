@@ -147,12 +147,12 @@ def build_evaluation_dataset() -> List[EvaluationCase]:
 
     # --- REG-02: Índice Faltante (4 casos) ---
     reg02_cases = [
-        ("q-std-05", "Filtro compuesto sobre lineitem sin índice secundario", "SELECT l_returnflag, l_linestatus, SUM(l_quantity) FROM dbo.lineitem WHERE l_shipdate <= @qd_p0 GROUP BY l_returnflag, l_linestatus", 89.5, 5200.0, 4800.0, 350000, 45),
-        ("q-std-06", "Join entre pedidos y clientes sin índice en clave foránea", "SELECT c.c_name, o.o_totalprice FROM dbo.customer c JOIN dbo.orders o ON c.c_custkey = o.o_custkey WHERE o.o_orderdate >= @qd_p0", 78.2, 4100.0, 3850.0, 210000, 60),
-        ("q-std-07", "Filtro de rango en proveedores sin índice cubierto", "SELECT s_name, s_address, s_acctbal FROM dbo.supplier WHERE s_acctbal > @qd_p0", 94.1, 2300.0, 2100.0, 85000, 22),
-        ("q-std-08", "Agrupación en inventario partsupp sin índice de soporte", "SELECT ps_partkey, SUM(ps_supplycost) FROM dbo.partsupp WHERE ps_availqty < @qd_p0 GROUP BY ps_partkey", 65.0, 6100.0, 5800.0, 420000, 95),
+        ("q-std-05", "Filtro compuesto sobre lineitem sin índice secundario", "SELECT l_returnflag, l_linestatus, SUM(l_quantity) FROM dbo.lineitem WHERE l_shipdate <= @qd_p0 GROUP BY l_returnflag, l_linestatus", "dbo.lineitem", 89.5, 5200.0, 4800.0, 350000, 45),
+        ("q-std-06", "Join entre pedidos y clientes sin índice en clave foránea", "SELECT c.c_name, o.o_totalprice FROM dbo.customer c JOIN dbo.orders o ON c.c_custkey = o.o_custkey WHERE o.o_orderdate >= @qd_p0", "dbo.customer, dbo.orders", 78.2, 4100.0, 3850.0, 210000, 60),
+        ("q-std-07", "Filtro de rango en proveedores sin índice cubierto", "SELECT s_name, s_address, s_acctbal FROM dbo.supplier WHERE s_acctbal > @qd_p0", "dbo.supplier", 94.1, 2300.0, 2100.0, 85000, 22),
+        ("q-std-08", "Agrupación en inventario partsupp sin índice de soporte", "SELECT ps_partkey, SUM(ps_supplycost) FROM dbo.partsupp WHERE ps_availqty < @qd_p0 GROUP BY ps_partkey", "dbo.partsupp", 65.0, 6100.0, 5800.0, 420000, 95),
     ]
-    for qid, desc, sql, impact, dur, cpu, io, execs in reg02_cases:
+    for qid, desc, sql, table_name, impact, dur, cpu, io, execs in reg02_cases:
         fid = f"find-{qid}-reg02"
         req = ExplainRequest(
             query_id=qid,
@@ -165,7 +165,7 @@ def build_evaluation_dataset() -> List[EvaluationCase]:
                     evidence_class="ESTIMADA",
                     severity="ALTA",
                     target_nodes=["MissingIndexes"],
-                    metrics={"impact_percent": impact, "table": "dbo.lineitem"},
+                    metrics={"impact_percent": impact, "table": table_name},
                     description=desc,
                 )
             ],
@@ -278,7 +278,7 @@ def build_evaluation_dataset() -> List[EvaluationCase]:
                     finding_id=fid,
                     rule_id="REG-11",
                     rule_name="Plan no analizable o XML truncado",
-                    evidence_class="EXACTA",
+                    evidence_class="NO_APLICA",
                     severity="MEDIA",
                     target_nodes=["ShowplanXML"],
                     metrics=finding_metrics,

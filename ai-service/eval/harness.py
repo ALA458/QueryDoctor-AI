@@ -1,9 +1,10 @@
 """Orquestador principal del arnés de evaluación de IA (RF-EVA-02, CA-HU20.2, SRS 6.3)."""
 
+import asyncio
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 from eval.control_condition import ControlConditionComparison, ControlConditionEvaluator
 from eval.dataset import EvaluationCase, build_evaluation_dataset
 from eval.metrics import (
@@ -13,8 +14,22 @@ from eval.metrics import (
     evaluate_explanation,
 )
 from src.config import Settings, get_settings
+from src.models.schemas import ExplainResponse
 from src.providers.base import BaseLLMProvider
 from src.providers.factory import get_llm_provider
+
+
+class CheckpointPausedError(RuntimeError):
+    """Indica que la corrida en lotes alcanzó el máximo de llamadas nuevas y guardó su progreso."""
+
+    def __init__(self, rag_done: int, control_done: int, total_cases: int):
+        self.rag_done = rag_done
+        self.control_done = control_done
+        self.total_cases = total_cases
+        super().__init__(
+            f"Lote completado y guardado en checkpoint: RAG {rag_done}/{total_cases}, "
+            f"Control {control_done}/{total_cases}."
+        )
 
 
 @dataclass
@@ -98,6 +113,7 @@ class EvaluationReport:
             "",
             "## 1. Metadatos de la Corrida",
             f"- **Perfil LLM:** `{meta.get('llm_profile')}`",
+            f"- **Modelo LLM:** `{meta.get('llm_model', meta.get('llm_profile'))}`",
             f"- **Entorno:** `{meta.get('app_env')}`",
             f"- **Política de datos:** `{meta.get('data_policy')}`",
             f"- **Versión de prompt:** `{meta.get('prompt_version')}`",
@@ -187,38 +203,42 @@ class AiEvaluationHarness:
         self,
         include_control: bool = True,
         limit: Optional[int] = None,
+        request_delay_seconds: Optional[float] = None,
+        checkpoint_path: Optional[Path] = None,
+        max_requests: Optional[int] = None,
     ) -> EvaluationReport:
-        """Ejecuta el protocolo de evaluación sobre el dataset y calcula todas las métricas requeridas."""
+        """Ejecuta el protocolo de evaluación sobre el dataset, con soporte opcional de reanudación por lotes."""
         cases_to_evaluate = self.dataset[:limit] if limit else self.dataset
+        effective_delay = self._resolve_delay(request_delay_seconds)
+        checkpoint = self._load_checkpoint(checkpoint_path)
+        budget = [max_requests]
 
-        rag_results: List[CaseEvaluationResult] = []
-        for case in cases_to_evaluate:
-            response = await self.provider.generate_explanation(case.request)
-            case_result = evaluate_explanation(response, case)
-            rag_results.append(case_result)
-
+        rag_results = await self._run_phase(
+            cases=cases_to_evaluate,
+            bucket=checkpoint["rag"],
+            checkpoint=checkpoint,
+            checkpoint_path=checkpoint_path,
+            fetcher=lambda case: self.provider.generate_explanation(case.request),
+            delay_seconds=effective_delay,
+            budget=budget,
+            total_cases=len(cases_to_evaluate),
+        )
         rag_metrics = calculate_aggregate_metrics(rag_results)
 
-        control_comparison: Optional[ControlConditionComparison] = None
-        if include_control:
-            control_evaluator = ControlConditionEvaluator(self.provider, self.settings)
-            control_results = await control_evaluator.run_all(cases_to_evaluate)
-            ctrl_metrics = calculate_aggregate_metrics(control_results)
-
-            reduction_delta = ctrl_metrics.overall_unsupported_rate_pct - rag_metrics.overall_unsupported_rate_pct
-            control_comparison = ControlConditionComparison(
-                rag_supported_rate_pct=rag_metrics.overall_supported_rate_pct,
-                rag_unsupported_rate_pct=rag_metrics.overall_unsupported_rate_pct,
-                control_supported_rate_pct=ctrl_metrics.overall_supported_rate_pct,
-                control_unsupported_rate_pct=ctrl_metrics.overall_unsupported_rate_pct,
-                hallucination_reduction_delta_pct=round(max(0.0, reduction_delta), 2),
-                rag_numeric_concordance_pct=rag_metrics.overall_numeric_concordance_pct,
-                control_numeric_concordance_pct=ctrl_metrics.overall_numeric_concordance_pct,
-            )
+        control_comparison = await self._evaluate_control_phase(
+            include_control=include_control,
+            cases=cases_to_evaluate,
+            rag_metrics=rag_metrics,
+            checkpoint=checkpoint,
+            checkpoint_path=checkpoint_path,
+            delay_seconds=effective_delay,
+            budget=budget,
+        )
 
         metadata = {
             "app_env": self.settings.APP_ENV,
             "llm_profile": self.settings.LLM_PROFILE,
+            "llm_model": getattr(self.provider, "model_name", self.settings.LLM_PROFILE),
             "data_policy": getattr(self.provider, "data_policy", "deterministic"),
             "prompt_version": self.settings.PROMPT_VERSION,
             "total_cases_evaluated": len(cases_to_evaluate),
@@ -229,4 +249,94 @@ class AiEvaluationHarness:
             rag_metrics=rag_metrics,
             control_comparison=control_comparison,
             case_results=rag_results,
+        )
+
+    def _resolve_delay(self, explicit_delay: Optional[float]) -> float:
+        if explicit_delay is not None:
+            return explicit_delay
+        return 1.0 if self.settings.LLM_PROFILE != "mock" else 0.0
+
+    @staticmethod
+    def _load_checkpoint(checkpoint_path: Optional[Path]) -> Dict[str, Dict[str, Any]]:
+        empty: Dict[str, Dict[str, Any]] = {"rag": {}, "control": {}}
+        if checkpoint_path is None or not checkpoint_path.is_file():
+            return empty
+        data = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        return {
+            "rag": dict(data.get("rag", {})),
+            "control": dict(data.get("control", {})),
+        }
+
+    @staticmethod
+    def _save_checkpoint(checkpoint_path: Optional[Path], checkpoint: Dict[str, Dict[str, Any]]) -> None:
+        if checkpoint_path is None:
+            return
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp_path = checkpoint_path.with_suffix(".tmp")
+        tmp_path.write_text(json.dumps(checkpoint, indent=2, ensure_ascii=False), encoding="utf-8")
+        tmp_path.replace(checkpoint_path)
+
+    async def _run_phase(
+        self,
+        cases: List[EvaluationCase],
+        bucket: Dict[str, Any],
+        checkpoint: Dict[str, Dict[str, Any]],
+        checkpoint_path: Optional[Path],
+        fetcher: Callable[[EvaluationCase], Awaitable[ExplainResponse]],
+        delay_seconds: float,
+        budget: List[Optional[int]],
+        total_cases: int,
+    ) -> List[CaseEvaluationResult]:
+        results: List[CaseEvaluationResult] = []
+        for case in cases:
+            if case.case_id in bucket:
+                response = ExplainResponse.model_validate(bucket[case.case_id])
+            else:
+                if budget[0] is not None and budget[0] <= 0:
+                    raise CheckpointPausedError(len(checkpoint["rag"]), len(checkpoint["control"]), total_cases)
+                response = await fetcher(case)
+                bucket[case.case_id] = response.model_dump(mode="json")
+                self._save_checkpoint(checkpoint_path, checkpoint)
+                if budget[0] is not None:
+                    budget[0] -= 1
+                if delay_seconds > 0.0:
+                    await asyncio.sleep(delay_seconds)
+            results.append(evaluate_explanation(response, case))
+        return results
+
+    async def _evaluate_control_phase(
+        self,
+        include_control: bool,
+        cases: List[EvaluationCase],
+        rag_metrics: AggregateMetrics,
+        checkpoint: Dict[str, Dict[str, Any]],
+        checkpoint_path: Optional[Path],
+        delay_seconds: float,
+        budget: List[Optional[int]],
+    ) -> Optional[ControlConditionComparison]:
+        if not include_control:
+            return None
+        control_results = await self._run_phase(
+            cases=cases,
+            bucket=checkpoint["control"],
+            checkpoint=checkpoint,
+            checkpoint_path=checkpoint_path,
+            fetcher=lambda case: self.provider.generate_control_explanation(
+                sql_text=case.request.sql_text,
+                query_id=case.case_id,
+            ),
+            delay_seconds=delay_seconds,
+            budget=budget,
+            total_cases=len(cases),
+        )
+        ctrl_metrics = calculate_aggregate_metrics(control_results)
+        reduction_delta = ctrl_metrics.overall_unsupported_rate_pct - rag_metrics.overall_unsupported_rate_pct
+        return ControlConditionComparison(
+            rag_supported_rate_pct=rag_metrics.overall_supported_rate_pct,
+            rag_unsupported_rate_pct=rag_metrics.overall_unsupported_rate_pct,
+            control_supported_rate_pct=ctrl_metrics.overall_supported_rate_pct,
+            control_unsupported_rate_pct=ctrl_metrics.overall_unsupported_rate_pct,
+            hallucination_reduction_delta_pct=round(max(0.0, reduction_delta), 2),
+            rag_numeric_concordance_pct=rag_metrics.overall_numeric_concordance_pct,
+            control_numeric_concordance_pct=ctrl_metrics.overall_numeric_concordance_pct,
         )

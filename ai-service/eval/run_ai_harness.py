@@ -20,7 +20,7 @@ root_dir = Path(__file__).resolve().parent.parent
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
-from eval.harness import AiEvaluationHarness
+from eval.harness import AiEvaluationHarness, CheckpointPausedError
 from src.config import Settings
 from src.providers.factory import get_llm_provider
 from src.security_lock import enforce_security_lock
@@ -65,6 +65,24 @@ def parse_args() -> argparse.Namespace:
         "--skip-control",
         action="store_true",
         help="Omite la condición de control sin contexto",
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=None,
+        help="Pausa en segundos entre llamadas al LLM (por defecto: 6.5 s en gemini_free, 1.5 s en otros reales, 0 en mock)",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default=None,
+        help="Ruta JSON opcional para guardar progreso y reanudar por lotes ante límites de cuota",
+    )
+    parser.add_argument(
+        "--max-requests",
+        type=int,
+        default=None,
+        help="Límite máximo de llamadas nuevas al LLM en esta ejecución (requiere --checkpoint para reanudar)",
     )
     return parser.parse_args()
 
@@ -167,13 +185,25 @@ async def main_async() -> int:
     provider = get_llm_provider(settings)
     harness = AiEvaluationHarness(settings=settings, provider=provider)
 
-    print("\nEjecutando arnés de evaluación de IA (RF-EVA-02 v1.1)...")
-    print(f"Perfil: {settings.LLM_PROFILE} | Casos: {args.limit or len(harness.dataset)}")
+    default_delay = 6.5 if settings.LLM_PROFILE == "gemini_free" else (0.0 if settings.LLM_PROFILE == "mock" else 1.5)
+    request_delay = args.delay if args.delay is not None else default_delay
+    checkpoint_path = Path(args.checkpoint).resolve() if args.checkpoint else None
 
-    report = await harness.run_evaluation(
-        include_control=not args.skip_control,
-        limit=args.limit,
-    )
+    print("\nEjecutando arnés de evaluación de IA (RF-EVA-02 v1.1)...")
+    print(f"Perfil: {settings.LLM_PROFILE} | Casos: {args.limit or len(harness.dataset)} | Pausa: {request_delay:.1f}s")
+
+    try:
+        report = await harness.run_evaluation(
+            include_control=not args.skip_control,
+            limit=args.limit,
+            request_delay_seconds=request_delay,
+            checkpoint_path=checkpoint_path,
+            max_requests=args.max_requests,
+        )
+    except CheckpointPausedError as paused:
+        print(f"\n[PAUSA POR LOTE] {paused}", file=sys.stderr)
+        print("Vuelve a ejecutar el mismo comando para reanudar desde el checkpoint.", file=sys.stderr)
+        return 3
 
     # 1. Imprimir resumen visual en consola (CA-HU20.2)
     print("\n" + report.to_console_summary() + "\n")

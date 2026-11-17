@@ -1,6 +1,7 @@
 """Adaptador para el perfil gemini_free (ADR-10 §8.3)."""
 
 import asyncio
+import re
 import time
 from typing import Any, Optional
 
@@ -72,16 +73,7 @@ class GeminiProvider(BaseLLMProvider):
             f"https://generativelanguage.googleapis.com/v1beta/models/"
             f"{self.model_name}:generateContent?key={api_key}"
         )
-        generation_config: dict[str, Any] = {
-            "responseMimeType": "application/json",
-            "responseSchema": _GEMINI_RESPONSE_SCHEMA,
-            "temperature": 0.1,
-            "maxOutputTokens": self.settings.MAX_TOKENS_PER_REQUEST,
-        }
-        # Los modelos gemini-2.5-* consumen maxOutputTokens con pensamiento interno por defecto;
-        # al desactivar el presupuesto de pensamiento evitamos JSON truncado por MAX_TOKENS.
-        if "gemini-2.5" in self.model_name.lower():
-            generation_config["thinkingConfig"] = {"thinkingBudget": 0}
+        generation_config = self._build_generation_config(schema=_GEMINI_RESPONSE_SCHEMA)
 
         payload = {
             "system_instruction": {"parts": [{"text": system_prompt}]},
@@ -128,11 +120,7 @@ class GeminiProvider(BaseLLMProvider):
         payload = {
             "system_instruction": {"parts": [{"text": control_system}]},
             "contents": [{"role": "user", "parts": [{"text": control_user}]}],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "temperature": 0.1,
-                "maxOutputTokens": self.settings.MAX_TOKENS_PER_REQUEST,
-            },
+            "generationConfig": self._build_generation_config(schema=None),
         }
 
         start_time = time.perf_counter()
@@ -173,22 +161,41 @@ class GeminiProvider(BaseLLMProvider):
                     response.status_code in (429, 500, 502, 503, 504)
                     and attempt < max_attempts
                 ):
-                    await self._wait_before_retry(attempt)
+                    await self._wait_before_retry(
+                        attempt,
+                        status_code=response.status_code,
+                        retry_after=response.headers.get("Retry-After"),
+                    )
                     continue
                 response.raise_for_status()
                 return response.json()
             except (httpx.RequestError, httpx.HTTPStatusError) as exc:
                 if attempt < max_attempts:
-                    await self._wait_before_retry(attempt)
+                    err_resp = exc.response if isinstance(exc, httpx.HTTPStatusError) else None
+                    await self._wait_before_retry(
+                        attempt,
+                        status_code=err_resp.status_code if err_resp is not None else None,
+                        retry_after=err_resp.headers.get("Retry-After") if err_resp is not None else None,
+                    )
                     continue
+                safe_exc = re.sub(r"key=[^&\s'\"]+", "key=***", str(exc))
                 raise RuntimeError(
-                    f"Fallo al conectar con Gemini tras {max_attempts} intentos: {exc}"
-                ) from exc
+                    f"Fallo al conectar con Gemini tras {max_attempts} intentos: {safe_exc}"
+                ) from None
 
         raise RuntimeError("Fallo inesperado al invocar Gemini.")
 
     @staticmethod
-    async def _wait_before_retry(attempt: int) -> None:
+    async def _wait_before_retry(
+        attempt: int,
+        status_code: Optional[int] = None,
+        retry_after: Optional[str] = None,
+    ) -> None:
+        if status_code == 429:
+            parsed_retry = float(retry_after) if retry_after and retry_after.isdigit() else 0.0
+            delay = max(parsed_retry, min(65.0, 15.0 * attempt))
+            await asyncio.sleep(delay)
+            return
         await asyncio.sleep(2.0 * (2 ** (attempt - 1)))
 
     @staticmethod
@@ -202,3 +209,16 @@ class GeminiProvider(BaseLLMProvider):
             raise ValueError("Candidato de respuesta de Gemini vacío o sin texto.")
 
         return parts[0]["text"]
+
+    def _build_generation_config(self, schema: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        """Construye la configuración de generación compartida (desactiva thinkingBudget en gemini-2.5-*)."""
+        config: dict[str, Any] = {
+            "responseMimeType": "application/json",
+            "temperature": 0.1,
+            "maxOutputTokens": self.settings.MAX_TOKENS_PER_REQUEST,
+        }
+        if schema is not None:
+            config["responseSchema"] = schema
+        if "gemini-2.5" in self.model_name.lower():
+            config["thinkingConfig"] = {"thinkingBudget": 0}
+        return config

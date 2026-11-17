@@ -3,8 +3,9 @@
 import pytest
 from eval.control_condition import ControlConditionEvaluator
 from eval.dataset import build_evaluation_dataset
-from eval.harness import AiEvaluationHarness
+from eval.harness import AiEvaluationHarness, CheckpointPausedError
 from eval.metrics import (
+    _validate_finding_references,
     calculate_aggregate_metrics,
     evaluate_explanation,
     extract_numbers_from_text,
@@ -164,3 +165,65 @@ async def test_full_ai_evaluation_harness_execution():
     md_text = report.to_markdown()
     assert "# Informe de Evaluación del Componente de IA" in md_text
     assert "Condición RAG Híbrida" in md_text
+
+
+def test_extract_numbers_ignores_query_ids_sql_types_and_hyphenated_tokens():
+    """Evita falsos negativos al citar query_id (q-std-06, q-adv-08), miles con punto o tipos SQL."""
+    text = (
+        "Diagnóstico para la consulta q-std-06 y q-adv-08 con varchar(20) en modelo "
+        "gemma-2: escanea 1.500.000 filas, 25000 lecturas lógicas y ratio 14.5."
+    )
+    numbers = extract_numbers_from_text(text)
+    assert numbers == [1500000.0, 25000.0, 14.5]
+
+
+def test_empty_finding_ids_marks_claim_unsupported():
+    """La validación defensiva de métricas rechaza una lista vacía de finding_ids (alineado con ExplanationValidator.cs)."""
+    is_valid, reasons = _validate_finding_references([], {"find-q-std-01-reg01"}, 1, "OBSERVACION")
+    assert is_valid is False
+    assert len(reasons) == 1
+    assert "finding_id" in reasons[0]
+
+
+def test_dataset_reg02_tables_and_evidence_classes_match_contract():
+    """Verifica que las tablas de REG-02 coincidan con su SQL y que evidence_class pertenezca al contrato."""
+    allowed_evidence = {"ESTIMADA", "EJECUCION_AGREGADA", "PLAN_REAL", "NO_APLICA"}
+    dataset = build_evaluation_dataset()
+
+    for case in dataset:
+        for finding in case.request.findings:
+            assert finding.evidence_class in allowed_evidence
+            if finding.rule_id == "REG-02":
+                table_tokens = [t.strip().split(".")[-1] for t in str(finding.metrics.get("table", "")).split(",")]
+                assert any(tok and tok.lower() in case.request.sql_text.lower() for tok in table_tokens), (
+                    f"La tabla '{finding.metrics.get('table')}' de {case.case_id} no aparece en su SQL."
+                )
+
+
+@pytest.mark.asyncio
+async def test_harness_checkpoint_resumes_in_batches(tmp_path):
+    """El arnés guarda cada respuesta en checkpoint y reanuda por lotes sin repetir llamadas previas."""
+    settings = Settings(APP_ENV="dev", LLM_PROFILE="mock")
+    provider = MockProvider(settings)
+    harness = AiEvaluationHarness(settings=settings, provider=provider)
+    checkpoint = tmp_path / "ai_checkpoint.json"
+
+    with pytest.raises(CheckpointPausedError) as paused:
+        await harness.run_evaluation(
+            include_control=True,
+            limit=2,
+            checkpoint_path=checkpoint,
+            max_requests=3,
+        )
+
+    assert paused.value.rag_done == 2
+    assert paused.value.control_done == 1
+
+    report = await harness.run_evaluation(
+        include_control=True,
+        limit=2,
+        checkpoint_path=checkpoint,
+        max_requests=3,
+    )
+    assert report.rag_metrics.total_cases == 2
+    assert report.control_comparison is not None
