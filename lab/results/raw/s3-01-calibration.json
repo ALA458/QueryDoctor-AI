@@ -1,0 +1,191 @@
+{
+  "catalog_version": "1.0.0",
+  "thresholds_hash": "641FC0A9B5A4B4768E6F82D09755C3F453BA55DFCABCEC42620E168C88A2EB25",
+  "thresholds": {
+    "min_query_consumption_pct": 1,
+    "reg03_min_estimated_rows": 10000,
+    "reg03_min_predicate_volume_rows": 1000,
+    "reg03_rows_read_to_returned_ratio": 10,
+    "reg04_min_estimated_executions": 1000,
+    "reg07_cardinality_ratio": 10,
+    "reg08_min_executions_per_plan": 100,
+    "reg08_regression_increase_pct": 50,
+    "reg10_duration_max_min_ratio": 5
+  },
+  "corpus_filter": "all",
+  "split_filter": "calibration",
+  "total_cases": 22,
+  "seeded_cases": 9,
+  "tpch_cases": 13,
+  "rules": [
+    {
+      "rule_id": "REG-01",
+      "rule_name": "Conversi\u00F3n impl\u00EDcita que afecta el plan",
+      "expected_positives": 2,
+      "emitted_total": 2,
+      "true_positives": 2,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "meets_precision_target": true,
+      "meets_recall_target": true
+    },
+    {
+      "rule_id": "REG-02",
+      "rule_name": "\u00CDndice faltante",
+      "expected_positives": 14,
+      "emitted_total": 14,
+      "true_positives": 14,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "meets_precision_target": true,
+      "meets_recall_target": true
+    },
+    {
+      "rule_id": "REG-03",
+      "rule_name": "Lectura completa costosa (contextual)",
+      "expected_positives": 28,
+      "emitted_total": 28,
+      "true_positives": 28,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "meets_precision_target": true,
+      "meets_recall_target": true
+    },
+    {
+      "rule_id": "REG-04",
+      "rule_name": "B\u00FAsqueda por clave excesiva (contextual)",
+      "expected_positives": 1,
+      "emitted_total": 1,
+      "true_positives": 1,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "meets_precision_target": true,
+      "meets_recall_target": true
+    }
+  ],
+  "seeded_rules": [
+    {
+      "rule_id": "REG-01",
+      "rule_name": "Conversi\u00F3n impl\u00EDcita que afecta el plan",
+      "expected_positives": 2,
+      "emitted_total": 2,
+      "true_positives": 2,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "meets_precision_target": true,
+      "meets_recall_target": true
+    },
+    {
+      "rule_id": "REG-02",
+      "rule_name": "\u00CDndice faltante",
+      "expected_positives": 2,
+      "emitted_total": 2,
+      "true_positives": 2,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "meets_precision_target": true,
+      "meets_recall_target": true
+    },
+    {
+      "rule_id": "REG-03",
+      "rule_name": "Lectura completa costosa (contextual)",
+      "expected_positives": 3,
+      "emitted_total": 3,
+      "true_positives": 3,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "meets_precision_target": true,
+      "meets_recall_target": true
+    },
+    {
+      "rule_id": "REG-04",
+      "rule_name": "B\u00FAsqueda por clave excesiva (contextual)",
+      "expected_positives": 1,
+      "emitted_total": 1,
+      "true_positives": 1,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "meets_precision_target": true,
+      "meets_recall_target": true
+    }
+  ],
+  "tpch_rules": [
+    {
+      "rule_id": "REG-01",
+      "rule_name": "Conversi\u00F3n impl\u00EDcita que afecta el plan",
+      "expected_positives": 0,
+      "emitted_total": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0
+    },
+    {
+      "rule_id": "REG-02",
+      "rule_name": "\u00CDndice faltante",
+      "expected_positives": 12,
+      "emitted_total": 12,
+      "true_positives": 12,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "meets_precision_target": true,
+      "meets_recall_target": true
+    },
+    {
+      "rule_id": "REG-03",
+      "rule_name": "Lectura completa costosa (contextual)",
+      "expected_positives": 25,
+      "emitted_total": 25,
+      "true_positives": 25,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "meets_precision_target": true,
+      "meets_recall_target": true
+    },
+    {
+      "rule_id": "REG-04",
+      "rule_name": "B\u00FAsqueda por clave excesiva (contextual)",
+      "expected_positives": 0,
+      "emitted_total": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "false_negatives": 0
+    }
+  ],
+  "not_analyzable": {
+    "expected_not_analyzable": 0,
+    "correctly_classified_reg11": 0,
+    "unexpected_not_analyzable": 0
+  },
+  "diffs": [],
+  "all_must_targets_met": true
+}

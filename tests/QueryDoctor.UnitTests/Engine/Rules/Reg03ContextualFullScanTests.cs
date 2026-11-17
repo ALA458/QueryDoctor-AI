@@ -56,8 +56,10 @@ public sealed class Reg03ContextualFullScanTests
         Assert.Contains("[Region]=[@region]", finding.Evidence["predicate"], StringComparison.Ordinal);
 
         Assert.Equal(10_000.0, finding.ThresholdsUsed["min_estimated_rows"]);
+        Assert.Equal(1_000.0, finding.ThresholdsUsed["min_predicate_volume_rows"]);
         Assert.Equal(10.0, finding.ThresholdsUsed["rows_read_to_returned_ratio"]);
         Assert.Equal(1.0, finding.ThresholdsUsed["min_query_consumption_pct"]);
+        Assert.Equal("1000", finding.Evidence["min_predicate_volume_rows_threshold"]);
     }
 
     [Fact]
@@ -414,6 +416,60 @@ public sealed class Reg03ContextualFullScanTests
         var oltpFinding = Assert.Single(oltpResult.Findings);
         Assert.Equal("ALTA", oltpFinding.Severity);
         Assert.Equal(2_000.0, oltpFinding.ThresholdsUsed["min_estimated_rows"]);
+    }
+
+    [Theory]
+    [InlineData(25, 1, false)]
+    [InlineData(999, 10, false)]
+    [InlineData(1000, 50, true)]
+    public void Reg03PisoDeVolumenEnCondicionARechazaTablasCatalogoPequenasYAceptaFronteraS301(
+        int rowsRead,
+        int estimateRows,
+        bool expectedFinding)
+    {
+        var scanXml = $"""
+            <?xml version="1.0" encoding="utf-16"?>
+            <ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.564" Build="16.0.4315.2">
+              <BatchSequence>
+                <Batch>
+                  <Statements>
+                    <StmtSimple StatementId="1" StatementText="SELECT N_NAME FROM dbo.Nation WHERE N_NAME = 'GERMANY'" StatementType="SELECT" StatementSubTreeCost="0.01" StatementEstRows="{estimateRows}">
+                      <QueryPlan>
+                        <RelOp NodeId="2" PhysicalOp="Clustered Index Scan" LogicalOp="Clustered Index Scan" EstimateRows="{estimateRows}" EstimatedRowsRead="{rowsRead}" TableCardinality="{rowsRead}" EstimateIO="0.005" EstimateCPU="0.005" AvgRowSize="32" EstimatedTotalSubtreeCost="0.01" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+                          <OutputList />
+                          <IndexScan Ordered="0">
+                            <Object Database="[QD_TPCH]" Schema="[dbo]" Table="[NATION]" Index="[PK_NATION]" IndexKind="Clustered" Storage="RowStore" />
+                            <Predicate>
+                              <ScalarOperator ScalarString="[QD_TPCH].[dbo].[NATION].[N_NAME]='GERMANY'" />
+                            </Predicate>
+                          </IndexScan>
+                        </RelOp>
+                      </QueryPlan>
+                    </StmtSimple>
+                  </Statements>
+                </Batch>
+              </BatchSequence>
+            </ShowPlanXML>
+            """;
+
+        var engine = CreateSingleRuleEngine();
+        var result = engine.Analyze(new PlanAnalysisRequest(
+            ShowplanXml: scanXml,
+            QueryStoreQueryId: 710,
+            QueryStorePlanId: 810,
+            Thresholds: RuleThresholds.Default,
+            QueryConsumptionPct: 10.0));
+
+        if (expectedFinding)
+        {
+            var finding = Assert.Single(result.Findings);
+            Assert.Equal("MEDIA", finding.Severity);
+            Assert.Equal("predicate_ratio", finding.Evidence["triggered_by"]);
+        }
+        else
+        {
+            Assert.Empty(result.Findings);
+        }
     }
 
     private DeterministicRuleEngine CreateSingleRuleEngine() =>

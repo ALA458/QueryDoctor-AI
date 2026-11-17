@@ -85,6 +85,10 @@ public sealed class EngineHarnessTests
         var calibrationRun = runner.EvaluateFromManifest(ManifestPath, splitFilter: "calibration");
         var evaluationRun = runner.EvaluateFromManifest(ManifestPath, splitFilter: "evaluation");
         Assert.Equal(firstRun.TotalCases, calibrationRun.TotalCases + evaluationRun.TotalCases);
+        Assert.True(calibrationRun.AllMustTargetsMet);
+        Assert.True(evaluationRun.AllMustTargetsMet);
+        Assert.True(firstRun.AllMustTargetsMet);
+        Assert.Empty(firstRun.Diffs);
     }
 
     [Fact]

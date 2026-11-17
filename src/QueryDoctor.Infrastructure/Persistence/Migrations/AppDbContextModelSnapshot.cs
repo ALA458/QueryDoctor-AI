@@ -1063,7 +1063,7 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                             Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a0003"),
                             BaseSeverity = "Media",
                             CatalogVersion = "1.0.0",
-                            DefaultThresholdsJson = "{\"min_estimated_rows\":10000,\"min_query_consumption_pct\":1,\"rows_read_to_returned_ratio\":10}",
+                            DefaultThresholdsJson = "{\"min_estimated_rows\":10000,\"min_predicate_volume_rows\":1000,\"min_query_consumption_pct\":1,\"rows_read_to_returned_ratio\":10}",
                             Description = "Operadores de recorrido completo de tabla o de índice que cumplen una condición de contexto: predicado con alta razón entre filas leídas y devueltas estimadas, o volumen estimado alto en una consulta con consumo relevante en la ventana.",
                             DocumentationSource = "Microsoft Learn: Display the estimated execution plan & Table/Index Scan operators [4, 6]",
                             EvidenceClass = "Estimada",
@@ -1239,10 +1239,10 @@ namespace QueryDoctor.Infrastructure.Persistence.Migrations
                         {
                             Id = new Guid("7a2d4c0e-9b63-4e1a-8d2f-3b8e5f6a1001"),
                             CatalogVersion = "1.0.0",
-                            ConfigurationHash = "8182349B6FF3DAD35F1B6FCCBD38C6AA8B0AFDDF9E7B91C28EBB061D8502E61E",
+                            ConfigurationHash = "641FC0A9B5A4B4768E6F82D09755C3F453BA55DFCABCEC42620E168C88A2EB25",
                             CreatedAt = new DateTimeOffset(new DateTime(2026, 10, 28, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
                             IsDefault = true,
-                            ThresholdsJson = "{\"min_query_consumption_pct\":1,\"reg03_min_estimated_rows\":10000,\"reg03_rows_read_to_returned_ratio\":10,\"reg04_min_estimated_executions\":1000,\"reg07_cardinality_ratio\":10,\"reg08_min_executions_per_plan\":100,\"reg08_regression_increase_pct\":50,\"reg10_duration_max_min_ratio\":5}"
+                            ThresholdsJson = "{\"min_query_consumption_pct\":1,\"reg03_min_estimated_rows\":10000,\"reg03_min_predicate_volume_rows\":1000,\"reg03_rows_read_to_returned_ratio\":10,\"reg04_min_estimated_executions\":1000,\"reg07_cardinality_ratio\":10,\"reg08_min_executions_per_plan\":100,\"reg08_regression_increase_pct\":50,\"reg10_duration_max_min_ratio\":5}"
                         });
                 });
 
