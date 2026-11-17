@@ -1,0 +1,21 @@
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.564" Build="16.0.4315.2">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementText="SELECT OrderId FROM dbo.Orders WHERE TRY_CONVERT(int, CustomerCode) = @p" StatementId="1" StatementType="SELECT" StatementSubTreeCost="0.25" StatementEstRows="10">
+          <QueryPlan>
+            <Warnings>
+              <PlanAffectingConvert ConvertIssue="Cardinality Estimate" Expression="CONVERT_IMPLICIT(int,[QD_Lab].[dbo].[Orders].[CustomerCode],0)" />
+            </Warnings>
+            <RelOp NodeId="1" PhysicalOp="Index Seek" LogicalOp="Index Seek" EstimateRows="10" EstimatedRowsRead="10" EstimateIO="0.01" EstimateCPU="0.001" AvgRowSize="16" EstimatedTotalSubtreeCost="0.011" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+              <OutputList />
+              <IndexScan Ordered="1" Storage="RowStore">
+                <Object Database="[QD_Lab]" Schema="[dbo]" Table="[Orders]" Index="[IX_Orders_CustomerCode]" IndexKind="NonClustered" Storage="RowStore" />
+              </IndexScan>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>

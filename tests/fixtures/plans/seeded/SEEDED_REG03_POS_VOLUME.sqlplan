@@ -1,0 +1,18 @@
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.564" Build="16.0.4315.2">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementText="SELECT EventId, Payload FROM dbo.EventStaging" StatementId="1" StatementType="SELECT" StatementSubTreeCost="4.5" StatementEstRows="25000">
+          <QueryPlan>
+            <RelOp NodeId="1" PhysicalOp="Table Scan" LogicalOp="Table Scan" EstimateRows="25000" EstimatedRowsRead="25000" TableCardinality="25000" EstimateIO="3.8" EstimateCPU="0.7" AvgRowSize="120" EstimatedTotalSubtreeCost="4.5" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+              <OutputList />
+              <TableScan Ordered="0" Storage="RowStore">
+                <Object Database="[QD_Lab]" Schema="[dbo]" Table="[EventStaging]" IndexKind="Heap" Storage="RowStore" />
+              </TableScan>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>

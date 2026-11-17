@@ -1,0 +1,18 @@
+<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan" Version="1.564" Build="16.0.4315.2">
+  <BatchSequence>
+    <Batch>
+      <Statements>
+        <StmtSimple StatementText="SELECT Id, Code, Label FROM dbo.CatalogStatus" StatementId="1" StatementType="SELECT" StatementSubTreeCost="0.004" StatementEstRows="120">
+          <QueryPlan>
+            <RelOp NodeId="0" PhysicalOp="Table Scan" LogicalOp="Table Scan" EstimateRows="120" EstimatedRowsRead="120" TableCardinality="120" EstimateIO="0.003" EstimateCPU="0.0002" AvgRowSize="32" EstimatedTotalSubtreeCost="0.0032" Parallel="0" EstimateRebinds="0" EstimateRewinds="0">
+              <OutputList />
+              <TableScan Ordered="0" Storage="RowStore">
+                <Object Database="[QD_Lab]" Schema="[dbo]" Table="[CatalogStatus]" IndexKind="Heap" Storage="RowStore" />
+              </TableScan>
+            </RelOp>
+          </QueryPlan>
+        </StmtSimple>
+      </Statements>
+    </Batch>
+  </BatchSequence>
+</ShowPlanXML>
