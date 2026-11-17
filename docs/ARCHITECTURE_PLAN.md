@@ -103,7 +103,7 @@ Endpoints API: `/connections`, `/ingestions`, `/queries`, `/plans/{id}`, `/findi
 | DA-04 | Resuelta salvo versión del modelo | ADR-10; desarrollo con `openrouter_free` + datos de laboratorio |
 | DA-05 | Resuelta | .NET 10, Python, React+TS, PostgreSQL, Hangfire, Identity |
 | DA-09 | Resuelta | ADR-09 |
-| DA-12 | Resuelta | 2016 "Compatible sin pruebas"; aceptación en 2019, 2022 y Azure SQL DB |
+| DA-12 | Resuelta | 2016 "Compatible sin pruebas". Probado (aceptación ejecutada en CI, S3-06): SQL Server 2019 y 2022. Azure SQL DB, 2017 y 2025+: Compatible sin pruebas. Detalle en `docs/COMPATIBILIDAD.md`; el Cuadro 4.16 del SRS aún dice 2019 "Compatible sin pruebas" (nota para Maykol, S1-19) |
 | DA-13 | **Abierta en el SRS** (tabla 8.1) | El equipo la tomó como riesgo residual el 28-oct (§8.2), pero falta ratificarla. Mientras tanto los nombres de objetos viajan sin seudonimizar (S2-04 los conserva) |
 | DA-01, 06, 10 | **Abiertas** | Ratificar con el tutor (S1-20) |
 | DA-02 | **Abierta** | Calibrar umbrales con el laboratorio (S3-01) |
@@ -118,7 +118,7 @@ HTTP en `docs/CONTRATO_API_CONEXIONES.md`.
 | D1 | `connection` gana los estados `Pending`/`Failed`/`Rejected`, `probe_failure_cause varchar(32)` (código cerrado, nunca el texto del motor) y `last_probed_at`. Unicidad por (servidor en minúsculas, `lower(database_name)`), sin resolver DNS |
 | D2 | Cuenta sin el permiso mínimo de la matriz → `Failed` / `MissingPermission`. En 2022+ basta `VIEW DATABASE PERFORMANCE STATE` |
 | D3 | Volver a registrar una conexión `Failed` o `Rejected` reemplaza credenciales y vuelve a sondear; si está `Active` o `Pending`, 409 |
-| D4 | Matriz del Cuadro 4.16: < 13.x `NotSupported` (`Rejected`), 13–14 `CompatibleUntested`, ≥ 15 y Azure SQL DB `Tested`. **Deuda:** Azure SQL DB y 2025 sin pruebas ejecutadas |
+| D4 | Matriz del Cuadro 4.16: < 13.x `NotSupported` (`Rejected`). **Vigente tras S1-19 y S3-06:** 15 y 16 `Tested` (aceptación en CI); 13, 14, 17+ y Azure SQL DB `CompatibleUntested`; Managed Instance `NotSupported`. Debe coincidir con `docs/COMPATIBILIDAD.md` (`SupportMatrixDocumentTests`) |
 | D5 | Regla `QueryStoreState.CanIngest` (READ_WRITE o READ_ONLY). CA-HU02.2 pasa a S1-11 |
 | D6 | Paquetes de prueba nuevos: `Testcontainers.PostgreSql`, `Microsoft.AspNetCore.Mvc.Testing` 10.x |
 | D7 | `tests/QueryDoctor.LabTests` contra el SQL Server del laboratorio; sin `QD_LAB_SQL` salen omitidas, y una omitida no es evidencia |
@@ -362,6 +362,38 @@ Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA.
   (auditoría B3; improbable con 30 días y `score` tras cada ingesta).
 - Los registros fuente (`QueryFindingSource`, `WindowPlanSnapshot`, …) traen el campo nuevo con valor por omisión: un
   lector futuro que no lo llene mostraría "no expirado" (auditoría B3).
+
+## Decisiones de implementación de S3-06 (aceptación por plataforma, RNF-COM-01)
+Aprobadas por el responsable (Álvaro) en el PUNTO 1. No cierran ninguna DA (actualizan la resolución de DA-12).
+
+| ID | Decisión |
+|---|---|
+| A1 | Suite `tests/QueryDoctor.AcceptanceTests`: la Api real (`WebApplicationFactory`) encola en Hangfire y un Worker armado con `AddWorkerServices` (la misma composición que `Worker/Program.cs`) consume del mismo PostgreSQL. Todo por la Api pública. Sin `QD_LAB_SQL` sale Skipped |
+| A2 | La IA es un doble HTTP debajo del `HttpAiExplanationClient` real (JSON, enmascarado y validador reales). Las métricas del modelo son del arnés S3-02 |
+| A3 | Plataformas: SQL Server 2022 y 2019, matriz de CI. 2019 pasó y queda **Probado**; Azure SQL DB queda Compatible sin pruebas (sin acceso). `docs/COMPATIBILIDAD.md` es la matriz declarada y `SupportMatrixDocumentTests` exige que coincida con `SupportMatrix` |
+| A4 | Job `acceptance` en `ci.yml`. SQL Server con `docker run` y no `services:`: así la contraseña de sa se genera y enmascara en cada corrida, sin ir al YAML (invariante 4) ni a un secreto manual |
+| A5 | Cada prueba lleva el trait `Criterio` (CA-HU / RNF), también las LabTests; los `.trx` por plataforma son artefactos de la CI |
+| A6 | `lab/sql/12-acceptance-scenarios.sql` (marca `QD-ACC`, no la toca `Run-Lab -Step extract`): ACC01 (Key Lookup sobre el umbral de REG-04), ACC02 (misma consulta con dos planes, CA-HU07.2) y la base `QD_Lab_Acc` para los negativos del sondeo |
+| A7 | `01` usa el nivel de compatibilidad máximo de la versión (160 en 2022, 150 en 2019) y `11` solo da `VIEW DATABASE PERFORMANCE STATE` desde 16.x. En 2022 nada cambia |
+
+**Mecánica que conviene conocer:**
+- `QD_LAB_PLATFORM` (`sql2022` por omisión, `sql2019`) fija la versión y el nivel esperados (`LabPlatform`).
+  `[LabFact(MinimumMajorVersion = 16)]` omite, con su motivo, lo que no existe en la versión bajo prueba.
+- `lab/ci/prepare-acceptance-lab.sh <contenedor>` arma el laboratorio desde cero (01, 04, 02, 03, 11 y la carga 05 + 12
+  dos veces con 65 s entre ellas, para tener dos intervalos). Quita el BOM UTF-8 de los scripts antes de pasarlos a sqlcmd.
+- La identidad de una conexión es (servidor, base) **normalizados** (`ConnectionAddress` quita `tcp:` y el puerto 1433):
+  por eso los negativos usan otra base (`QD_Lab_Acc`) y no un alias del servidor.
+- En Windows, `QD_LAB_SQL=127.0.0.1` (con `localhost` resuelve primero a IPv6 y el compose publica 1433 solo en IPv4).
+
+**Hallazgos y deuda de S3-06:**
+- **La ingesta queda `Succeeded` antes de que terminen el análisis y el score** (corren después, en el mismo trabajo y con
+  el bloqueo tomado). Mientras tanto el listado muestra consultas sin hallazgos ni score, y una ingesta pedida en ese
+  momento sale `Skipped/AlreadyRunning`. La suite espera un score posterior a `finishedAt`. Deuda de S1-11 y S2-02.
+- **REG-04 no se dispara en ESC02 con los umbrales por defecto** (unos 20 lookups y 0,03 % de consumo frente a 1000 y 1 %).
+  Lo cubre ACC01. Dato para S3-01 (DA-02) y para el "Hecho cuando" de S1-16.
+- CA-HU01.4 (eliminar una conexión y sus credenciales) **no está implementado**: no hay `DELETE /connections/{id}`.
+- Sin prueba de punta a punta de CA-HU03.4 con un corte de red real (RNF-FIA-01); sigue simulado en IntegrationTests.
+- Solo la edición Developer en Linux. El Cuadro 4.16 del SRS debe pasar 2019 a Probado (S1-19, Maykol).
 
 ## Riesgos que afectan al código (§14.1)
 - **RA-03:** si ScriptDom no puede tokenizar el SQL, se envía solo el contexto de hallazgos,

@@ -54,8 +54,10 @@ laboratorio desde cero con `lab/ci/prepare-acceptance-lab.sh` (scripts de `lab/s
 `QueryDoctor.AcceptanceTests` contra el motor real (sin Skipped por falta de laboratorio) y publica un `.trx` por
 plataforma, con el criterio de aceptación de cada prueba en el trait `Criterio`.
 
-Corrida de referencia: [CI 44051765396](https://github.com/ALA458/QueryDoctor-AI/actions/runs/44051765396) (PR #72,
-commit `4e26946`, 2026-11-17).
+Corrida de referencia: [CI 44061839147](https://github.com/ALA458/QueryDoctor-AI/actions/runs/44061839147) (PR #72,
+commit `ed52d25`, 2026-11-17), la primera con 2019 ya clasificado como `Tested` por la plataforma. La anterior
+([44051765396](https://github.com/ALA458/QueryDoctor-AI/actions/runs/44051765396), `4e26946`) dio el mismo resultado
+con 2019 todavía `CompatibleUntested`.
 
 | Plataforma | Imagen | Motor | AcceptanceTests | LabTests |
 |---|---|---|---|---|

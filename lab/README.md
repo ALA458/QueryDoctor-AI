@@ -74,3 +74,28 @@ Para limpiar por completo el entorno de laboratorio (incluyendo volúmenes):
 ```powershell
 docker compose down -v
 ```
+
+---
+
+## 4. Laboratorio de aceptación (S3-06, RNF-COM-01)
+
+Las suites `tests/QueryDoctor.LabTests` y `tests/QueryDoctor.AcceptanceTests` corren contra este laboratorio cuando
+`QD_LAB_SQL` está definida (sin ella salen Skipped, y un Skipped no es evidencia). La CI las corre en el job
+`acceptance` contra SQL Server 2022 y 2019. Matriz y resultados: [docs/COMPATIBILIDAD.md](../docs/COMPATIBILIDAD.md).
+
+| Pieza | Para qué |
+|---|---|
+| `sql/12-acceptance-scenarios.sql` | Escenarios `QD-ACC` (no los toma `-Step extract`): ACC01 (Key Lookup sobre el umbral de REG-04), ACC02 (una consulta con dos planes) y la base `QD_Lab_Acc` para los negativos del sondeo. Se corre después de `05` |
+| `ci/prepare-acceptance-lab.sh <contenedor>` | Arma el laboratorio desde cero en cualquier contenedor (01, 04, 02, 03, 11 y la carga 05 + 12 dos veces con 65 s entre ellas). Lee `SA_PASSWORD` y `READER_PASSWORD` del entorno |
+
+Con el contenedor `sqlserver` del compose ya construido, basta con refrescar la carga (debe tener menos de 24 h) y correr:
+
+```powershell
+$env:QD_LAB_SQL = "127.0.0.1"   # en Windows no "localhost": resuelve primero a IPv6
+dotnet test tests/QueryDoctor.LabTests
+dotnet test tests/QueryDoctor.AcceptanceTests
+```
+
+`QD_LAB_PLATFORM` (`sql2022` por omisión, o `sql2019`) dice qué versión y qué nivel de soporte esperar. `01-database.sql`
+usa el nivel de compatibilidad máximo de la versión (160 en 2022, 150 en 2019) y `11-probe-fixtures.sql` solo crea el
+permiso de `qd_perf` desde 2022.
