@@ -12,7 +12,7 @@ public sealed record LabPlatform(string Name, int MajorVersion, SupportLevel Exp
     public const string Variable = "QD_LAB_PLATFORM";
 
     public static readonly LabPlatform SqlServer2022 = new("sql2022", 16, SupportLevel.Tested);
-    public static readonly LabPlatform SqlServer2019 = new("sql2019", 15, SupportLevel.CompatibleUntested);
+    public static readonly LabPlatform SqlServer2019 = new("sql2019", 15, SupportLevel.Tested);
 
     /// <summary>Prefijo de ProductVersion ("16.", "15.").</summary>
     public string VersionPrefix => $"{MajorVersion}.";

@@ -15,9 +15,9 @@ public class SupportMatrixTests
     [InlineData("12.0.6024.0", SupportLevel.NotSupported, ProbeFailureCause.UnsupportedVersion)]   // 2014
     [InlineData("13.0.7000.253", SupportLevel.CompatibleUntested, null)]                           // 2016
     [InlineData("14.0.3456.2", SupportLevel.CompatibleUntested, null)]                             // 2017
-    [InlineData("15.0.4382.1", SupportLevel.CompatibleUntested, null)]                             // 2019 (S1-19 / pendiente S3-06)
+    [InlineData("15.0.4382.1", SupportLevel.Tested, null)]                                         // 2019 (aceptación en CI, S3-06)
     [InlineData("16.0.4315.2", SupportLevel.Tested, null)]                                         // 2022 (laboratorio)
-    [InlineData("17.0.1000.7", SupportLevel.CompatibleUntested, null)]                             // 2025 (S1-19 / pendiente S3-06)
+    [InlineData("17.0.1000.7", SupportLevel.CompatibleUntested, null)]                             // 2025 (sin aceptación)
     public void SqlServerSeClasificaPorVersionMayor(string version, SupportLevel level, ProbeFailureCause? cause)
     {
         var result = SupportMatrix.Assess(ConnectionPlatform.SqlServer, version, Developer);

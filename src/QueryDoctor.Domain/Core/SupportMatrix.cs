@@ -32,13 +32,15 @@ public sealed record SupportAssessment(
     ProbeFailureCause? FailureCause);
 
 /// <summary>
-/// Matriz de soporte por plataforma y versión: Cuadro 4.16 del SRS v1.1 definitivo (S1-19).
+/// Matriz de soporte por plataforma y versión: Cuadro 4.16 del SRS v1.1 definitivo (S1-19), con la promoción de
+/// SQL Server 2019 de S3-06. Debe coincidir exactamente con docs/COMPATIBILIDAD.md (SupportMatrixDocumentTests).
 /// Función pura: mismo motor, mismo resultado; sin E/S.
 /// </summary>
 /// <remarks>
-/// Conforme a RNF-COM-01, únicamente SQL Server 2022 (16.x) queda como Probado; SQL Server 2016, 2017, 2019,
-/// 2025+ y Azure SQL Database quedan como Compatible sin pruebas hasta ejecutar sus pruebas de aceptación (S3-06);
-/// Azure SQL Managed Instance queda como No soportado en el MVP (regla de alcance S1-19).
+/// Conforme a RNF-COM-01, son Probado las plataformas con pruebas de aceptación automáticas ejecutadas: SQL Server 2022
+/// (16.x) y, desde S3-06, SQL Server 2019 (15.x), ambas en el job "acceptance" de la CI. SQL Server 2016, 2017, 2025+ y
+/// Azure SQL Database quedan como Compatible sin pruebas (sin aceptación ejecutada); Azure SQL Managed Instance queda
+/// como No soportado en el MVP (regla de alcance S1-19).
 /// </remarks>
 public static class SupportMatrix
 {
@@ -102,8 +104,8 @@ public static class SupportMatrix
         var level = major switch
         {
             < MinimumMajorVersion => SupportLevel.NotSupported,
-            16 => SupportLevel.Tested,               // SQL Server 2022: único probado en el laboratorio
-            _ => SupportLevel.CompatibleUntested,    // 2016 (DA-12), 2017, 2019 y 2025+ (pendientes de S3-06)
+            15 or 16 => SupportLevel.Tested,         // SQL Server 2019 y 2022: aceptación ejecutada en CI (S3-06)
+            _ => SupportLevel.CompatibleUntested,    // 2016 (DA-12), 2017 y 2025+: sin pruebas de aceptación
         };
 
         return new SupportAssessment(
