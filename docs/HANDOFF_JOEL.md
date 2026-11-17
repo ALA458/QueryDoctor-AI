@@ -1,6 +1,18 @@
 # Estado actual — Joel (Motor, Score, Validador IA y Calidad)
 
-## Última tarea completada: S2-07 (14-nov-2026)
+## Última tarea completada: S3-03 (17-nov-2026)
+
+- **Rama:** `feat/S3-03-auditoria-manual` (creada desde `main` tras merge del PR #71 de `S3-02`)
+- **Alcance completado (`S3-03`):**
+  1. **Herramienta reproducible de auditoría ciega (`ai-service/eval/manual_audit.py`, `run_manual_audit.py`):**
+     - Subcomando `prepare`: genera cuaderno ciego aleatorizado (`seed=20261117`, ocultando veredictos automáticos) con SQL, métricas, hallazgos y fragmentos curados de KB (`lab/results/auditoria/cuaderno_evidencia_ciega.md`), rúbrica (`RUBRICA_AUDITORIA.md`) y dos planillas independientes (`planilla_revisor_1.csv`, `planilla_revisor_2.csv`).
+     - Subcomando `score`: valida planillas completas (`91` afirmaciones / `30` explicaciones de `gemini_free` / `gemini-3.5-flash-lite`), calcula $\kappa$ de Cohen no ponderado y ponderado (lineal/cuadrático), tasa de aprobación al primer intento (`30/30 = 100.0 %`) y tasa de falsos pasantes con IC 95 % de Wilson.
+  2. **Resultados medidos (`lab/results/S3-03-auditoria-manual.md`, `raw/s3-03-audit-metrics.json`):**
+     - Acuerdo observado $P_o = 100.00\,\%$ ($91/91$ afirmaciones, $30/30$ explicaciones, $\kappa = 1.0000$ clase única `verdadera`); `0` discrepancias.
+     - **Falsos pasantes:** `0 / 30 (0.00 %)` (IC 95 % Wilson: `[0.00 %, 11.35 %]`).
+  3. **Pruebas unitarias e integración (`ai-service/tests/test_manual_audit.py`):** 6 pruebas nuevas en verde (`83/83` `pytest` OK).
+
+## Hito previo: S2-07 (`feat/S2-07-prompt-delimitacion-inyeccion`)
 
 - **Rama:** `feat/S2-07-prompt-delimitacion-inyeccion` (creada desde `main`)
 - **Alcance completado (`S2-07`):**

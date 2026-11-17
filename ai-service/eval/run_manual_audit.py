@@ -1,0 +1,143 @@
+"""CLI reproducible para preparar y puntuar la auditoría manual ciega (S3-03, RNF-FUN-03)."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+root_dir = Path(__file__).resolve().parent.parent
+if str(root_dir) not in sys.path:
+    sys.path.insert(0, str(root_dir))
+
+from eval.manual_audit import (  # noqa: E402
+    prepare_blind_audit_bundle,
+    render_audit_markdown,
+    report_to_dict,
+    score_manual_audit,
+)
+
+
+def _resolve_repo_path(repo_root: Path, raw_path: str, fallback_rel: str) -> Path:
+    """Resuelve rutas garantizando contención dentro de la raíz del repositorio (CWE-22)."""
+    resolved_root = repo_root.resolve()
+    candidate = Path(raw_path).resolve() if Path(raw_path).is_absolute() else (resolved_root / raw_path).resolve()
+    if os.path.commonpath([str(resolved_root), str(candidate)]) != str(resolved_root):
+        return (resolved_root / fallback_rel).resolve()
+    return candidate
+
+
+def _build_parser(repo_root: Path) -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description="Herramienta de auditoría manual por dos revisores independientes (S3-03 / RNF-FUN-03)"
+    )
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    prep = subparsers.add_parser("prepare", help="Genera cuaderno ciego, rúbrica y dos planillas CSV vacías")
+    prep.add_argument(
+        "--report",
+        type=str,
+        default="lab/results/ai_evaluation_report.json",
+        help="Ruta al reporte JSON generado por run_ai_harness.py",
+    )
+    prep.add_argument(
+        "--out-dir",
+        type=str,
+        default="lab/results/auditoria",
+        help="Directorio de salida para el paquete de revisión ciega",
+    )
+    prep.add_argument(
+        "--seed",
+        type=int,
+        default=20261117,
+        help="Semilla reproducible para barajar el orden de presentación",
+    )
+
+    score = subparsers.add_parser("score", help="Calcula Kappa de Cohen y tasa de falsos pasantes")
+    score.add_argument(
+        "--manifest",
+        type=str,
+        default="lab/results/auditoria/audit_manifest.json",
+        help="Ruta al manifiesto generado por prepare",
+    )
+    score.add_argument(
+        "--r1",
+        type=str,
+        default="lab/results/auditoria/planilla_revisor_1.csv",
+        help="Planilla completada por el Revisor 1",
+    )
+    score.add_argument(
+        "--r2",
+        type=str,
+        default="lab/results/auditoria/planilla_revisor_2.csv",
+        help="Planilla completada por el Revisor 2",
+    )
+    score.add_argument(
+        "--adjudication",
+        type=str,
+        default=None,
+        help="CSV opcional con consenso documentado sobre discrepancias (audit_id,final_verdict,resolution_note)",
+    )
+    score.add_argument(
+        "--out-md",
+        type=str,
+        default="lab/results/S3-03-auditoria-manual.md",
+        help="Ruta de salida para el informe en Markdown",
+    )
+    score.add_argument(
+        "--out-json",
+        type=str,
+        default="lab/results/raw/s3-03-audit-metrics.json",
+        help="Ruta de salida para métricas crudas en JSON",
+    )
+    return parser
+
+
+def main() -> int:
+    repo_root = root_dir.parent.resolve()
+    args = _build_parser(repo_root).parse_args()
+
+    if args.command == "prepare":
+        report_path = _resolve_repo_path(repo_root, args.report, "lab/results/ai_evaluation_report.json")
+        out_dir = _resolve_repo_path(repo_root, args.out_dir, "lab/results/auditoria")
+        manifest = prepare_blind_audit_bundle(report_path, out_dir, seed=args.seed)
+        print(
+            f"[OK] Paquete ciego generado en {out_dir}: "
+            f"{manifest['total_cases']} casos, {manifest['total_claims']} afirmaciones (seed={manifest['seed']})."
+        )
+        return 0
+
+    manifest_path = _resolve_repo_path(repo_root, args.manifest, "lab/results/auditoria/audit_manifest.json")
+    r1_path = _resolve_repo_path(repo_root, args.r1, "lab/results/auditoria/planilla_revisor_1.csv")
+    r2_path = _resolve_repo_path(repo_root, args.r2, "lab/results/auditoria/planilla_revisor_2.csv")
+    adj_path = (
+        _resolve_repo_path(repo_root, args.adjudication, "lab/results/auditoria/desacuerdos_resueltos.csv")
+        if args.adjudication
+        else None
+    )
+    out_md = _resolve_repo_path(repo_root, args.out_md, "lab/results/S3-03-auditoria-manual.md")
+    out_json = _resolve_repo_path(repo_root, args.out_json, "lab/results/raw/s3-03-audit-metrics.json")
+
+    audit_report = score_manual_audit(manifest_path, r1_path, r2_path, adjudication_csv=adj_path)
+
+    out_md.parent.mkdir(parents=True, exist_ok=True)
+    out_json.parent.mkdir(parents=True, exist_ok=True)
+    out_md.write_text(render_audit_markdown(audit_report), encoding="utf-8")
+    out_json.write_text(json.dumps(report_to_dict(audit_report), indent=2, ensure_ascii=False), encoding="utf-8")
+
+    strict_pct = audit_report.strict_false_passer_ci.proportion * 100.0
+    print(
+        f"[OK] S3-03 puntuado: kappa(claims)={audit_report.claim_kappa.kappa:.4f}, "
+        f"kappa(cases)={audit_report.case_kappa.kappa:.4f}, "
+        f"falsos_pasantes(estricto)={audit_report.strict_false_passer_count}/{audit_report.first_attempt_pass_count} "
+        f"({strict_pct:.2f}%)"
+    )
+    print(f"     Informe Markdown: {out_md}")
+    print(f"     Métricas JSON:    {out_json}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
