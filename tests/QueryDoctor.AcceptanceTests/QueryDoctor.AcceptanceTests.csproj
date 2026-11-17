@@ -29,6 +29,7 @@
   <!-- Dónde está el laboratorio y [LabFact]: los mismos que LabTests, sin copiarlos. -->
   <ItemGroup>
     <Compile Include="..\QueryDoctor.LabTests\LabEnvironment.cs" Link="Lab\LabEnvironment.cs" />
+    <Compile Include="..\QueryDoctor.LabTests\LabPlatform.cs" Link="Lab\LabPlatform.cs" />
   </ItemGroup>
 
   <ItemGroup>

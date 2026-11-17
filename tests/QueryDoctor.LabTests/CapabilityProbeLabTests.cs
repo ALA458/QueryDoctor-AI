@@ -5,7 +5,7 @@ using QueryDoctor.Domain.Core;
 namespace QueryDoctor.LabTests;
 
 /// <summary>
-/// S1-09 contra SQL Server 2022 real (D7). Requiere: compose sqlserver arriba, Run-Lab build + login y
+/// S1-09 contra el SQL Server real del laboratorio (D7; S3-06: 2022 o 2019 según QD_LAB_PLATFORM). Requiere: compose sqlserver arriba, Run-Lab build + login y
 /// lab/sql/11-probe-fixtures.sql. Cada prueba crea su propia conexión en memoria: no dependen del orden.
 /// </summary>
 public sealed class CapabilityProbeLabTests
@@ -18,9 +18,12 @@ public sealed class CapabilityProbeLabTests
         TelemetryStatementWhitelist.Keys.GetQueryStoreViewColumns,
     ];
 
-    // CA-HU01.1 + CA-HU02.1 + RF-CFG-07: qd_reader (VIEW DATABASE STATE) queda Active con el perfil completo.
+    // CA-HU01.1 + CA-HU02.1 + RF-CFG-07: qd_reader (VIEW DATABASE STATE) queda Active con el perfil completo y el nivel
+    // de la matriz para la plataforma bajo prueba (S3-06: QD_LAB_PLATFORM).
     [LabFact]
-    public async Task QdReaderEnQdLabQuedaActiveConPerfilDeSqlServer2022()
+    [Trait("Criterio", "CA-HU01.1")]
+    [Trait("Criterio", "CA-HU02.1")]
+    public async Task QdReaderEnQdLabQuedaActiveConElPerfilDeLaPlataforma()
     {
         var lab = new LabProbeHarness();
         var connection = lab.AddPending(LabEnvironment.Database, LabEnvironment.Reader, LabEnvironment.ReaderPassword());
@@ -31,9 +34,9 @@ public sealed class CapabilityProbeLabTests
         Assert.Null(outcome.FailureCause);
 
         var profile = Assert.Single(lab.Repository.Profiles);
-        Assert.StartsWith("16.", profile.EngineVersion, StringComparison.Ordinal);
+        Assert.StartsWith(LabPlatform.Current.VersionPrefix, profile.EngineVersion, StringComparison.Ordinal);
         Assert.Contains("Developer", profile.Edition, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal(SupportLevel.Tested, profile.SupportLevel);
+        Assert.Equal(LabPlatform.Current.ExpectedSupportLevel, profile.SupportLevel);
         Assert.True(profile.HasViewDatabaseState);
 
         // Lo que configura lab/sql/01-database.sql.
@@ -41,12 +44,13 @@ public sealed class CapabilityProbeLabTests
         Assert.Equal(1, profile.IntervalLengthMinutes);
         Assert.Equal("ALL", profile.CaptureMode);
 
-        // 2022 trae las columnas de RF-ING-03: no se omite nada.
+        // 2017+ trae las columnas de RF-ING-03: no se omite nada.
         Assert.Equal("[]", profile.OmittedFeaturesJson);
     }
 
     // RNF-SEG-01 / S1-08: el sondeo solo emite las 4 sentencias de la lista blanca, todas SELECT, y quedan en statement_log.
     [LabFact]
+    [Trait("Criterio", "CA-HU15.2")]
     public async Task ElSondeoSoloEjecutaSelectDeLaListaBlancaYQuedanEnStatementLog()
     {
         var lab = new LabProbeHarness();
@@ -66,6 +70,7 @@ public sealed class CapabilityProbeLabTests
 
     // CA-HU02.3: el sondeo lee Query Store y no lo modifica.
     [LabFact]
+    [Trait("Criterio", "CA-HU02.3")]
     public async Task ElSondeoNoCambiaLaConfiguracionDeQueryStore()
     {
         var before = await LabProbeHarness.QueryStoreConfigurationAsync(LabEnvironment.Database);
@@ -79,8 +84,9 @@ public sealed class CapabilityProbeLabTests
         Assert.Equal(before, after);
     }
 
-    // Decisión 9: en 2022+ VIEW DATABASE PERFORMANCE STATE también alcanza (Cuadro 4.16).
-    [LabFact]
+    // Decisión 9: en 2022+ VIEW DATABASE PERFORMANCE STATE también alcanza (Cuadro 4.16). En 2019 el permiso no existe.
+    [LabFact(MinimumMajorVersion = 16)]
+    [Trait("Criterio", "CA-HU15.1")]
     public async Task UnaCuentaConSoloViewDatabasePerformanceStateQuedaActiveEn2022()
     {
         var lab = new LabProbeHarness();
@@ -94,6 +100,7 @@ public sealed class CapabilityProbeLabTests
 
     // CA-HU01.2: credenciales inválidas → Failed con su código, sin perfil.
     [LabFact]
+    [Trait("Criterio", "CA-HU01.2")]
     public async Task ContrasenaIncorrectaQuedaFailedPorCredencialesInvalidas()
     {
         var lab = new LabProbeHarness();
@@ -108,6 +115,7 @@ public sealed class CapabilityProbeLabTests
 
     // CA-HU01.2: conecta pero no tiene el permiso mínimo de la matriz.
     [LabFact]
+    [Trait("Criterio", "CA-HU01.2")]
     public async Task QdNopermQuedaFailedPorPermisoFaltante()
     {
         var lab = new LabProbeHarness();
@@ -134,6 +142,7 @@ public sealed class CapabilityProbeLabTests
 
     // Invariante 3 / RNF-SEG-03: sin la excepción del laboratorio, el certificado autofirmado se rechaza.
     [LabFact]
+    [Trait("Criterio", "RNF-SEG-03")]
     public async Task SinExcepcionDeLaboratorioElCertificadoAutofirmadoSeRechaza()
     {
         var lab = new LabProbeHarness();
@@ -147,6 +156,7 @@ public sealed class CapabilityProbeLabTests
 
     // Puerto cerrado en el mismo host: el error de red se clasifica como servidor inalcanzable.
     [LabFact]
+    [Trait("Criterio", "CA-HU01.2")]
     public async Task PuertoCerradoQuedaFailedPorServidorInalcanzable()
     {
         var lab = new LabProbeHarness();
@@ -154,7 +164,7 @@ public sealed class CapabilityProbeLabTests
             LabEnvironment.Database,
             LabEnvironment.Reader,
             LabEnvironment.ReaderPassword(),
-            server: LabEnvironment.RequiredServer + ",1");
+            server: LabEnvironment.RequiredServer.Split(',')[0] + ",1"); // S3-06: QD_LAB_SQL puede traer puerto
 
         var outcome = await lab.ProbeAsync(connection.Id);
 
@@ -164,6 +174,7 @@ public sealed class CapabilityProbeLabTests
 
     // CA-HU02.3: Query Store apagado se informa tal cual, no se intenta activar, y no habilita la ingesta (D5).
     [LabFact]
+    [Trait("Criterio", "CA-HU02.3")]
     public async Task QueryStoreApagadoSeInformaSinActivarlo()
     {
         var before = await LabProbeHarness.QueryStoreConfigurationAsync(LabEnvironment.DatabaseWithoutQueryStore);
@@ -184,6 +195,7 @@ public sealed class CapabilityProbeLabTests
 
     // CA-HU01.3: versión < 2016 (sustituida sobre el sondeo real) → Rejected y sin credenciales guardadas.
     [LabFact]
+    [Trait("Criterio", "CA-HU01.3")]
     public async Task VersionNoSoportadaQuedaRejectedYBorraLasCredenciales()
     {
         var lab = new LabProbeHarness();

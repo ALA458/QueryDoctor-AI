@@ -26,8 +26,9 @@ public sealed class ConnectionAcceptanceTests(AcceptanceFixture platform, ITestO
         var version = capabilities.GetProperty("engineVersion").GetString();
         output.WriteLine($"Plataforma bajo prueba: {version} — {capabilities.GetProperty("edition").GetString()} — {capabilities.GetProperty("supportLevel").GetString()}");
 
-        Assert.False(string.IsNullOrWhiteSpace(version));
-        Assert.Equal("Tested", capabilities.GetProperty("supportLevel").GetString());
+        // RF-CFG-07: el nivel que la matriz de soporte le da a la plataforma bajo prueba (QD_LAB_PLATFORM).
+        Assert.StartsWith(LabPlatform.Current.VersionPrefix, version, StringComparison.Ordinal);
+        Assert.Equal(LabPlatform.Current.ExpectedSupportLevel.ToString(), capabilities.GetProperty("supportLevel").GetString());
 
         var queryStore = capabilities.GetProperty("queryStore");
         Assert.Equal("READ_WRITE", queryStore.GetProperty("actualState").GetString());

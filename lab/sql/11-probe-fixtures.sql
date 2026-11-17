@@ -41,7 +41,10 @@ USE QD_Lab;
 GO
 IF USER_ID(N'qd_perf') IS NOT NULL DROP USER qd_perf;
 CREATE USER qd_perf FOR LOGIN qd_perf;
-GRANT VIEW DATABASE PERFORMANCE STATE TO qd_perf;
+-- S3-06: VIEW DATABASE PERFORMANCE STATE existe desde SQL Server 2022 (16.x). En 2019 qd_perf queda sin permisos y la
+-- prueba que lo usa no aplica (LabTests la omite por version). EXEC porque en 2019 el permiso ni siquiera compila.
+IF CAST(SERVERPROPERTY('ProductMajorVersion') AS int) >= 16
+    EXEC (N'GRANT VIEW DATABASE PERFORMANCE STATE TO qd_perf;');
 GO
 
 -- Comprobacion visible al final de la corrida.
