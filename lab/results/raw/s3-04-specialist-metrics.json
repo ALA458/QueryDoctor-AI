@@ -1,0 +1,372 @@
+{
+  "specialist_metadata": {
+    "specialist_name": "Ing. Carlos M. Restrepo",
+    "specialist_role": "DBA Senior & Especialista en Rendimiento SQL Server",
+    "certifications": "Microsoft Certified: Azure Database Administrator Associate, MCP SQL Server Query Tuning",
+    "experience_years": 12,
+    "evaluation_date": "2026-11-18",
+    "modality": "Contraste Ciego Independiente (RF-EVA-03, DA-10)"
+  },
+  "diagnostic_metrics": {
+    "total_cases": 15,
+    "exact_diagnostic_matches": 15,
+    "exact_diagnostic_match_pct": 100.0,
+    "broader_diagnostic_matches": 15,
+    "broader_diagnostic_match_pct": 100.0,
+    "therapeutic_matches": 14,
+    "therapeutic_match_pct": 93.3,
+    "rule_sensitivity": {
+      "REG-01": 100.0,
+      "REG-02": 100.0,
+      "REG-03": 100.0,
+      "REG-04": 100.0,
+      "REG-11": 100.0
+    },
+    "specificity": 100.0,
+    "false_positive_rate": 0.0,
+    "confusion_matrix": {
+      "REG-01": {
+        "REG-01": 4,
+        "REG-02": 0,
+        "REG-03": 0,
+        "REG-04": 0,
+        "REG-11": 0,
+        "NINGUNO": 0
+      },
+      "REG-02": {
+        "REG-01": 0,
+        "REG-02": 3,
+        "REG-03": 0,
+        "REG-04": 0,
+        "REG-11": 0,
+        "NINGUNO": 0
+      },
+      "REG-03": {
+        "REG-01": 0,
+        "REG-02": 0,
+        "REG-03": 3,
+        "REG-04": 0,
+        "REG-11": 0,
+        "NINGUNO": 0
+      },
+      "REG-04": {
+        "REG-01": 0,
+        "REG-02": 0,
+        "REG-03": 0,
+        "REG-04": 3,
+        "REG-11": 0,
+        "NINGUNO": 0
+      },
+      "REG-11": {
+        "REG-01": 0,
+        "REG-02": 0,
+        "REG-03": 0,
+        "REG-04": 0,
+        "REG-11": 1,
+        "NINGUNO": 0
+      },
+      "NINGUNO": {
+        "REG-01": 0,
+        "REG-02": 0,
+        "REG-03": 0,
+        "REG-04": 0,
+        "REG-11": 0,
+        "NINGUNO": 1
+      }
+    }
+  },
+  "correlation_metrics": {
+    "spearman_rho": 0.9964,
+    "kendall_tau": 0.981,
+    "top3_coincidence_pct": 100.0,
+    "top5_coincidence_pct": 100.0,
+    "mean_rank_difference": 0.13
+  },
+  "case_results": [
+    {
+      "case_id": "SPE-01",
+      "scenario_name": "REG-01: Filtro varchar contra parámetro Unicode nvarchar",
+      "specialist_rule": "REG-01",
+      "system_primary_rule": "REG-01",
+      "system_all_rules": [
+        "REG-01"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "ALINEAR_TIPOS",
+      "system_action": "ALINEAR_TIPOS",
+      "therapeutic_match": true,
+      "specialist_priority": "ALTA",
+      "specialist_rank": 6,
+      "query_health_score": 42.1,
+      "system_rank": 6,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-02",
+      "scenario_name": "REG-01: Join en clave con tipos desalineados int y bigint",
+      "specialist_rule": "REG-01",
+      "system_primary_rule": "REG-01",
+      "system_all_rules": [
+        "REG-01",
+        "REG-03"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "ALINEAR_TIPOS",
+      "system_action": "ALINEAR_TIPOS",
+      "therapeutic_match": true,
+      "specialist_priority": "CRITICA",
+      "specialist_rank": 2,
+      "query_health_score": 28.5,
+      "system_rank": 3,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-03",
+      "scenario_name": "REG-01: Búsqueda en campo char con literal string variable",
+      "specialist_rule": "REG-01",
+      "system_primary_rule": "REG-01",
+      "system_all_rules": [
+        "REG-01"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "ALINEAR_TIPOS",
+      "system_action": "ALINEAR_TIPOS",
+      "therapeutic_match": true,
+      "specialist_priority": "MEDIA",
+      "specialist_rank": 9,
+      "query_health_score": 58.0,
+      "system_rank": 9,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-04",
+      "scenario_name": "REG-01: Conversión implícita en clave foránea de detalle",
+      "specialist_rule": "REG-01",
+      "system_primary_rule": "REG-01",
+      "system_all_rules": [
+        "REG-01",
+        "REG-03"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "ALINEAR_TIPOS",
+      "system_action": "ALINEAR_TIPOS",
+      "therapeutic_match": true,
+      "specialist_priority": "CRITICA",
+      "specialist_rank": 3,
+      "query_health_score": 24.0,
+      "system_rank": 2,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-05",
+      "scenario_name": "REG-02: Filtro compuesto sobre lineitem sin índice secundario",
+      "specialist_rule": "REG-02",
+      "system_primary_rule": "REG-02",
+      "system_all_rules": [
+        "REG-02"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "CREAR_INDICE",
+      "system_action": "CREAR_INDICE",
+      "therapeutic_match": true,
+      "specialist_priority": "CRITICA",
+      "specialist_rank": 1,
+      "query_health_score": 18.0,
+      "system_rank": 1,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-06",
+      "scenario_name": "REG-02: Join entre pedidos y clientes sin índice en clave foránea",
+      "specialist_rule": "REG-02",
+      "system_primary_rule": "REG-02",
+      "system_all_rules": [
+        "REG-02"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "CREAR_INDICE",
+      "system_action": "CREAR_INDICE",
+      "therapeutic_match": true,
+      "specialist_priority": "ALTA",
+      "specialist_rank": 4,
+      "query_health_score": 31.0,
+      "system_rank": 4,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-07",
+      "scenario_name": "REG-02: Filtro de rango en proveedores sin índice cubierto",
+      "specialist_rule": "REG-02",
+      "system_primary_rule": "REG-02",
+      "system_all_rules": [
+        "REG-02"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "CREAR_INDICE",
+      "system_action": "CREAR_INDICE",
+      "therapeutic_match": true,
+      "specialist_priority": "MEDIA",
+      "specialist_rank": 8,
+      "query_health_score": 52.4,
+      "system_rank": 8,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-08",
+      "scenario_name": "REG-03: Table scan sobre tabla grande con predicado residual",
+      "specialist_rule": "REG-03",
+      "system_primary_rule": "REG-03",
+      "system_all_rules": [
+        "REG-03"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "CREAR_INDICE",
+      "system_action": "CREAR_INDICE",
+      "therapeutic_match": true,
+      "specialist_priority": "ALTA",
+      "specialist_rank": 5,
+      "query_health_score": 36.5,
+      "system_rank": 5,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-09",
+      "scenario_name": "REG-03: Clustered index scan en lineitem con filtro residual",
+      "specialist_rule": "REG-03",
+      "system_primary_rule": "REG-03",
+      "system_all_rules": [
+        "REG-03"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "CREAR_INDICE",
+      "system_action": "CREAR_INDICE",
+      "therapeutic_match": true,
+      "specialist_priority": "ALTA",
+      "specialist_rank": 7,
+      "query_health_score": 44.0,
+      "system_rank": 7,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-10",
+      "scenario_name": "REG-03: Escaneo completo en customer con predicado no sargable",
+      "specialist_rule": "REG-03",
+      "system_primary_rule": "REG-03",
+      "system_all_rules": [
+        "REG-03"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "REESCRIBIR_PREDICADO_SARGABLE",
+      "system_action": "CREAR_INDICE",
+      "therapeutic_match": false,
+      "specialist_priority": "MEDIA",
+      "specialist_rank": 10,
+      "query_health_score": 61.2,
+      "system_rank": 10,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-11",
+      "scenario_name": "REG-04: Búsqueda en índice no agrupado con Key Lookup masivo",
+      "specialist_rule": "REG-04",
+      "system_primary_rule": "REG-04",
+      "system_all_rules": [
+        "REG-04"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "MODIFICAR_INDICE_INCLUDE",
+      "system_action": "MODIFICAR_INDICE_INCLUDE",
+      "therapeutic_match": true,
+      "specialist_priority": "ALTA",
+      "specialist_rank": 11,
+      "query_health_score": 64.5,
+      "system_rank": 11,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-12",
+      "scenario_name": "REG-04: Key Lookup excesivo en detalle de clientes",
+      "specialist_rule": "REG-04",
+      "system_primary_rule": "REG-04",
+      "system_all_rules": [
+        "REG-04"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "MODIFICAR_INDICE_INCLUDE",
+      "system_action": "MODIFICAR_INDICE_INCLUDE",
+      "therapeutic_match": true,
+      "specialist_priority": "MEDIA",
+      "specialist_rank": 12,
+      "query_health_score": 69.0,
+      "system_rank": 12,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-13",
+      "scenario_name": "REG-04: Key Lookup en partsupp por columnas no cubiertas",
+      "specialist_rule": "REG-04",
+      "system_primary_rule": "REG-04",
+      "system_all_rules": [
+        "REG-04"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "MODIFICAR_INDICE_INCLUDE",
+      "system_action": "MODIFICAR_INDICE_INCLUDE",
+      "therapeutic_match": true,
+      "specialist_priority": "BAJA",
+      "specialist_rank": 13,
+      "query_health_score": 76.5,
+      "system_rank": 13,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-14",
+      "scenario_name": "REG-11: Showplan XML truncado por límite de tamaño de buffer",
+      "specialist_rule": "REG-11",
+      "system_primary_rule": "REG-11",
+      "system_all_rules": [
+        "REG-11"
+      ],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "REFACTORIZAR_CTE_TABLA_TEMP",
+      "system_action": "REFACTORIZAR_CTE_TABLA_TEMP",
+      "therapeutic_match": true,
+      "specialist_priority": "MEDIA",
+      "specialist_rank": 14,
+      "query_health_score": 81.0,
+      "system_rank": 14,
+      "validation_status": "TRAZADA"
+    },
+    {
+      "case_id": "SPE-15",
+      "scenario_name": "Control Negativo: Búsqueda puntual por Primary Key sin defectos",
+      "specialist_rule": "NINGUNO",
+      "system_primary_rule": "NINGUNO",
+      "system_all_rules": [],
+      "diagnostic_exact_match": true,
+      "diagnostic_broader_match": true,
+      "specialist_action": "NINGUNA_ACCION",
+      "system_action": "NINGUNA_ACCION",
+      "therapeutic_match": true,
+      "specialist_priority": "LEVE_NINGUNA",
+      "specialist_rank": 15,
+      "query_health_score": 98.5,
+      "system_rank": 15,
+      "validation_status": "TRAZADA"
+    }
+  ]
+}

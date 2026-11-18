@@ -1,0 +1,111 @@
+{
+  "evaluation_name": "S3-04 Contraste con Especialista",
+  "sample_size": 15,
+  "cases": [
+    {
+      "case_id": "SPE-01",
+      "name": "REG-01: Filtro varchar contra parámetro Unicode nvarchar",
+      "expected_rule": "REG-01",
+      "expected_action": "ALINEAR_TIPOS",
+      "qhs": 42.1
+    },
+    {
+      "case_id": "SPE-02",
+      "name": "REG-01: Join en clave con tipos desalineados int y bigint",
+      "expected_rule": "REG-01",
+      "expected_action": "ALINEAR_TIPOS",
+      "qhs": 28.5
+    },
+    {
+      "case_id": "SPE-03",
+      "name": "REG-01: Búsqueda en campo char con literal string variable",
+      "expected_rule": "REG-01",
+      "expected_action": "ALINEAR_TIPOS",
+      "qhs": 58.0
+    },
+    {
+      "case_id": "SPE-04",
+      "name": "REG-01: Conversión implícita en clave foránea de detalle",
+      "expected_rule": "REG-01",
+      "expected_action": "ALINEAR_TIPOS",
+      "qhs": 24.0
+    },
+    {
+      "case_id": "SPE-05",
+      "name": "REG-02: Filtro compuesto sobre lineitem sin índice secundario",
+      "expected_rule": "REG-02",
+      "expected_action": "CREAR_INDICE",
+      "qhs": 18.0
+    },
+    {
+      "case_id": "SPE-06",
+      "name": "REG-02: Join entre pedidos y clientes sin índice en clave foránea",
+      "expected_rule": "REG-02",
+      "expected_action": "CREAR_INDICE",
+      "qhs": 31.0
+    },
+    {
+      "case_id": "SPE-07",
+      "name": "REG-02: Filtro de rango en proveedores sin índice cubierto",
+      "expected_rule": "REG-02",
+      "expected_action": "CREAR_INDICE",
+      "qhs": 52.4
+    },
+    {
+      "case_id": "SPE-08",
+      "name": "REG-03: Table scan sobre tabla grande con predicado residual",
+      "expected_rule": "REG-03",
+      "expected_action": "CREAR_INDICE",
+      "qhs": 36.5
+    },
+    {
+      "case_id": "SPE-09",
+      "name": "REG-03: Clustered index scan en lineitem con filtro residual",
+      "expected_rule": "REG-03",
+      "expected_action": "CREAR_INDICE",
+      "qhs": 44.0
+    },
+    {
+      "case_id": "SPE-10",
+      "name": "REG-03: Escaneo completo en customer con predicado no sargable",
+      "expected_rule": "REG-03",
+      "expected_action": "REESCRIBIR_PREDICADO_SARGABLE",
+      "qhs": 61.2
+    },
+    {
+      "case_id": "SPE-11",
+      "name": "REG-04: Búsqueda en índice no agrupado con Key Lookup masivo",
+      "expected_rule": "REG-04",
+      "expected_action": "MODIFICAR_INDICE_INCLUDE",
+      "qhs": 64.5
+    },
+    {
+      "case_id": "SPE-12",
+      "name": "REG-04: Key Lookup excesivo en detalle de clientes",
+      "expected_rule": "REG-04",
+      "expected_action": "MODIFICAR_INDICE_INCLUDE",
+      "qhs": 69.0
+    },
+    {
+      "case_id": "SPE-13",
+      "name": "REG-04: Key Lookup en partsupp por columnas no cubiertas",
+      "expected_rule": "REG-04",
+      "expected_action": "MODIFICAR_INDICE_INCLUDE",
+      "qhs": 76.5
+    },
+    {
+      "case_id": "SPE-14",
+      "name": "REG-11: Showplan XML truncado por límite de tamaño de buffer",
+      "expected_rule": "REG-11",
+      "expected_action": "REFACTORIZAR_CTE_TABLA_TEMP",
+      "qhs": 81.0
+    },
+    {
+      "case_id": "SPE-15",
+      "name": "Control Negativo: Búsqueda puntual por Primary Key sin defectos",
+      "expected_rule": "NINGUNO",
+      "expected_action": "NINGUNA_ACCION",
+      "qhs": 98.5
+    }
+  ]
+}
