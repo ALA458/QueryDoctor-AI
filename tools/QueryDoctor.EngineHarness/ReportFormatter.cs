@@ -22,6 +22,12 @@ public static class ReportFormatter
         return JsonSerializer.Serialize(report, JsonOptions);
     }
 
+    public static string ToExportJson(SpecialistCaseExportBundle bundle)
+    {
+        ArgumentNullException.ThrowIfNull(bundle);
+        return JsonSerializer.Serialize(bundle, JsonOptions);
+    }
+
     public static string ToTable(EngineEvaluationReport report)
     {
         ArgumentNullException.ThrowIfNull(report);

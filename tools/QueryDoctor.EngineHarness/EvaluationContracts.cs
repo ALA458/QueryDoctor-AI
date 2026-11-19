@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using QueryDoctor.Application.Engine.Rules;
 
 namespace QueryDoctor.EngineHarness;
 
@@ -96,3 +97,68 @@ public sealed record EngineEvaluationReport(
     [property: JsonPropertyName("not_analyzable")] NotAnalyzableMetrics NotAnalyzable,
     [property: JsonPropertyName("diffs")] IReadOnlyList<FindingDiffItem> Diffs,
     [property: JsonPropertyName("all_must_targets_met")] bool AllMustTargetsMet);
+
+/// <summary>
+/// Paquete exportado de casos evaluados de extremo a extremo para contraste con especialista (S3-04, RF-EVA-03).
+/// </summary>
+public sealed record SpecialistCaseExportBundle(
+    [property: JsonPropertyName("catalog_version")] string CatalogVersion,
+    [property: JsonPropertyName("thresholds_hash")] string ThresholdsHash,
+    [property: JsonPropertyName("score_parameters_hash")] string ScoreParametersHash,
+    [property: JsonPropertyName("thresholds")] IReadOnlyDictionary<string, double> Thresholds,
+    [property: JsonPropertyName("cases")] IReadOnlyList<SpecialistExportedCase> Cases);
+
+/// <summary>
+/// Caso individual exportado con SQL, resumen del plan XML, puntaje Query Health Score y hallazgos del motor calibrado.
+/// </summary>
+public sealed record SpecialistExportedCase(
+    [property: JsonPropertyName("case_id")] string CaseId,
+    [property: JsonPropertyName("corpus")] string Corpus,
+    [property: JsonPropertyName("split")] string Split,
+    [property: JsonPropertyName("plan_path")] string PlanPath,
+    [property: JsonPropertyName("description")] string Description,
+    [property: JsonPropertyName("sql_text")] string SqlText,
+    [property: JsonPropertyName("masked_sql_text")] string MaskedSqlText,
+    [property: JsonPropertyName("context")] CaseExecutionContext Context,
+    [property: JsonPropertyName("health_score")] SpecialistHealthScoreSummary HealthScore,
+    [property: JsonPropertyName("plan_summary")] SpecialistPlanSummary PlanSummary,
+    [property: JsonPropertyName("findings")] IReadOnlyList<FindingContract> Findings);
+
+/// <summary>
+/// Resumen determinístico del puntaje Query Health Score dentro de la ventana de contraste (RF-SCO-01..06, RF-EVA-05).
+/// </summary>
+public sealed record SpecialistHealthScoreSummary(
+    [property: JsonPropertyName("score")] double Score,
+    [property: JsonPropertyName("priority")] double Priority,
+    [property: JsonPropertyName("band")] string Band,
+    [property: JsonPropertyName("impact_component")] double ImpactComponent,
+    [property: JsonPropertyName("severity_component")] double SeverityComponent,
+    [property: JsonPropertyName("weighted_consumption_pct")] double WeightedConsumptionPct,
+    [property: JsonPropertyName("rank_by_score_asc")] int RankByScoreAsc,
+    [property: JsonPropertyName("rank_by_consumption_desc")] int RankByConsumptionDesc);
+
+/// <summary>
+/// Resumen estructural del Showplan XML analizado sin exponer reglas internas en Etapa A ciega.
+/// </summary>
+public sealed record SpecialistPlanSummary(
+    [property: JsonPropertyName("engine_version")] string? EngineVersion,
+    [property: JsonPropertyName("statement_optm_level")] string? StatementOptmLevel,
+    [property: JsonPropertyName("statement_optm_early_abort_reason")] string? StatementOptmEarlyAbortReason,
+    [property: JsonPropertyName("statement_subtree_cost")] double? StatementSubTreeCost,
+    [property: JsonPropertyName("statement_est_rows")] double? StatementEstRows,
+    [property: JsonPropertyName("warnings")] IReadOnlyList<string> Warnings,
+    [property: JsonPropertyName("missing_indexes")] IReadOnlyList<string> MissingIndexes,
+    [property: JsonPropertyName("operators")] IReadOnlyList<SpecialistPlanOperatorSummary> Operators);
+
+/// <summary>
+/// Operador resumido dentro del árbol Showplan XML para inspección del especialista.
+/// </summary>
+public sealed record SpecialistPlanOperatorSummary(
+    [property: JsonPropertyName("node_id")] int NodeId,
+    [property: JsonPropertyName("physical_op")] string PhysicalOp,
+    [property: JsonPropertyName("logical_op")] string LogicalOp,
+    [property: JsonPropertyName("estimate_rows")] double EstimateRows,
+    [property: JsonPropertyName("estimated_rows_read")] double? EstimatedRowsRead,
+    [property: JsonPropertyName("estimated_total_subtree_cost")] double EstimatedTotalSubtreeCost,
+    [property: JsonPropertyName("target_object")] string? TargetObject,
+    [property: JsonPropertyName("warnings")] IReadOnlyList<string> Warnings);

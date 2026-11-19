@@ -29,6 +29,24 @@ internal static class Program
                 : EngineHarnessRunner.LoadThresholds(options.ThresholdsPath);
 
             var runner = new EngineHarnessRunner();
+
+            if (!string.IsNullOrWhiteSpace(options.ExportCasesPath))
+            {
+                var caseIds = (options.CasesCsv ?? string.Empty)
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var exportBundle = runner.ExportCasesFromManifest(manifestPath, caseIds, thresholds);
+                var exportFullPath = Path.GetFullPath(options.ExportCasesPath);
+                var exportParent = Path.GetDirectoryName(exportFullPath);
+                if (!string.IsNullOrWhiteSpace(exportParent))
+                {
+                    Directory.CreateDirectory(exportParent);
+                }
+
+                File.WriteAllText(exportFullPath, ReportFormatter.ToExportJson(exportBundle), new UTF8Encoding(false));
+                Console.WriteLine($"Paquete de {exportBundle.Cases.Count} casos exportado en: {exportFullPath}");
+                return 0;
+            }
+
             var report = runner.EvaluateFromManifest(
                 manifestPath,
                 options.Corpus,
@@ -102,6 +120,8 @@ internal static class Program
         var thresholds = (string?)null;
         var format = "table";
         var outputDir = (string?)null;
+        var casesCsv = (string?)null;
+        var exportCasesPath = (string?)null;
         var checkTargets = false;
         showHelp = false;
         error = null;
@@ -112,7 +132,7 @@ internal static class Program
             if (arg is "-h" or "--help")
             {
                 showHelp = true;
-                options = new CliOptions(manifest, corpus, split, thresholds, format, outputDir, checkTargets);
+                options = new CliOptions(manifest, corpus, split, thresholds, format, outputDir, checkTargets, casesCsv, exportCasesPath);
                 return true;
             }
 
@@ -124,7 +144,7 @@ internal static class Program
 
             if (!TryReadOptionValue(args, ref i, out var val, out error))
             {
-                options = new CliOptions(manifest, corpus, split, thresholds, format, outputDir, checkTargets);
+                options = new CliOptions(manifest, corpus, split, thresholds, format, outputDir, checkTargets, casesCsv, exportCasesPath);
                 return false;
             }
 
@@ -147,21 +167,27 @@ internal static class Program
                     if (format is not ("table" or "json" or "markdown"))
                     {
                         error = $"Formato inválido '{val}'. Use table, json o markdown.";
-                        options = new CliOptions(manifest, corpus, split, thresholds, format, outputDir, checkTargets);
+                        options = new CliOptions(manifest, corpus, split, thresholds, format, outputDir, checkTargets, casesCsv, exportCasesPath);
                         return false;
                     }
                     break;
                 case "--output-dir":
                     outputDir = val;
                     break;
+                case "--cases":
+                    casesCsv = val;
+                    break;
+                case "--export-cases":
+                    exportCasesPath = val;
+                    break;
                 default:
                     error = $"Opción no reconocida: '{arg}'.";
-                    options = new CliOptions(manifest, corpus, split, thresholds, format, outputDir, checkTargets);
+                    options = new CliOptions(manifest, corpus, split, thresholds, format, outputDir, checkTargets, casesCsv, exportCasesPath);
                     return false;
             }
         }
 
-        options = new CliOptions(manifest, corpus, split, thresholds, format, outputDir, checkTargets);
+        options = new CliOptions(manifest, corpus, split, thresholds, format, outputDir, checkTargets, casesCsv, exportCasesPath);
         return true;
     }
 
@@ -190,6 +216,8 @@ internal static class Program
         Console.WriteLine("  --thresholds <ruta>    JSON opcional de RuleThresholds para calibración (S3-01)");
         Console.WriteLine("  --format <valor>       table (defecto) | markdown | json");
         Console.WriteLine("  --output-dir <carpeta> Guarda engine-metrics.json y engine-metrics.md");
+        Console.WriteLine("  --cases <id1,id2,...>  Lista de case_id para exportar en --export-cases (S3-04)");
+        Console.WriteLine("  --export-cases <ruta>  Exporta bundle JSON completo con SQL, plan, score y hallazgos");
         Console.WriteLine("  --check-targets        Retorna 1 si alguna regla incumple RNF-FUN-01 (P>=90%, R>=80%)");
     }
 
@@ -200,5 +228,7 @@ internal static class Program
         string? ThresholdsPath,
         string Format,
         string? OutputDir,
-        bool CheckTargets);
+        bool CheckTargets,
+        string? CasesCsv,
+        string? ExportCasesPath);
 }

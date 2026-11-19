@@ -1,0 +1,146 @@
+{
+  "seed": 20261119,
+  "total_cases": 10,
+  "metadata": {
+    "llm_profile": "gemini_free",
+    "llm_model": "gemini-2.5-flash",
+    "prompt_version": "v1.1",
+    "catalog_version": "1.0.0",
+    "thresholds_hash": "641FC0A9B5A4B4768E6F82D09755C3F453BA55DFCABCEC42620E168C88A2EB25",
+    "score_parameters_hash": "2FEC518C901537422F733DD42050992242FEF4CC6874DE54D21700ED7005C7A2",
+    "total_cases": 10
+  },
+  "entries": [
+    {
+      "case_label": "CASO-01",
+      "case_id": "TPCH_Q02",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "emitted_rules": [
+        "REG-02",
+        "REG-03"
+      ],
+      "has_findings": true,
+      "has_ai_explanation": true,
+      "system_health_score": 15.09,
+      "system_priority_rank": 4
+    },
+    {
+      "case_label": "CASO-02",
+      "case_id": "TPCH_Q06",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "emitted_rules": [
+        "REG-02",
+        "REG-03"
+      ],
+      "has_findings": true,
+      "has_ai_explanation": true,
+      "system_health_score": 44.26,
+      "system_priority_rank": 8
+    },
+    {
+      "case_label": "CASO-03",
+      "case_id": "SEEDED_REG01_SEEK_PLAN",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "emitted_rules": [
+        "REG-01"
+      ],
+      "has_findings": true,
+      "has_ai_explanation": true,
+      "system_health_score": 29.88,
+      "system_priority_rank": 6
+    },
+    {
+      "case_label": "CASO-04",
+      "case_id": "ESC04B_QS_1",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "emitted_rules": [],
+      "has_findings": false,
+      "has_ai_explanation": false,
+      "system_health_score": 50,
+      "system_priority_rank": 9
+    },
+    {
+      "case_label": "CASO-05",
+      "case_id": "ESC03_QS_1",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "emitted_rules": [
+        "REG-02",
+        "REG-03"
+      ],
+      "has_findings": true,
+      "has_ai_explanation": true,
+      "system_health_score": 13.52,
+      "system_priority_rank": 3
+    },
+    {
+      "case_label": "CASO-06",
+      "case_id": "ESC01_QS_1",
+      "corpus": "seeded",
+      "split": "calibration",
+      "emitted_rules": [
+        "REG-01",
+        "REG-03"
+      ],
+      "has_findings": true,
+      "has_ai_explanation": true,
+      "system_health_score": 13.52,
+      "system_priority_rank": 2
+    },
+    {
+      "case_label": "CASO-07",
+      "case_id": "TPCH_Q18",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "emitted_rules": [
+        "REG-03"
+      ],
+      "has_findings": true,
+      "has_ai_explanation": true,
+      "system_health_score": 26,
+      "system_priority_rank": 5
+    },
+    {
+      "case_label": "CASO-08",
+      "case_id": "SEEDED_REG04_POS_RID_2500",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "emitted_rules": [
+        "REG-04"
+      ],
+      "has_findings": true,
+      "has_ai_explanation": true,
+      "system_health_score": 35,
+      "system_priority_rank": 7
+    },
+    {
+      "case_label": "CASO-09",
+      "case_id": "TPCH_NEG02",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "emitted_rules": [],
+      "has_findings": false,
+      "has_ai_explanation": false,
+      "system_health_score": 99.8,
+      "system_priority_rank": 10
+    },
+    {
+      "case_label": "CASO-10",
+      "case_id": "TPCH_Q20",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "emitted_rules": [
+        "REG-02",
+        "REG-03"
+      ],
+      "has_findings": true,
+      "has_ai_explanation": true,
+      "system_health_score": 4.64,
+      "system_priority_rank": 1
+    }
+  ]
+}

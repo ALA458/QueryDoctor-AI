@@ -1,0 +1,1867 @@
+{
+  "catalog_version": "1.0.0",
+  "thresholds_hash": "641FC0A9B5A4B4768E6F82D09755C3F453BA55DFCABCEC42620E168C88A2EB25",
+  "score_parameters_hash": "2FEC518C901537422F733DD42050992242FEF4CC6874DE54D21700ED7005C7A2",
+  "thresholds": {
+    "min_query_consumption_pct": 1,
+    "reg03_min_estimated_rows": 10000,
+    "reg03_min_predicate_volume_rows": 1000,
+    "reg03_rows_read_to_returned_ratio": 10,
+    "reg04_min_estimated_executions": 1000,
+    "reg07_cardinality_ratio": 10,
+    "reg08_min_executions_per_plan": 100,
+    "reg08_regression_increase_pct": 50,
+    "reg10_duration_max_min_ratio": 5
+  },
+  "cases": [
+    {
+      "case_id": "ESC01_QS_1",
+      "corpus": "seeded",
+      "split": "calibration",
+      "plan_path": "plans/ESC01.qs.1.sqlplan",
+      "description": "QD_Lab ESC01: conversion implicita varchar vs nvarchar (Seek Plan) sobre IX_Orders_CustomerCode \u002B Index Scan completo.",
+      "sql_text": "SELECT /* QD-LAB:ESC01 */ OrderId, Amount\r\n    FROM dbo.Orders\r\n    WHERE CustomerCode = @code",
+      "masked_sql_text": "SELECT   OrderId, Amount\r\n    FROM dbo.Orders\r\n    WHERE CustomerCode = @code",
+      "context": {
+        "query_store_query_id": 101,
+        "query_store_plan_id": 15,
+        "query_execution_count": 300,
+        "query_consumption_pct": 5,
+        "avg_rows_returned": 20
+      },
+      "health_score": {
+        "score": 13.52,
+        "priority": 86.48,
+        "band": "CRITICA",
+        "impact_component": 1,
+        "severity_component": 0.7296,
+        "weighted_consumption_pct": 11.85,
+        "rank_by_score_asc": 2,
+        "rank_by_consumption_desc": 3
+      },
+      "plan_summary": {
+        "engine_version": "16.0.4315.2",
+        "statement_optm_level": "FULL",
+        "statement_subtree_cost": 3.67404,
+        "statement_est_rows": 20,
+        "warnings": [
+          "PlanAffectingConvert"
+        ],
+        "missing_indexes": [],
+        "operators": [
+          {
+            "node_id": 1,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 20,
+            "estimated_total_subtree_cost": 3.67403,
+            "warnings": []
+          },
+          {
+            "node_id": 3,
+            "physical_op": "Index Scan",
+            "logical_op": "Index Scan",
+            "estimate_rows": 20,
+            "estimated_rows_read": 1000000,
+            "estimated_total_subtree_cost": 3.03143,
+            "target_object": "dbo.Orders [IX_Orders_CustomerCode]",
+            "warnings": []
+          },
+          {
+            "node_id": 5,
+            "physical_op": "Clustered Index Seek",
+            "logical_op": "Clustered Index Seek",
+            "estimate_rows": 1,
+            "estimated_total_subtree_cost": 0.0625199,
+            "target_object": "dbo.Orders [PK_Orders]",
+            "warnings": []
+          }
+        ]
+      },
+      "findings": [
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-30229DA0024A",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-01",
+            "name": "Conversi\u00F3n impl\u00EDcita que afecta el plan",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "ALTA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 101,
+          "plan_id": 15,
+          "nodes": [
+            {
+              "node_id": 3,
+              "physical_op": "Index Scan"
+            }
+          ],
+          "evidence": {
+            "column": "CustomerCode",
+            "convert_issue": "Seek Plan",
+            "expression": "CONVERT_IMPLICIT(nvarchar(20),[QD_Lab].[dbo].[Orders].[CustomerCode],0)=[@code]",
+            "index": "IX_Orders_CustomerCode",
+            "table": "Orders",
+            "target_data_type": "nvarchar"
+          },
+          "context": {
+            "executions": 300,
+            "query_consumption_pct": 5,
+            "estimated_rows": 20,
+            "estimated_rows_read": 1000000,
+            "avg_rows_returned": 20
+          },
+          "thresholds_used": {},
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        },
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-405CF25401F3",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-03",
+            "name": "Lectura completa costosa (contextual)",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "ALTA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 101,
+          "plan_id": 15,
+          "nodes": [
+            {
+              "node_id": 3,
+              "physical_op": "Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_Lab",
+            "estimated_rows": "20",
+            "estimated_rows_read": "1000000",
+            "estimated_subtree_cost": "3.03143",
+            "has_predicate": "true",
+            "index": "IX_Orders_CustomerCode",
+            "logical_op": "Index Scan",
+            "min_estimated_rows_threshold": "10000",
+            "min_predicate_volume_rows_threshold": "1000",
+            "min_query_consumption_pct_threshold": "1",
+            "physical_op": "Index Scan",
+            "predicate": "CONVERT_IMPLICIT(nvarchar(20),[QD_Lab].[dbo].[Orders].[CustomerCode],0)=[@code]",
+            "rows_read_to_returned_ratio": "50000",
+            "rows_read_to_returned_ratio_threshold": "10",
+            "schema": "dbo",
+            "table": "Orders",
+            "table_cardinality": "1000000",
+            "triggered_by": "predicate_ratio_and_volume",
+            "volume_rows_evaluated": "1000000"
+          },
+          "context": {
+            "executions": 300,
+            "query_consumption_pct": 5,
+            "estimated_rows": 20,
+            "estimated_rows_read": 1000000,
+            "avg_rows_returned": 20
+          },
+          "thresholds_used": {
+            "min_estimated_rows": 10000,
+            "min_predicate_volume_rows": 1000,
+            "min_query_consumption_pct": 1,
+            "rows_read_to_returned_ratio": 10
+          },
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        }
+      ]
+    },
+    {
+      "case_id": "SEEDED_REG01_SEEK_PLAN",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/seeded/SEEDED_REG01_SEEK_PLAN.sqlplan",
+      "description": "Positivo sembrado REG-01 (Seek Plan) sobre Index Scan de bajo volumen (500/120, sin REG-03).",
+      "sql_text": "SELECT OrderId FROM dbo.Orders WHERE CustomerCode = @code",
+      "masked_sql_text": "SELECT OrderId FROM dbo.Orders WHERE CustomerCode = @code",
+      "context": {
+        "query_store_query_id": 1002,
+        "query_store_plan_id": 1002,
+        "query_execution_count": 50,
+        "query_consumption_pct": 2,
+        "avg_rows_returned": 120
+      },
+      "health_score": {
+        "score": 29.88,
+        "priority": 70.12,
+        "band": "CRITICA",
+        "impact_component": 0.9476,
+        "severity_component": 0.48,
+        "weighted_consumption_pct": 4.74,
+        "rank_by_score_asc": 6,
+        "rank_by_consumption_desc": 8
+      },
+      "plan_summary": {
+        "engine_version": "16.0.4315.2",
+        "statement_subtree_cost": 0.45,
+        "statement_est_rows": 120,
+        "warnings": [
+          "PlanAffectingConvert"
+        ],
+        "missing_indexes": [],
+        "operators": [
+          {
+            "node_id": 2,
+            "physical_op": "Index Scan",
+            "logical_op": "Index Scan",
+            "estimate_rows": 120,
+            "estimated_rows_read": 500,
+            "estimated_total_subtree_cost": 0.05,
+            "target_object": "dbo.Orders [IX_Orders_CustomerCode]",
+            "warnings": []
+          }
+        ]
+      },
+      "findings": [
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-05F90BD50CCD",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-01",
+            "name": "Conversi\u00F3n impl\u00EDcita que afecta el plan",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "ALTA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 1002,
+          "plan_id": 1002,
+          "nodes": [
+            {
+              "node_id": 2,
+              "physical_op": "Index Scan"
+            }
+          ],
+          "evidence": {
+            "convert_issue": "Seek Plan",
+            "expression": "CONVERT_IMPLICIT(nvarchar(20),[QD_Lab].[dbo].[Orders].[CustomerCode],0)=[@code]",
+            "index": "IX_Orders_CustomerCode",
+            "table": "Orders"
+          },
+          "context": {
+            "executions": 50,
+            "query_consumption_pct": 2,
+            "estimated_rows": 120,
+            "estimated_rows_read": 500,
+            "avg_rows_returned": 120
+          },
+          "thresholds_used": {},
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        }
+      ]
+    },
+    {
+      "case_id": "ESC03_QS_1",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/ESC03.qs.1.sqlplan",
+      "description": "QD_Lab ESC03: Clustered Index Scan en dbo.Orders (1M filas) \u002B MissingIndex Impact=99.277.",
+      "sql_text": "SELECT /* QD-LAB:ESC03 */ OrderId, Amount\r\n    FROM dbo.Orders\r\n    WHERE Region = @region AND Amount \u003E 900",
+      "masked_sql_text": "SELECT   OrderId, Amount\r\n    FROM dbo.Orders\r\n    WHERE Region = @region AND Amount \u003E @qd_num_1",
+      "context": {
+        "query_store_query_id": 103,
+        "query_store_plan_id": 17,
+        "query_execution_count": 40,
+        "query_consumption_pct": 5,
+        "avg_rows_returned": 5000
+      },
+      "health_score": {
+        "score": 13.52,
+        "priority": 86.48,
+        "band": "CRITICA",
+        "impact_component": 1,
+        "severity_component": 0.7296,
+        "weighted_consumption_pct": 11.85,
+        "rank_by_score_asc": 3,
+        "rank_by_consumption_desc": 4
+      },
+      "plan_summary": {
+        "engine_version": "16.0.4315.2",
+        "statement_optm_level": "FULL",
+        "statement_subtree_cost": 23.5171,
+        "statement_est_rows": 16172.1,
+        "warnings": [],
+        "missing_indexes": [
+          "Impacto 99.3% en dbo.Orders: EQ(Region) INEQ(Amount)"
+        ],
+        "operators": [
+          {
+            "node_id": 0,
+            "physical_op": "Parallelism",
+            "logical_op": "Gather Streams",
+            "estimate_rows": 16172.1,
+            "estimated_total_subtree_cost": 23.5171,
+            "warnings": []
+          },
+          {
+            "node_id": 1,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 16172.1,
+            "estimated_rows_read": 1000000,
+            "estimated_total_subtree_cost": 23.3339,
+            "target_object": "dbo.Orders [PK_Orders]",
+            "warnings": []
+          }
+        ]
+      },
+      "findings": [
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-18F40E1A92C0",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-02",
+            "name": "\u00CDndice faltante",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "ALTA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 103,
+          "plan_id": 17,
+          "nodes": [
+            {
+              "node_id": 1,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_Lab",
+            "equality_columns": "Region",
+            "impact_pct": "99.277",
+            "include_columns": "",
+            "inequality_columns": "Amount",
+            "schema": "dbo",
+            "table": "Orders",
+            "write_cost_warning": "La sugerencia del optimizador no considera todos los \u00EDndices existentes ni el costo de escritura (INSERT, UPDATE, DELETE) y mantenimiento; debe evaluarse manualmente por un DBA antes de aplicarse."
+          },
+          "context": {
+            "executions": 40,
+            "query_consumption_pct": 5,
+            "estimated_rows": 16172.1,
+            "estimated_rows_read": 1000000,
+            "avg_rows_returned": 5000
+          },
+          "thresholds_used": {},
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        },
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-0D04EF7E0B2D",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-03",
+            "name": "Lectura completa costosa (contextual)",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "ALTA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 103,
+          "plan_id": 17,
+          "nodes": [
+            {
+              "node_id": 1,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_Lab",
+            "estimated_rows": "16172.1",
+            "estimated_rows_read": "1000000",
+            "estimated_subtree_cost": "23.3339",
+            "has_predicate": "true",
+            "index": "PK_Orders",
+            "logical_op": "Clustered Index Scan",
+            "min_estimated_rows_threshold": "10000",
+            "min_predicate_volume_rows_threshold": "1000",
+            "min_query_consumption_pct_threshold": "1",
+            "physical_op": "Clustered Index Scan",
+            "predicate": "[QD_Lab].[dbo].[Orders].[Region]=[@region] AND [QD_Lab].[dbo].[Orders].[Amount]\u003E(900.00)",
+            "rows_read_to_returned_ratio": "61.8349",
+            "rows_read_to_returned_ratio_threshold": "10",
+            "schema": "dbo",
+            "table": "Orders",
+            "table_cardinality": "1000000",
+            "triggered_by": "predicate_ratio_and_volume",
+            "volume_rows_evaluated": "1000000"
+          },
+          "context": {
+            "executions": 40,
+            "query_consumption_pct": 5,
+            "estimated_rows": 16172.1,
+            "estimated_rows_read": 1000000,
+            "avg_rows_returned": 5000
+          },
+          "thresholds_used": {
+            "min_estimated_rows": 10000,
+            "min_predicate_volume_rows": 1000,
+            "min_query_consumption_pct": 1,
+            "rows_read_to_returned_ratio": 10
+          },
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        }
+      ]
+    },
+    {
+      "case_id": "SEEDED_REG04_POS_RID_2500",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/seeded/SEEDED_REG04_POS_RID_2500.sqlplan",
+      "description": "Positivo sembrado REG-04: RID Lookup sobre Heap con 2 500 ejecuciones estimadas y consumo 4.2 %.",
+      "sql_text": "SELECT AuditId, Detail FROM dbo.HeapAudit WHERE CorrelationKey = @k",
+      "masked_sql_text": "SELECT AuditId, Detail FROM dbo.HeapAudit WHERE CorrelationKey = @k",
+      "context": {
+        "query_store_query_id": 1007,
+        "query_store_plan_id": 1007,
+        "query_execution_count": 60,
+        "query_consumption_pct": 4.2,
+        "avg_rows_returned": 2500
+      },
+      "health_score": {
+        "score": 35,
+        "priority": 65,
+        "band": "CRITICA",
+        "impact_component": 1,
+        "severity_component": 0.3,
+        "weighted_consumption_pct": 9.95,
+        "rank_by_score_asc": 7,
+        "rank_by_consumption_desc": 5
+      },
+      "plan_summary": {
+        "engine_version": "16.0.4315.2",
+        "statement_subtree_cost": 2.9,
+        "statement_est_rows": 2500,
+        "warnings": [],
+        "missing_indexes": [],
+        "operators": [
+          {
+            "node_id": 0,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 2500,
+            "estimated_total_subtree_cost": 2.9,
+            "warnings": []
+          },
+          {
+            "node_id": 1,
+            "physical_op": "Index Seek",
+            "logical_op": "Index Seek",
+            "estimate_rows": 2500,
+            "estimated_rows_read": 2500,
+            "estimated_total_subtree_cost": 0.034,
+            "target_object": "dbo.HeapAudit [IX_HeapAudit_CorrelationKey]",
+            "warnings": []
+          },
+          {
+            "node_id": 4,
+            "physical_op": "RID Lookup",
+            "logical_op": "RID Lookup",
+            "estimate_rows": 1,
+            "estimated_total_subtree_cost": 2.8,
+            "target_object": "dbo.HeapAudit",
+            "warnings": []
+          }
+        ]
+      },
+      "findings": [
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-3360FA5458D9",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-04",
+            "name": "B\u00FAsqueda por clave excesiva (contextual)",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "MEDIA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 1007,
+          "plan_id": 1007,
+          "nodes": [
+            {
+              "node_id": 4,
+              "physical_op": "RID Lookup"
+            }
+          ],
+          "evidence": {
+            "database": "QD_Lab",
+            "estimate_rebinds": "2499",
+            "estimate_rewinds": "0",
+            "estimated_executions": "2500",
+            "estimated_subtree_cost": "2.8",
+            "lookup_kind": "RID Lookup",
+            "min_estimated_executions_threshold": "1000",
+            "min_query_consumption_pct_threshold": "1",
+            "output_columns": "Detail",
+            "schema": "dbo",
+            "table": "HeapAudit"
+          },
+          "context": {
+            "executions": 60,
+            "query_consumption_pct": 4.2,
+            "estimated_rows": 1,
+            "avg_rows_returned": 2500
+          },
+          "thresholds_used": {
+            "min_estimated_executions": 1000,
+            "min_query_consumption_pct": 1
+          },
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q02",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q02.qs.1.sqlplan",
+      "description": "TPC-H Q02: Minimum Cost Supplier.",
+      "sql_text": "SELECT TOP (100) -- QD-TPCH:Q02:\n    S.S_ACCTBAL,\n    S.S_NAME,\n    N.N_NAME,\n    P.P_PARTKEY,\n    P.P_MFGR,\n    S.S_ADDRESS,\n    S.S_PHONE,\n    S.S_COMMENT\nFROM dbo.PART P\nJOIN dbo.PARTSUPP PS ON P.P_PARTKEY = PS.PS_PARTKEY\nJOIN dbo.SUPPLIER S ON S.S_SUPPKEY = PS.PS_SUPPKEY\nJOIN dbo.NATION N ON S.S_NATIONKEY = N.N_NATIONKEY\nJOIN dbo.REGION R ON N.N_REGIONKEY = R.R_REGIONKEY\nWHERE P.P_SIZE = 15\n  AND P.P_TYPE LIKE \u0027%STEEL\u0027\n  AND R.R_NAME = \u0027EUROPE\u0027\n  AND PS.PS_SUPPLYCOST = (\n      SELECT MIN(PS2.PS_SUPPLYCOST)\n      FROM dbo.PARTSUPP PS2\n      JOIN dbo.SUPPLIER S2 ON S2.S_SUPPKEY = PS2.PS_SUPPKEY\n      JOIN dbo.NATION N2 ON S2.S_NATIONKEY = N2.N_NATIONKEY\n      JOIN dbo.REGION R2 ON N2.N_REGIONKEY = R2.R_REGIONKEY\n      WHERE P.P_PARTKEY = PS2.PS_PARTKEY\n        AND R2.R_NAME = \u0027EUROPE\u0027\n  )\nORDER BY S.S_ACCTBAL DESC, N.N_NAME ASC, S.S_NAME ASC, P.P_PARTKEY ASC",
+      "masked_sql_text": "SELECT TOP (@qd_num_1)  \n    S.S_ACCTBAL,\n    S.S_NAME,\n    N.N_NAME,\n    P.P_PARTKEY,\n    P.P_MFGR,\n    S.S_ADDRESS,\n    S.S_PHONE,\n    S.S_COMMENT\nFROM dbo.PART P\nJOIN dbo.PARTSUPP PS ON P.P_PARTKEY = PS.PS_PARTKEY\nJOIN dbo.SUPPLIER S ON S.S_SUPPKEY = PS.PS_SUPPKEY\nJOIN dbo.NATION N ON S.S_NATIONKEY = N.N_NATIONKEY\nJOIN dbo.REGION R ON N.N_REGIONKEY = R.R_REGIONKEY\nWHERE P.P_SIZE = @qd_num_2\n  AND P.P_TYPE LIKE @qd_str_3\n  AND R.R_NAME = @qd_str_4\n  AND PS.PS_SUPPLYCOST = (\n      SELECT MIN(PS2.PS_SUPPLYCOST)\n      FROM dbo.PARTSUPP PS2\n      JOIN dbo.SUPPLIER S2 ON S2.S_SUPPKEY = PS2.PS_SUPPKEY\n      JOIN dbo.NATION N2 ON S2.S_NATIONKEY = N2.N_NATIONKEY\n      JOIN dbo.REGION R2 ON N2.N_REGIONKEY = R2.R_REGIONKEY\n      WHERE P.P_PARTKEY = PS2.PS_PARTKEY\n        AND R2.R_NAME = @qd_str_4\n  )\nORDER BY S.S_ACCTBAL DESC, N.N_NAME ASC, S.S_NAME ASC, P.P_PARTKEY ASC",
+      "context": {
+        "query_store_query_id": 25,
+        "query_store_plan_id": 28,
+        "query_execution_count": 1,
+        "query_consumption_pct": 2.3215,
+        "avg_rows_returned": 100
+      },
+      "health_score": {
+        "score": 15.09,
+        "priority": 84.91,
+        "band": "CRITICA",
+        "impact_component": 1,
+        "severity_component": 0.6982,
+        "weighted_consumption_pct": 5.5,
+        "rank_by_score_asc": 4,
+        "rank_by_consumption_desc": 7
+      },
+      "plan_summary": {
+        "engine_version": "16.0.4315.2",
+        "statement_optm_level": "FULL",
+        "statement_optm_early_abort_reason": "TimeOut",
+        "statement_subtree_cost": 1.70227,
+        "statement_est_rows": 23.6397,
+        "warnings": [],
+        "missing_indexes": [
+          "Impacto 49.0% en dbo.PARTSUPP: EQ(PS_SUPPKEY) INCLUDE(PS_SUPPLYCOST)",
+          "Impacto 15.8% en dbo.PART: EQ(P_SIZE) INCLUDE(P_MFGR, P_TYPE)"
+        ],
+        "operators": [
+          {
+            "node_id": 0,
+            "physical_op": "Sort",
+            "logical_op": "TopN Sort",
+            "estimate_rows": 23.6397,
+            "estimated_total_subtree_cost": 1.70227,
+            "warnings": []
+          },
+          {
+            "node_id": 1,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 23.6397,
+            "estimated_total_subtree_cost": 1.69074,
+            "warnings": []
+          },
+          {
+            "node_id": 2,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 118.198,
+            "estimated_total_subtree_cost": 1.66837,
+            "warnings": []
+          },
+          {
+            "node_id": 3,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 118.198,
+            "estimated_total_subtree_cost": 1.64607,
+            "warnings": []
+          },
+          {
+            "node_id": 4,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 118.198,
+            "estimated_total_subtree_cost": 1.58315,
+            "warnings": []
+          },
+          {
+            "node_id": 6,
+            "physical_op": "Stream Aggregate",
+            "logical_op": "Aggregate",
+            "estimate_rows": 118.198,
+            "estimated_total_subtree_cost": 1.23881,
+            "warnings": []
+          },
+          {
+            "node_id": 8,
+            "physical_op": "Sort",
+            "logical_op": "Sort",
+            "estimate_rows": 160.158,
+            "estimated_total_subtree_cost": 1.23866,
+            "warnings": []
+          },
+          {
+            "node_id": 9,
+            "physical_op": "Hash Match",
+            "logical_op": "Inner Join",
+            "estimate_rows": 160.158,
+            "estimated_total_subtree_cost": 1.22546,
+            "warnings": []
+          },
+          {
+            "node_id": 10,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 200.198,
+            "estimated_rows_read": 20000,
+            "estimated_total_subtree_cost": 0.248986,
+            "target_object": "dbo.PART [PK_PART]",
+            "warnings": []
+          },
+          {
+            "node_id": 11,
+            "physical_op": "Hash Match",
+            "logical_op": "Inner Join",
+            "estimate_rows": 16000,
+            "estimated_total_subtree_cost": 0.855593,
+            "warnings": []
+          },
+          {
+            "node_id": 12,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 200,
+            "estimated_total_subtree_cost": 0.0182039,
+            "warnings": []
+          },
+          {
+            "node_id": 13,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 5,
+            "estimated_total_subtree_cost": 0.0105035,
+            "warnings": []
+          },
+          {
+            "node_id": 14,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 25,
+            "estimated_rows_read": 25,
+            "estimated_total_subtree_cost": 0.0033095,
+            "target_object": "dbo.NATION [PK_NATION]",
+            "warnings": []
+          },
+          {
+            "node_id": 15,
+            "physical_op": "Clustered Index Seek",
+            "logical_op": "Clustered Index Seek",
+            "estimate_rows": 1,
+            "estimated_rows_read": 1,
+            "estimated_total_subtree_cost": 0.0070775,
+            "target_object": "dbo.REGION [PK_REGION]",
+            "warnings": []
+          },
+          {
+            "node_id": 16,
+            "physical_op": "Index Seek",
+            "logical_op": "Index Seek",
+            "estimate_rows": 40,
+            "estimated_rows_read": 40,
+            "estimated_total_subtree_cost": 0.00686438,
+            "target_object": "dbo.SUPPLIER [IX_SUPPLIER_S_NATIONKEY]",
+            "warnings": []
+          },
+          {
+            "node_id": 17,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 80000,
+            "estimated_rows_read": 80000,
+            "estimated_total_subtree_cost": 0.43943,
+            "target_object": "dbo.PARTSUPP [PK_PARTSUPP]",
+            "warnings": []
+          },
+          {
+            "node_id": 18,
+            "physical_op": "Clustered Index Seek",
+            "logical_op": "Clustered Index Seek",
+            "estimate_rows": 1,
+            "estimated_rows_read": 4,
+            "estimated_total_subtree_cost": 0.343615,
+            "target_object": "dbo.PARTSUPP [PK_PARTSUPP]",
+            "warnings": []
+          },
+          {
+            "node_id": 19,
+            "physical_op": "Clustered Index Seek",
+            "logical_op": "Clustered Index Seek",
+            "estimate_rows": 1,
+            "estimated_rows_read": 1,
+            "estimated_total_subtree_cost": 0.062426,
+            "target_object": "dbo.SUPPLIER [PK_SUPPLIER]",
+            "warnings": []
+          },
+          {
+            "node_id": 20,
+            "physical_op": "Clustered Index Seek",
+            "logical_op": "Clustered Index Seek",
+            "estimate_rows": 1,
+            "estimated_rows_read": 1,
+            "estimated_total_subtree_cost": 0.0218122,
+            "target_object": "dbo.NATION [PK_NATION]",
+            "warnings": []
+          },
+          {
+            "node_id": 21,
+            "physical_op": "Clustered Index Seek",
+            "logical_op": "Clustered Index Seek",
+            "estimate_rows": 1,
+            "estimated_rows_read": 1,
+            "estimated_total_subtree_cost": 0.0218122,
+            "target_object": "dbo.REGION [PK_REGION]",
+            "warnings": []
+          }
+        ]
+      },
+      "findings": [
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-4B024D546AD3",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-02",
+            "name": "\u00CDndice faltante",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "BAJA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 25,
+          "plan_id": 28,
+          "nodes": [
+            {
+              "node_id": 10,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "equality_columns": "P_SIZE",
+            "impact_pct": "15.7729",
+            "include_columns": "P_MFGR, P_TYPE",
+            "inequality_columns": "",
+            "schema": "dbo",
+            "table": "PART",
+            "write_cost_warning": "La sugerencia del optimizador no considera todos los \u00EDndices existentes ni el costo de escritura (INSERT, UPDATE, DELETE) y mantenimiento; debe evaluarse manualmente por un DBA antes de aplicarse."
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 2.3215,
+            "estimated_rows": 200.198,
+            "estimated_rows_read": 20000,
+            "avg_rows_returned": 100
+          },
+          "thresholds_used": {},
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        },
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-3C205B0D08E2",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-02",
+            "name": "\u00CDndice faltante",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "MEDIA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 25,
+          "plan_id": 28,
+          "nodes": [
+            {
+              "node_id": 17,
+              "physical_op": "Clustered Index Scan"
+            },
+            {
+              "node_id": 18,
+              "physical_op": "Clustered Index Seek"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "equality_columns": "PS_SUPPKEY",
+            "impact_pct": "48.9655",
+            "include_columns": "PS_SUPPLYCOST",
+            "inequality_columns": "",
+            "schema": "dbo",
+            "table": "PARTSUPP",
+            "write_cost_warning": "La sugerencia del optimizador no considera todos los \u00EDndices existentes ni el costo de escritura (INSERT, UPDATE, DELETE) y mantenimiento; debe evaluarse manualmente por un DBA antes de aplicarse."
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 2.3215,
+            "estimated_rows": 80000,
+            "estimated_rows_read": 80000,
+            "avg_rows_returned": 100
+          },
+          "thresholds_used": {},
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        },
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-A8FD598D053D",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-03",
+            "name": "Lectura completa costosa (contextual)",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "MEDIA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 25,
+          "plan_id": 28,
+          "nodes": [
+            {
+              "node_id": 10,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "estimated_rows": "200.198",
+            "estimated_rows_read": "20000",
+            "estimated_subtree_cost": "0.248986",
+            "has_predicate": "true",
+            "index": "PK_PART",
+            "logical_op": "Clustered Index Scan",
+            "min_estimated_rows_threshold": "10000",
+            "min_predicate_volume_rows_threshold": "1000",
+            "min_query_consumption_pct_threshold": "1",
+            "physical_op": "Clustered Index Scan",
+            "predicate": "[QD_TPCH].[dbo].[PART].[P_SIZE] as [P].[P_SIZE]=(15) AND [QD_TPCH].[dbo].[PART].[P_TYPE] as [P].[P_TYPE] like \u0027%STEEL\u0027",
+            "rows_read_to_returned_ratio": "99.9011",
+            "rows_read_to_returned_ratio_threshold": "10",
+            "schema": "dbo",
+            "table": "PART",
+            "table_cardinality": "20000",
+            "triggered_by": "predicate_ratio_and_volume",
+            "volume_rows_evaluated": "20000"
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 2.3215,
+            "estimated_rows": 200.198,
+            "estimated_rows_read": 20000,
+            "avg_rows_returned": 100
+          },
+          "thresholds_used": {
+            "min_estimated_rows": 10000,
+            "min_predicate_volume_rows": 1000,
+            "min_query_consumption_pct": 1,
+            "rows_read_to_returned_ratio": 10
+          },
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        },
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-C034FDD5EBAB",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-03",
+            "name": "Lectura completa costosa (contextual)",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "MEDIA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 25,
+          "plan_id": 28,
+          "nodes": [
+            {
+              "node_id": 17,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "estimated_rows": "80000",
+            "estimated_rows_read": "80000",
+            "estimated_subtree_cost": "0.43943",
+            "has_predicate": "false",
+            "index": "PK_PARTSUPP",
+            "logical_op": "Clustered Index Scan",
+            "min_estimated_rows_threshold": "10000",
+            "min_predicate_volume_rows_threshold": "1000",
+            "min_query_consumption_pct_threshold": "1",
+            "physical_op": "Clustered Index Scan",
+            "rows_read_to_returned_ratio": "1",
+            "rows_read_to_returned_ratio_threshold": "10",
+            "schema": "dbo",
+            "table": "PARTSUPP",
+            "table_cardinality": "80000",
+            "triggered_by": "volume_and_consumption",
+            "volume_rows_evaluated": "80000"
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 2.3215,
+            "estimated_rows": 80000,
+            "estimated_rows_read": 80000,
+            "avg_rows_returned": 100
+          },
+          "thresholds_used": {
+            "min_estimated_rows": 10000,
+            "min_predicate_volume_rows": 1000,
+            "min_query_consumption_pct": 1,
+            "rows_read_to_returned_ratio": 10
+          },
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q06",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q06.qs.1.sqlplan",
+      "description": "TPC-H Q06: Forecasting Revenue Change sobre LINEITEM.",
+      "sql_text": "SELECT -- QD-TPCH:Q06:\n    SUM(L_EXTENDEDPRICE * L_DISCOUNT) AS REVENUE\nFROM dbo.LINEITEM\nWHERE L_SHIPDATE \u003E= DATEFROMPARTS(1994, 1, 1)\n  AND L_SHIPDATE \u003C DATEADD(YEAR, 1, DATEFROMPARTS(1994, 1, 1))\n  AND L_DISCOUNT BETWEEN 0.05 AND 0.07\n  AND L_QUANTITY \u003C 24",
+      "masked_sql_text": "SELECT  \n    SUM(L_EXTENDEDPRICE * L_DISCOUNT) AS REVENUE\nFROM dbo.LINEITEM\nWHERE L_SHIPDATE \u003E= DATEFROMPARTS(@qd_num_1, @qd_num_2, @qd_num_2)\n  AND L_SHIPDATE \u003C DATEADD(YEAR, @qd_num_2, DATEFROMPARTS(@qd_num_1, @qd_num_2, @qd_num_2))\n  AND L_DISCOUNT BETWEEN @qd_num_3 AND @qd_num_4\n  AND L_QUANTITY \u003C @qd_num_5",
+      "context": {
+        "query_store_query_id": 29,
+        "query_store_plan_id": 32,
+        "query_execution_count": 1,
+        "query_consumption_pct": 1.3603,
+        "avg_rows_returned": 1
+      },
+      "health_score": {
+        "score": 44.26,
+        "priority": 55.74,
+        "band": "ATENCION",
+        "impact_component": 0.6445,
+        "severity_component": 0.7296,
+        "weighted_consumption_pct": 3.22,
+        "rank_by_score_asc": 8,
+        "rank_by_consumption_desc": 9
+      },
+      "plan_summary": {
+        "engine_version": "16.0.4315.2",
+        "statement_optm_level": "FULL",
+        "statement_subtree_cost": 6.77438,
+        "statement_est_rows": 1,
+        "warnings": [],
+        "missing_indexes": [
+          "Impacto 87.6% en dbo.LINEITEM: INEQ(L_QUANTITY, L_DISCOUNT, L_SHIPDATE) INCLUDE(L_EXTENDEDPRICE)"
+        ],
+        "operators": [
+          {
+            "node_id": 1,
+            "physical_op": "Compute Scalar",
+            "logical_op": "Compute Scalar",
+            "estimate_rows": 1,
+            "estimated_total_subtree_cost": 6.77438,
+            "warnings": []
+          },
+          {
+            "node_id": 2,
+            "physical_op": "Stream Aggregate",
+            "logical_op": "Aggregate",
+            "estimate_rows": 1,
+            "estimated_total_subtree_cost": 6.77438,
+            "warnings": []
+          },
+          {
+            "node_id": 3,
+            "physical_op": "Parallelism",
+            "logical_op": "Gather Streams",
+            "estimate_rows": 6,
+            "estimated_total_subtree_cost": 6.77437,
+            "warnings": []
+          },
+          {
+            "node_id": 4,
+            "physical_op": "Stream Aggregate",
+            "logical_op": "Aggregate",
+            "estimate_rows": 6,
+            "estimated_total_subtree_cost": 6.74587,
+            "warnings": []
+          },
+          {
+            "node_id": 5,
+            "physical_op": "Compute Scalar",
+            "logical_op": "Compute Scalar",
+            "estimate_rows": 39775.9,
+            "estimated_total_subtree_cost": 6.56389,
+            "warnings": []
+          },
+          {
+            "node_id": 6,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 39775.9,
+            "estimated_rows_read": 600000,
+            "estimated_total_subtree_cost": 6.55389,
+            "target_object": "dbo.LINEITEM [PK_LINEITEM]",
+            "warnings": []
+          }
+        ]
+      },
+      "findings": [
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-013F2E81F2F2",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-02",
+            "name": "\u00CDndice faltante",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "ALTA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 29,
+          "plan_id": 32,
+          "nodes": [
+            {
+              "node_id": 6,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "equality_columns": "",
+            "impact_pct": "87.6214",
+            "include_columns": "L_EXTENDEDPRICE",
+            "inequality_columns": "L_QUANTITY, L_DISCOUNT, L_SHIPDATE",
+            "schema": "dbo",
+            "table": "LINEITEM",
+            "write_cost_warning": "La sugerencia del optimizador no considera todos los \u00EDndices existentes ni el costo de escritura (INSERT, UPDATE, DELETE) y mantenimiento; debe evaluarse manualmente por un DBA antes de aplicarse."
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 1.3603,
+            "estimated_rows": 39775.9,
+            "estimated_rows_read": 600000,
+            "avg_rows_returned": 1
+          },
+          "thresholds_used": {},
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        },
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-F4DE35F62A98",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-03",
+            "name": "Lectura completa costosa (contextual)",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "ALTA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 29,
+          "plan_id": 32,
+          "nodes": [
+            {
+              "node_id": 6,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "estimated_rows": "39775.9",
+            "estimated_rows_read": "600000",
+            "estimated_subtree_cost": "6.55389",
+            "has_predicate": "true",
+            "index": "PK_LINEITEM",
+            "logical_op": "Clustered Index Scan",
+            "min_estimated_rows_threshold": "10000",
+            "min_predicate_volume_rows_threshold": "1000",
+            "min_query_consumption_pct_threshold": "1",
+            "physical_op": "Clustered Index Scan",
+            "predicate": "[QD_TPCH].[dbo].[LINEITEM].[L_SHIPDATE]\u003E=\u00271994-01-01\u0027 AND [QD_TPCH].[dbo].[LINEITEM].[L_SHIPDATE]\u003C\u00271995-01-01\u0027 AND [QD_TPCH].[dbo].[LINEITEM].[L_DISCOUNT]\u003E=(0.05) AND [QD_TPCH].[dbo].[LINEITEM].[L_DISCOUNT]\u003C=(0.07) AND [QD_TPCH].[dbo].[LINEITEM].[L_QUANTITY]\u003C(24.00)",
+            "rows_read_to_returned_ratio": "15.0845",
+            "rows_read_to_returned_ratio_threshold": "10",
+            "schema": "dbo",
+            "table": "LINEITEM",
+            "table_cardinality": "600000",
+            "triggered_by": "predicate_ratio_and_volume",
+            "volume_rows_evaluated": "600000"
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 1.3603,
+            "estimated_rows": 39775.9,
+            "estimated_rows_read": 600000,
+            "avg_rows_returned": 1
+          },
+          "thresholds_used": {
+            "min_estimated_rows": 10000,
+            "min_predicate_volume_rows": 1000,
+            "min_query_consumption_pct": 1,
+            "rows_read_to_returned_ratio": 10
+          },
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q18",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q18.qs.1.sqlplan",
+      "description": "TPC-H Q18: Large Volume Customer.",
+      "sql_text": "SELECT TOP (100) -- QD-TPCH:Q18:\n    C.C_NAME,\n    C.C_CUSTKEY,\n    O.O_ORDERKEY,\n    O.O_ORDERDATE,\n    O.O_TOTALPRICE,\n    SUM(L.L_QUANTITY) AS TOTAL_QTY\nFROM dbo.CUSTOMER C\nJOIN dbo.ORDERS O ON C.C_CUSTKEY = O.O_CUSTKEY\nJOIN dbo.LINEITEM L ON O.O_ORDERKEY = L.L_ORDERKEY\nWHERE O.O_ORDERKEY IN (\n    SELECT L2.L_ORDERKEY\n    FROM dbo.LINEITEM L2\n    GROUP BY L2.L_ORDERKEY\n    HAVING SUM(L2.L_QUANTITY) \u003E 150\n)\nGROUP BY C.C_NAME, C.C_CUSTKEY, O.O_ORDERKEY, O.O_ORDERDATE, O.O_TOTALPRICE\nORDER BY O.O_TOTALPRICE DESC, O.O_ORDERDATE ASC",
+      "masked_sql_text": "SELECT TOP (@qd_num_1)  \n    C.C_NAME,\n    C.C_CUSTKEY,\n    O.O_ORDERKEY,\n    O.O_ORDERDATE,\n    O.O_TOTALPRICE,\n    SUM(L.L_QUANTITY) AS TOTAL_QTY\nFROM dbo.CUSTOMER C\nJOIN dbo.ORDERS O ON C.C_CUSTKEY = O.O_CUSTKEY\nJOIN dbo.LINEITEM L ON O.O_ORDERKEY = L.L_ORDERKEY\nWHERE O.O_ORDERKEY IN (\n    SELECT L2.L_ORDERKEY\n    FROM dbo.LINEITEM L2\n    GROUP BY L2.L_ORDERKEY\n    HAVING SUM(L2.L_QUANTITY) \u003E @qd_num_2\n)\nGROUP BY C.C_NAME, C.C_CUSTKEY, O.O_ORDERKEY, O.O_ORDERDATE, O.O_TOTALPRICE\nORDER BY O.O_TOTALPRICE DESC, O.O_ORDERDATE ASC",
+      "context": {
+        "query_store_query_id": 41,
+        "query_store_plan_id": 44,
+        "query_execution_count": 1,
+        "query_consumption_pct": 8.757,
+        "avg_rows_returned": 100
+      },
+      "health_score": {
+        "score": 26,
+        "priority": 74,
+        "band": "CRITICA",
+        "impact_component": 1,
+        "severity_component": 0.48,
+        "weighted_consumption_pct": 20.75,
+        "rank_by_score_asc": 5,
+        "rank_by_consumption_desc": 2
+      },
+      "plan_summary": {
+        "engine_version": "16.0.4315.2",
+        "statement_optm_level": "FULL",
+        "statement_optm_early_abort_reason": "TimeOut",
+        "statement_subtree_cost": 11.021,
+        "statement_est_rows": 100,
+        "warnings": [],
+        "missing_indexes": [],
+        "operators": [
+          {
+            "node_id": 0,
+            "physical_op": "Top",
+            "logical_op": "Top",
+            "estimate_rows": 100,
+            "estimated_total_subtree_cost": 11.021,
+            "warnings": []
+          },
+          {
+            "node_id": 2,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 100,
+            "estimated_total_subtree_cost": 11.021,
+            "warnings": []
+          },
+          {
+            "node_id": 5,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 100,
+            "estimated_total_subtree_cost": 10.7573,
+            "warnings": []
+          },
+          {
+            "node_id": 6,
+            "physical_op": "Sort",
+            "logical_op": "Sort",
+            "estimate_rows": 552.746,
+            "estimated_total_subtree_cost": 7.22471,
+            "warnings": []
+          },
+          {
+            "node_id": 7,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 150000,
+            "estimated_rows_read": 150000,
+            "estimated_total_subtree_cost": 1.30162,
+            "target_object": "dbo.ORDERS [PK_ORDERS]",
+            "warnings": []
+          },
+          {
+            "node_id": 8,
+            "physical_op": "Stream Aggregate",
+            "logical_op": "Aggregate",
+            "estimate_rows": 1,
+            "estimated_total_subtree_cost": 3.83158,
+            "warnings": []
+          },
+          {
+            "node_id": 9,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 4,
+            "estimated_total_subtree_cost": 3.82984,
+            "warnings": []
+          },
+          {
+            "node_id": 10,
+            "physical_op": "Filter",
+            "logical_op": "Filter",
+            "estimate_rows": 1,
+            "estimated_total_subtree_cost": 1.91091,
+            "warnings": []
+          },
+          {
+            "node_id": 11,
+            "physical_op": "Stream Aggregate",
+            "logical_op": "Aggregate",
+            "estimate_rows": 1,
+            "estimated_total_subtree_cost": 1.91062,
+            "warnings": []
+          },
+          {
+            "node_id": 12,
+            "physical_op": "Clustered Index Seek",
+            "logical_op": "Clustered Index Seek",
+            "estimate_rows": 4,
+            "estimated_rows_read": 4,
+            "estimated_total_subtree_cost": 1.90888,
+            "target_object": "dbo.LINEITEM [PK_LINEITEM]",
+            "warnings": []
+          },
+          {
+            "node_id": 13,
+            "physical_op": "Clustered Index Seek",
+            "logical_op": "Clustered Index Seek",
+            "estimate_rows": 4,
+            "estimated_rows_read": 4,
+            "estimated_total_subtree_cost": 1.90888,
+            "target_object": "dbo.LINEITEM [PK_LINEITEM]",
+            "warnings": []
+          },
+          {
+            "node_id": 14,
+            "physical_op": "Clustered Index Seek",
+            "logical_op": "Clustered Index Seek",
+            "estimate_rows": 1,
+            "estimated_rows_read": 1,
+            "estimated_total_subtree_cost": 0.263227,
+            "target_object": "dbo.CUSTOMER [PK_CUSTOMER]",
+            "warnings": []
+          }
+        ]
+      },
+      "findings": [
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-5D932640BEA7",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-03",
+            "name": "Lectura completa costosa (contextual)",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "ALTA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 41,
+          "plan_id": 44,
+          "nodes": [
+            {
+              "node_id": 7,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "estimated_rows": "150000",
+            "estimated_rows_read": "150000",
+            "estimated_subtree_cost": "1.30162",
+            "has_predicate": "false",
+            "index": "PK_ORDERS",
+            "logical_op": "Clustered Index Scan",
+            "min_estimated_rows_threshold": "10000",
+            "min_predicate_volume_rows_threshold": "1000",
+            "min_query_consumption_pct_threshold": "1",
+            "physical_op": "Clustered Index Scan",
+            "rows_read_to_returned_ratio": "1",
+            "rows_read_to_returned_ratio_threshold": "10",
+            "schema": "dbo",
+            "table": "ORDERS",
+            "table_cardinality": "150000",
+            "triggered_by": "volume_and_consumption",
+            "volume_rows_evaluated": "150000"
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 8.757,
+            "estimated_rows": 150000,
+            "estimated_rows_read": 150000,
+            "avg_rows_returned": 100
+          },
+          "thresholds_used": {
+            "min_estimated_rows": 10000,
+            "min_predicate_volume_rows": 1000,
+            "min_query_consumption_pct": 1,
+            "rows_read_to_returned_ratio": 10
+          },
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        }
+      ]
+    },
+    {
+      "case_id": "TPCH_Q20",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_Q20.qs.1.sqlplan",
+      "description": "TPC-H Q20: Potential Part Promotion (NATION=25 filas no es costoso).",
+      "sql_text": "SELECT -- QD-TPCH:Q20:\n    S.S_NAME,\n    S.S_ADDRESS\nFROM dbo.SUPPLIER S\nJOIN dbo.NATION N ON S.S_NATIONKEY = N.N_NATIONKEY\nWHERE S.S_SUPPKEY IN (\n    SELECT PS.PS_SUPPKEY\n    FROM dbo.PARTSUPP PS\n    WHERE PS.PS_PARTKEY IN (\n        SELECT P.P_PARTKEY\n        FROM dbo.PART P\n        WHERE P.P_NAME LIKE \u0027part green%\u0027\n    )\n      AND PS.PS_AVAILQTY \u003E (\n          SELECT 0.5 * SUM(L.L_QUANTITY)\n          FROM dbo.LINEITEM L\n          WHERE L.L_PARTKEY = PS.PS_PARTKEY\n            AND L.L_SUPPKEY = PS.PS_SUPPKEY\n            AND L.L_SHIPDATE \u003E= DATEFROMPARTS(1994, 1, 1)\n            AND L.L_SHIPDATE \u003C DATEADD(YEAR, 1, DATEFROMPARTS(1994, 1, 1))\n      )\n)\n  AND N.N_NAME = \u0027CANADA\u0027\nORDER BY S.S_NAME ASC",
+      "masked_sql_text": "SELECT  \n    S.S_NAME,\n    S.S_ADDRESS\nFROM dbo.SUPPLIER S\nJOIN dbo.NATION N ON S.S_NATIONKEY = N.N_NATIONKEY\nWHERE S.S_SUPPKEY IN (\n    SELECT PS.PS_SUPPKEY\n    FROM dbo.PARTSUPP PS\n    WHERE PS.PS_PARTKEY IN (\n        SELECT P.P_PARTKEY\n        FROM dbo.PART P\n        WHERE P.P_NAME LIKE @qd_str_1\n    )\n      AND PS.PS_AVAILQTY \u003E (\n          SELECT @qd_num_2 * SUM(L.L_QUANTITY)\n          FROM dbo.LINEITEM L\n          WHERE L.L_PARTKEY = PS.PS_PARTKEY\n            AND L.L_SUPPKEY = PS.PS_SUPPKEY\n            AND L.L_SHIPDATE \u003E= DATEFROMPARTS(@qd_num_3, @qd_num_4, @qd_num_4)\n            AND L.L_SHIPDATE \u003C DATEADD(YEAR, @qd_num_4, DATEFROMPARTS(@qd_num_3, @qd_num_4, @qd_num_4))\n      )\n)\n  AND N.N_NAME = @qd_str_5\nORDER BY S.S_NAME ASC",
+      "context": {
+        "query_store_query_id": 43,
+        "query_store_plan_id": 46,
+        "query_execution_count": 1,
+        "query_consumption_pct": 9.5636,
+        "avg_rows_returned": 0
+      },
+      "health_score": {
+        "score": 4.64,
+        "priority": 95.36,
+        "band": "CRITICA",
+        "impact_component": 1,
+        "severity_component": 0.9073,
+        "weighted_consumption_pct": 22.66,
+        "rank_by_score_asc": 1,
+        "rank_by_consumption_desc": 1
+      },
+      "plan_summary": {
+        "engine_version": "16.0.4315.2",
+        "statement_optm_level": "FULL",
+        "statement_optm_early_abort_reason": "TimeOut",
+        "statement_subtree_cost": 9.61438,
+        "statement_est_rows": 36.8401,
+        "warnings": [],
+        "missing_indexes": [
+          "Impacto 73.2% en dbo.LINEITEM: INEQ(L_SHIPDATE) INCLUDE(L_PARTKEY, L_SUPPKEY, L_QUANTITY)",
+          "Impacto 89.4% en dbo.LINEITEM: EQ(L_PARTKEY, L_SUPPKEY) INEQ(L_SHIPDATE) INCLUDE(L_QUANTITY)"
+        ],
+        "operators": [
+          {
+            "node_id": 0,
+            "physical_op": "Sort",
+            "logical_op": "Sort",
+            "estimate_rows": 36.8401,
+            "estimated_total_subtree_cost": 9.61438,
+            "warnings": []
+          },
+          {
+            "node_id": 1,
+            "physical_op": "Hash Match",
+            "logical_op": "Inner Join",
+            "estimate_rows": 36.8401,
+            "estimated_total_subtree_cost": 9.60272,
+            "warnings": []
+          },
+          {
+            "node_id": 2,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 1,
+            "estimated_rows_read": 25,
+            "estimated_total_subtree_cost": 0.0033095,
+            "target_object": "dbo.NATION [PK_NATION]",
+            "warnings": []
+          },
+          {
+            "node_id": 4,
+            "physical_op": "Merge Join",
+            "logical_op": "Inner Join",
+            "estimate_rows": 921.004,
+            "estimated_total_subtree_cost": 9.57739,
+            "warnings": []
+          },
+          {
+            "node_id": 5,
+            "physical_op": "Stream Aggregate",
+            "logical_op": "Aggregate",
+            "estimate_rows": 921.004,
+            "estimated_total_subtree_cost": 9.55365,
+            "warnings": []
+          },
+          {
+            "node_id": 6,
+            "physical_op": "Filter",
+            "logical_op": "Filter",
+            "estimate_rows": 2497.27,
+            "estimated_total_subtree_cost": 9.55194,
+            "warnings": []
+          },
+          {
+            "node_id": 7,
+            "physical_op": "Stream Aggregate",
+            "logical_op": "Aggregate",
+            "estimate_rows": 2474.34,
+            "estimated_total_subtree_cost": 9.55026,
+            "warnings": []
+          },
+          {
+            "node_id": 8,
+            "physical_op": "Sort",
+            "logical_op": "Sort",
+            "estimate_rows": 2501.8,
+            "estimated_total_subtree_cost": 9.54752,
+            "warnings": []
+          },
+          {
+            "node_id": 9,
+            "physical_op": "Hash Match",
+            "logical_op": "Inner Join",
+            "estimate_rows": 2501.8,
+            "estimated_total_subtree_cost": 9.4921,
+            "warnings": []
+          },
+          {
+            "node_id": 11,
+            "physical_op": "Merge Join",
+            "logical_op": "Inner Join",
+            "estimate_rows": 16000,
+            "estimated_total_subtree_cost": 0.889619,
+            "warnings": []
+          },
+          {
+            "node_id": 12,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 4000,
+            "estimated_rows_read": 20000,
+            "estimated_total_subtree_cost": 0.248986,
+            "target_object": "dbo.PART [PK_PART]",
+            "warnings": []
+          },
+          {
+            "node_id": 13,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 80000,
+            "estimated_rows_read": 80000,
+            "estimated_total_subtree_cost": 0.43943,
+            "target_object": "dbo.PARTSUPP [PK_PARTSUPP]",
+            "warnings": []
+          },
+          {
+            "node_id": 14,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 92471.3,
+            "estimated_rows_read": 600000,
+            "estimated_total_subtree_cost": 7.10402,
+            "target_object": "dbo.LINEITEM [PK_LINEITEM]",
+            "warnings": []
+          },
+          {
+            "node_id": 15,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 1000,
+            "estimated_rows_read": 1000,
+            "estimated_total_subtree_cost": 0.0140116,
+            "target_object": "dbo.SUPPLIER [PK_SUPPLIER]",
+            "warnings": []
+          }
+        ]
+      },
+      "findings": [
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-811C7395DA05",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-02",
+            "name": "\u00CDndice faltante",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "MEDIA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 43,
+          "plan_id": 46,
+          "nodes": [
+            {
+              "node_id": 14,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "equality_columns": "",
+            "impact_pct": "73.2469",
+            "include_columns": "L_PARTKEY, L_SUPPKEY, L_QUANTITY",
+            "inequality_columns": "L_SHIPDATE",
+            "schema": "dbo",
+            "table": "LINEITEM",
+            "write_cost_warning": "La sugerencia del optimizador no considera todos los \u00EDndices existentes ni el costo de escritura (INSERT, UPDATE, DELETE) y mantenimiento; debe evaluarse manualmente por un DBA antes de aplicarse."
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 9.5636,
+            "estimated_rows": 92471.3,
+            "estimated_rows_read": 600000,
+            "avg_rows_returned": 0
+          },
+          "thresholds_used": {},
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        },
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-D76245076438",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-02",
+            "name": "\u00CDndice faltante",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "ALTA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 43,
+          "plan_id": 46,
+          "nodes": [
+            {
+              "node_id": 14,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "equality_columns": "L_PARTKEY, L_SUPPKEY",
+            "impact_pct": "89.435",
+            "include_columns": "L_QUANTITY",
+            "inequality_columns": "L_SHIPDATE",
+            "schema": "dbo",
+            "table": "LINEITEM",
+            "write_cost_warning": "La sugerencia del optimizador no considera todos los \u00EDndices existentes ni el costo de escritura (INSERT, UPDATE, DELETE) y mantenimiento; debe evaluarse manualmente por un DBA antes de aplicarse."
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 9.5636,
+            "estimated_rows": 92471.3,
+            "estimated_rows_read": 600000,
+            "avg_rows_returned": 0
+          },
+          "thresholds_used": {},
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        },
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-C3E77814CAB3",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-03",
+            "name": "Lectura completa costosa (contextual)",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "MEDIA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 43,
+          "plan_id": 46,
+          "nodes": [
+            {
+              "node_id": 12,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "estimated_rows": "4000",
+            "estimated_rows_read": "20000",
+            "estimated_subtree_cost": "0.248986",
+            "has_predicate": "true",
+            "index": "PK_PART",
+            "logical_op": "Clustered Index Scan",
+            "min_estimated_rows_threshold": "10000",
+            "min_predicate_volume_rows_threshold": "1000",
+            "min_query_consumption_pct_threshold": "1",
+            "physical_op": "Clustered Index Scan",
+            "predicate": "[QD_TPCH].[dbo].[PART].[P_NAME] as [P].[P_NAME] like \u0027part green%\u0027",
+            "rows_read_to_returned_ratio": "5",
+            "rows_read_to_returned_ratio_threshold": "10",
+            "schema": "dbo",
+            "table": "PART",
+            "table_cardinality": "20000",
+            "triggered_by": "volume_and_consumption",
+            "volume_rows_evaluated": "20000"
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 9.5636,
+            "estimated_rows": 4000,
+            "estimated_rows_read": 20000,
+            "avg_rows_returned": 0
+          },
+          "thresholds_used": {
+            "min_estimated_rows": 10000,
+            "min_predicate_volume_rows": 1000,
+            "min_query_consumption_pct": 1,
+            "rows_read_to_returned_ratio": 10
+          },
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        },
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-CFB0AAF9F421",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-03",
+            "name": "Lectura completa costosa (contextual)",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "MEDIA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 43,
+          "plan_id": 46,
+          "nodes": [
+            {
+              "node_id": 13,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "estimated_rows": "80000",
+            "estimated_rows_read": "80000",
+            "estimated_subtree_cost": "0.43943",
+            "has_predicate": "false",
+            "index": "PK_PARTSUPP",
+            "logical_op": "Clustered Index Scan",
+            "min_estimated_rows_threshold": "10000",
+            "min_predicate_volume_rows_threshold": "1000",
+            "min_query_consumption_pct_threshold": "1",
+            "physical_op": "Clustered Index Scan",
+            "rows_read_to_returned_ratio": "1",
+            "rows_read_to_returned_ratio_threshold": "10",
+            "schema": "dbo",
+            "table": "PARTSUPP",
+            "table_cardinality": "80000",
+            "triggered_by": "volume_and_consumption",
+            "volume_rows_evaluated": "80000"
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 9.5636,
+            "estimated_rows": 80000,
+            "estimated_rows_read": 80000,
+            "avg_rows_returned": 0
+          },
+          "thresholds_used": {
+            "min_estimated_rows": 10000,
+            "min_predicate_volume_rows": 1000,
+            "min_query_consumption_pct": 1,
+            "rows_read_to_returned_ratio": 10
+          },
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        },
+        {
+          "schema_version": "1.0.0",
+          "finding_id": "F-6528115E7115",
+          "catalog_version": "1.0.0",
+          "rule": {
+            "id": "REG-03",
+            "name": "Lectura completa costosa (contextual)",
+            "version": "1.0.0"
+          },
+          "kind": "SENAL",
+          "severity": "ALTA",
+          "evidence_class": "ESTIMADA",
+          "query_id": 43,
+          "plan_id": 46,
+          "nodes": [
+            {
+              "node_id": 14,
+              "physical_op": "Clustered Index Scan"
+            }
+          ],
+          "evidence": {
+            "database": "QD_TPCH",
+            "estimated_rows": "92471.3",
+            "estimated_rows_read": "600000",
+            "estimated_subtree_cost": "7.10402",
+            "has_predicate": "true",
+            "index": "PK_LINEITEM",
+            "logical_op": "Clustered Index Scan",
+            "min_estimated_rows_threshold": "10000",
+            "min_predicate_volume_rows_threshold": "1000",
+            "min_query_consumption_pct_threshold": "1",
+            "physical_op": "Clustered Index Scan",
+            "predicate": "[QD_TPCH].[dbo].[LINEITEM].[L_SHIPDATE] as [L].[L_SHIPDATE]\u003E=\u00271994-01-01\u0027 AND [QD_TPCH].[dbo].[LINEITEM].[L_SHIPDATE] as [L].[L_SHIPDATE]\u003C\u00271995-01-01\u0027",
+            "rows_read_to_returned_ratio": "6.4885",
+            "rows_read_to_returned_ratio_threshold": "10",
+            "schema": "dbo",
+            "table": "LINEITEM",
+            "table_cardinality": "600000",
+            "triggered_by": "volume_and_consumption",
+            "volume_rows_evaluated": "600000"
+          },
+          "context": {
+            "executions": 1,
+            "query_consumption_pct": 9.5636,
+            "estimated_rows": 92471.3,
+            "estimated_rows_read": 600000,
+            "avg_rows_returned": 0
+          },
+          "thresholds_used": {
+            "min_estimated_rows": 10000,
+            "min_predicate_volume_rows": 1000,
+            "min_query_consumption_pct": 1,
+            "rows_read_to_returned_ratio": 10
+          },
+          "engine_version": "16.0.4315.2",
+          "analyzed_at": "2026-11-12T00:00:00+00:00"
+        }
+      ]
+    },
+    {
+      "case_id": "TPCH_NEG02",
+      "corpus": "tpch",
+      "split": "evaluation",
+      "plan_path": "plans/tpch/TPCH_NEG02.qs.1.sqlplan",
+      "description": "TPC-H control negativo NEG02: lectura completa de NATION (25 filas, sin predicado).",
+      "sql_text": "SELECT -- QD-TPCH:NEG02:\n    N_NATIONKEY, N_NAME, N_REGIONKEY FROM dbo.NATION",
+      "masked_sql_text": "SELECT  \n    N_NATIONKEY, N_NAME, N_REGIONKEY FROM dbo.NATION",
+      "context": {
+        "query_store_query_id": 47,
+        "query_store_plan_id": 50,
+        "query_execution_count": 1,
+        "query_consumption_pct": 0.0084,
+        "avg_rows_returned": 25
+      },
+      "health_score": {
+        "score": 99.8,
+        "priority": 0.2,
+        "band": "SALUDABLE",
+        "impact_component": 0.004,
+        "severity_component": 0,
+        "weighted_consumption_pct": 0.02,
+        "rank_by_score_asc": 10,
+        "rank_by_consumption_desc": 10
+      },
+      "plan_summary": {
+        "engine_version": "16.0.4315.2",
+        "statement_optm_level": "TRIVIAL",
+        "statement_subtree_cost": 0.0033095,
+        "statement_est_rows": 25,
+        "warnings": [],
+        "missing_indexes": [],
+        "operators": [
+          {
+            "node_id": 0,
+            "physical_op": "Clustered Index Scan",
+            "logical_op": "Clustered Index Scan",
+            "estimate_rows": 25,
+            "estimated_rows_read": 25,
+            "estimated_total_subtree_cost": 0.0033095,
+            "target_object": "dbo.NATION [PK_NATION]",
+            "warnings": []
+          }
+        ]
+      },
+      "findings": []
+    },
+    {
+      "case_id": "ESC04B_QS_1",
+      "corpus": "seeded",
+      "split": "evaluation",
+      "plan_path": "plans/ESC04B.qs.1.sqlplan",
+      "description": "QD_Lab ESC04B parameter sniffing (Lookup est=1; sin reglas de compilacion REG-01..04).",
+      "sql_text": "SELECT /* QD-LAB:ESC04B */ OrderId, Amount, CreatedAt\r\n    FROM dbo.Orders\r\n    WHERE SkewKey = @k\r\n    OPTION (USE HINT(\u0027QUERY_OPTIMIZER_COMPATIBILITY_LEVEL_150\u0027))",
+      "masked_sql_text": "SELECT   OrderId, Amount, CreatedAt\r\n    FROM dbo.Orders\r\n    WHERE SkewKey = @k\r\n    OPTION (USE HINT(@qd_str_1))",
+      "context": {
+        "query_store_query_id": 105,
+        "query_store_plan_id": 25,
+        "query_execution_count": 2,
+        "query_consumption_pct": 4,
+        "avg_rows_returned": 495000.5
+      },
+      "health_score": {
+        "score": 50,
+        "priority": 50,
+        "band": "ATENCION",
+        "impact_component": 1,
+        "severity_component": 0,
+        "weighted_consumption_pct": 9.48,
+        "rank_by_score_asc": 9,
+        "rank_by_consumption_desc": 6
+      },
+      "plan_summary": {
+        "engine_version": "16.0.4315.2",
+        "statement_optm_level": "FULL",
+        "statement_optm_early_abort_reason": "GoodEnoughPlanFound",
+        "statement_subtree_cost": 0.00657038,
+        "statement_est_rows": 1,
+        "warnings": [],
+        "missing_indexes": [],
+        "operators": [
+          {
+            "node_id": 0,
+            "physical_op": "Nested Loops",
+            "logical_op": "Inner Join",
+            "estimate_rows": 1,
+            "estimated_total_subtree_cost": 0.00657038,
+            "warnings": []
+          },
+          {
+            "node_id": 1,
+            "physical_op": "Index Seek",
+            "logical_op": "Index Seek",
+            "estimate_rows": 1,
+            "estimated_rows_read": 1,
+            "estimated_total_subtree_cost": 0.0032831,
+            "target_object": "dbo.Orders [IX_Orders_SkewKey]",
+            "warnings": []
+          },
+          {
+            "node_id": 3,
+            "physical_op": "Clustered Index Seek",
+            "logical_op": "Clustered Index Seek",
+            "estimate_rows": 1,
+            "estimated_total_subtree_cost": 0.0032831,
+            "target_object": "dbo.Orders [PK_Orders]",
+            "warnings": []
+          }
+        ]
+      },
+      "findings": []
+    }
+  ]
+}
