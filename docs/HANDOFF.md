@@ -3,7 +3,7 @@
 > **Se sobrescribe, no se acumula.** Máximo ~50 líneas. Lo escribe quien cierra una
 > sesión (humano o agente). La historia vive en los PR y en git.
 
-**Actualizado:** 2026-11-17 · **Por:** Álvaro (con agente) · **Rama:** `feat/S3-06-aceptacion` (PR #72, con `main` en `6124860` mergeado)
+**Actualizado:** 2026-11-20 · **Por:** Álvaro (con agente) · **Rama:** `feat/S3-06-aceptacion` (PR #72, con `main` en `6124860` mergeado)
 
 ## Estado
 - ✅ En `main`: Sprint 1 y 2 (salvo S1-20), S2-13 (#67) y S2-14 (#69).
@@ -13,6 +13,8 @@
 - **SQL Server 2019 pasa a Probado** (`SupportMatrix`). Azure SQL DB sigue Compatible sin pruebas (sin acceso).
   Matriz declarada en `docs/COMPATIBILIDAD.md`; `SupportMatrixDocumentTests` exige que coincida con el código.
 - Decisiones A1–A7, mecánica y deuda: `docs/ARCHITECTURE_PLAN.md` §S3-06.
+- Auditoría (en la misma sesión, no independiente): M1, M2 y B4 corregidos en `b7ea843`, CI en verde. Abierto M3
+  (SRS); B1 y B5 quedan como deuda. Detalle en el cuerpo del PR #72.
 
 ## Cómo probarla
 - Local con el compose: refrescar la carga (`05` y `lab/sql/12`) y `QD_LAB_SQL=127.0.0.1 dotnet test -m:1`
@@ -40,6 +42,8 @@
 - CA-HU03.4 sin prueba con corte de red real. CA-HU04.2 es de S3-07. HU-20: S2-14 en CI, S3-02 pendiente.
 - Solo la edición Developer en Linux. Azure SQL DB sin aceptación. El SRS todavía dice 2019 "Compatible sin pruebas".
 - Sigue de antes: sin RLS, DA-14, DA-06 y DA-13 abiertas; web sin `evidenceExpired`.
+- Auditoría: B1 (prueba de IL que impida a la Api llamar `AddWorkerServices`) y B5 (notas A02/A03 en `OWASP_TOP10.md`).
 
 ## Siguiente paso
-`/audit` de S3-06 en una sesión aparte y revisión del PR #72 → `main`. Maykol: actualizar el Cuadro 4.16.
+Revisión independiente del PR #72 (otra sesión o un compañero) y aprobación → `main`. Antes de fusionar: Maykol
+actualiza el Cuadro 4.16, la nota (d) y DA-12 del SRS, o el revisor acepta por escrito la diferencia temporal (M3).
