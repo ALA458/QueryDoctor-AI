@@ -82,8 +82,11 @@ permisos, Query Store apagado). El detalle criterio por criterio está en el PR 
 ## Cómo repetirlo en local
 
 ```bash
-docker run -d --name qd-sql2019 -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD='<clave>' -p 127.0.0.1:14339:1433 mcr.microsoft.com/mssql/server:2019-latest
-SA_PASSWORD='<clave>' READER_PASSWORD="$(tr -d '\r\n' < secrets/mssql_reader_password.txt)" bash lab/ci/prepare-acceptance-lab.sh qd-sql2019
+# Clave de sa aleatoria y solo en variables de entorno: nunca escrita en la línea de comandos ni en el historial.
+export SA_PASSWORD="Qd!9a$(openssl rand -hex 16)" MSSQL_SA_PASSWORD="$SA_PASSWORD"
+export READER_PASSWORD="$(tr -d '\r\n' < secrets/mssql_reader_password.txt)"
+docker run -d --name qd-sql2019 -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD -p 127.0.0.1:14339:1433 mcr.microsoft.com/mssql/server:2019-latest
+bash lab/ci/prepare-acceptance-lab.sh qd-sql2019
 QD_LAB_SQL="127.0.0.1,14339" QD_LAB_PLATFORM=sql2019 dotnet test tests/QueryDoctor.AcceptanceTests
 ```
 

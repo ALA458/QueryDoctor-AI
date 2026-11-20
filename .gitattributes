@@ -1,3 +1,5 @@
 * text=auto
 *.png binary
 *.sqlplan -text
+# S3-06: los scripts de bash del laboratorio y la CI siempre con LF (con CRLF, bash falla en "set -euo pipefail").
+*.sh text eol=lf

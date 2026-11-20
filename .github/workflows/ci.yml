@@ -83,10 +83,14 @@ jobs:
                   echo "QD_LAB_READER_PASSWORD_FILE=$RUNNER_TEMP/mssql_reader_password.txt"
                 } >> "$GITHUB_ENV"
 
+            # "-e MSSQL_SA_PASSWORD" sin valor: Docker la toma del entorno y la contraseña no queda en los argumentos del
+            # proceso, visibles con "ps" en el runner (auditoría B4 de S3-06).
             - name: Arrancar SQL Server (${{ matrix.image }})
+              env:
+                MSSQL_SA_PASSWORD: ${{ env.SA_PASSWORD }}
               run: |
                 docker run -d --name qd-lab -e ACCEPT_EULA=Y -e MSSQL_PID=Developer \
-                  -e MSSQL_SA_PASSWORD="$SA_PASSWORD" -p 127.0.0.1:1433:1433 "${{ matrix.image }}"
+                  -e MSSQL_SA_PASSWORD -p 127.0.0.1:1433:1433 "${{ matrix.image }}"
 
             - name: Preparar el laboratorio (lab/sql 01, 04, 02, 03, 11 y carga 05 + 12 dos veces)
               run: bash lab/ci/prepare-acceptance-lab.sh qd-lab
@@ -108,6 +112,10 @@ jobs:
                     --logger "console;verbosity=normal" \
                     --results-directory "$RUNNER_TEMP/acceptance-results"
                 done
+
+            # D7: un Skipped no es evidencia. dotnet test sale con 0 aunque todo se omita, así que se exige lo ejecutado.
+            - name: Comprobar que no hubo pruebas omitidas de mas
+              run: bash lab/ci/check-acceptance-results.sh "$RUNNER_TEMP/acceptance-results" "${{ matrix.platform }}"
 
             - name: Publicar resultados (trx con el trait Criterio por prueba)
               if: always()

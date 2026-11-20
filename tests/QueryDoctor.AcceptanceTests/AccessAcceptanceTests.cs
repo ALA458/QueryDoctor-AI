@@ -142,12 +142,19 @@ public sealed class AccessAcceptanceTests(AcceptanceFixture platform)
         var lab = await platform.QdLabAsync();
         var esc01 = await AnalysisAcceptanceTests.Esc01Async(lab);
 
-        // Al menos una explicación de ESC01 (la no verificada de la otra clase o esta, según el orden).
+        // Al menos una explicación de ESC01 (la no verificada de la otra clase o esta, según el orden). Se espera su
+        // estado final antes de seguir: el doble de IA es compartido y, si el trabajo siguiera en cola, otra prueba podría
+        // cambiar la respuesta y dejar en caché una TRAZADA de ESC01 (auditoría M1 de S3-06). NO_VERIFICADA no se cachea.
         platform.Ai.Explain = AiResponses.WrongNumber;
         using (var request = await lab.Dba.PostAsync($"/queries/{esc01}/explanations", null))
         {
             Assert.True(request.StatusCode is HttpStatusCode.Accepted or HttpStatusCode.Conflict, $"POST respondió {(int)request.StatusCode}.");
         }
+
+        await Platform.UntilAsync(
+            () => Platform.GetJsonAsync(lab.Dba, $"/queries/{esc01}/explanations/latest"),
+            e => e.GetProperty("status").GetString() is not ("PENDIENTE" or "EN_CURSO"),
+            "el estado final de la explicación de ESC01");
 
         var byQuery = await Platform.UntilAsync(
             () => Platform.GetJsonAsync(lab.Dba, $"/trace?queryId={esc01}"),

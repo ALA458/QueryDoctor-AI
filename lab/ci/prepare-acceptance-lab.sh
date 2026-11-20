@@ -17,6 +17,10 @@ container="${1:?Uso: prepare-acceptance-lab.sh <contenedor>}"
 : "${READER_PASSWORD:?Falta READER_PASSWORD}"
 sql_dir="$(cd "$(dirname "$0")/../sql" && pwd)"
 
+# "docker exec -e VAR" sin valor toma la variable del entorno: así las contraseñas no quedan en los argumentos del
+# proceso, visibles con "ps" (auditoría B4 de S3-06). Se exportan las dos para que "-e NOMBRE" las encuentre.
+export SQLCMDPASSWORD="$SA_PASSWORD" READER_PASSWORD
+
 # Las imágenes recientes traen mssql-tools18; algunas de 2019 solo mssql-tools.
 sqlcmd="$(docker exec "$container" bash -c 'ls /opt/mssql-tools18/bin/sqlcmd /opt/mssql-tools/bin/sqlcmd 2>/dev/null | head -1')"
 if [[ -z "$sqlcmd" ]]; then
@@ -30,18 +34,18 @@ run() {
     # Algunos scripts (03) se guardaron con BOM UTF-8; Run-Lab.ps1 lo quita al leerlos con Get-Content, aquí se quita
     # antes de pasarlos por stdin (sqlcmd lo trataría como texto y fallaría con "Incorrect syntax").
     sed '1s/^\xEF\xBB\xBF//' "$file" \
-        | docker exec -i -e SQLCMDPASSWORD="$SA_PASSWORD" -e READER_PASSWORD="$READER_PASSWORD" "$container" \
+        | docker exec -i -e SQLCMDPASSWORD -e READER_PASSWORD "$container" \
             "$sqlcmd" -S localhost -U sa -C -I -b -W > /dev/null
 }
 
 echo "== Esperando a SQL Server en $container"
 for _ in $(seq 1 60); do
-    if docker exec -e SQLCMDPASSWORD="$SA_PASSWORD" "$container" "$sqlcmd" -S localhost -U sa -C -b -Q "SELECT 1" > /dev/null 2>&1; then
+    if docker exec -e SQLCMDPASSWORD "$container" "$sqlcmd" -S localhost -U sa -C -b -Q "SELECT 1" > /dev/null 2>&1; then
         break
     fi
     sleep 2
 done
-docker exec -e SQLCMDPASSWORD="$SA_PASSWORD" "$container" "$sqlcmd" -S localhost -U sa -C -b -h -1 -Q "SET NOCOUNT ON; SELECT @@VERSION"
+docker exec -e SQLCMDPASSWORD "$container" "$sqlcmd" -S localhost -U sa -C -b -h -1 -Q "SET NOCOUNT ON; SELECT @@VERSION"
 
 for f in 01-database.sql 04-readonly-login.sql 02-schema-data.sql 03-scenarios.sql 11-probe-fixtures.sql; do
     run "$sql_dir/$f"
