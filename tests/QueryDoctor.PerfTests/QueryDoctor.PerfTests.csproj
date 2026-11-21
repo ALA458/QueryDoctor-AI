@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    S3-07 (RNF-RND-01, RNF-RND-02): consola de medición de rendimiento. NO es un proyecto de pruebas xUnit: `dotnet test`
+    no la ejecuta (en la CI solo se compila). La corre lab/Run-Perf.ps1 contra el entorno de laboratorio.
+    Sin paquetes NuGet: solo HttpClient, Stopwatch y System.Text.Json de la BCL.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+</Project>

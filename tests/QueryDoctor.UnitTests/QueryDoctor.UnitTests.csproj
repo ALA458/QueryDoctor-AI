@@ -24,6 +24,7 @@
     <ProjectReference Include="..\..\src\QueryDoctor.Infrastructure\QueryDoctor.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\QueryDoctor.Api\QueryDoctor.Api.csproj" />
     <ProjectReference Include="..\..\tools\QueryDoctor.EngineHarness\QueryDoctor.EngineHarness.csproj" />
+    <ProjectReference Include="..\QueryDoctor.PerfTests\QueryDoctor.PerfTests.csproj" />
   </ItemGroup>
 
 </Project>

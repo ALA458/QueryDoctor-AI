@@ -10,6 +10,7 @@
     <Project Path="tests/QueryDoctor.ArchitectureTests/QueryDoctor.ArchitectureTests.csproj" />
     <Project Path="tests/QueryDoctor.IntegrationTests/QueryDoctor.IntegrationTests.csproj" />
     <Project Path="tests/QueryDoctor.LabTests/QueryDoctor.LabTests.csproj" />
+    <Project Path="tests/QueryDoctor.PerfTests/QueryDoctor.PerfTests.csproj" />
     <Project Path="tests/QueryDoctor.UnitTests/QueryDoctor.UnitTests.csproj" />
   </Folder>
   <Folder Name="/tools/">
