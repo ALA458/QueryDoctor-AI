@@ -87,8 +87,47 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _serialize_case_result(r) -> Dict[str, Any]:
+    """Serializa el resultado completo de evaluación de un caso (RAG o Control)."""
+    return {
+        "case_id": r.case_id,
+        "name": r.name,
+        "category": r.category,
+        "total_claims": r.total_claims,
+        "supported_rate_pct": r.supported_rate_pct,
+        "numeric_concordance_pct": r.numeric_concordance_pct,
+        "total_numbers_cited": r.total_numbers_cited,
+        "matched_numbers": r.matched_numbers,
+        "sql_literal_numbers_cited": r.sql_literal_numbers_cited,
+        "non_sql_numbers_cited": r.non_sql_numbers_cited,
+        "non_sql_matched_numbers": r.non_sql_matched_numbers,
+        "expected_metrics_count": r.expected_metrics_count,
+        "covered_metrics_count": r.covered_metrics_count,
+        "metric_coverage_pct": r.metric_coverage_pct,
+        "is_trazada": r.is_trazada,
+        "adversarial_contained": r.adversarial_contained,
+        "failure_reasons": r.failure_reasons,
+        "summary": r.response.summary if r.response else "",
+        "claims": (
+            [
+                {
+                    "claim_index": c_idx,
+                    "claim_type": c.claim_type.value if hasattr(c.claim_type, "value") else str(c.claim_type),
+                    "statement": c.statement,
+                    "finding_ids": c.finding_ids,
+                    "kb_fragment_id": c.kb_fragment_id,
+                }
+                for c_idx, c in enumerate(r.response.claims, start=1)
+            ]
+            if r.response
+            else []
+        ),
+    }
+
+
 def _build_report_dict(report) -> Dict[str, Any]:
     """Serializa los resultados del reporte a un diccionario estructurado."""
+    c = report.control_comparison
     return {
         "metadata": report.metadata,
         "rag_metrics": {
@@ -97,6 +136,14 @@ def _build_report_dict(report) -> Dict[str, Any]:
             "supported_rate_pct": report.rag_metrics.overall_supported_rate_pct,
             "unsupported_rate_pct": report.rag_metrics.overall_unsupported_rate_pct,
             "numeric_concordance_pct": report.rag_metrics.overall_numeric_concordance_pct,
+            "total_numbers_cited": report.rag_metrics.total_numbers_cited,
+            "total_matched_numbers": report.rag_metrics.total_matched_numbers,
+            "non_sql_numeric_concordance_pct": report.rag_metrics.overall_non_sql_numeric_concordance_pct,
+            "total_non_sql_numbers_cited": report.rag_metrics.total_non_sql_numbers_cited,
+            "total_non_sql_matched_numbers": report.rag_metrics.total_non_sql_matched_numbers,
+            "metric_coverage_pct": report.rag_metrics.overall_metric_coverage_pct,
+            "total_covered_metrics": report.rag_metrics.total_covered_metrics,
+            "total_expected_metrics": report.rag_metrics.total_expected_metrics,
             "type_distribution_pct": report.rag_metrics.type_distribution_pct,
             "unsupported_interpretation_rate_pct": report.rag_metrics.overall_unsupported_interpretation_rate_pct,
             "trazada_cases": report.rag_metrics.trazada_cases_count,
@@ -105,42 +152,34 @@ def _build_report_dict(report) -> Dict[str, Any]:
         },
         "control_comparison": (
             {
-                "rag_supported_rate_pct": report.control_comparison.rag_supported_rate_pct,
-                "control_supported_rate_pct": report.control_comparison.control_supported_rate_pct,
-                "hallucination_reduction_delta_pct": report.control_comparison.hallucination_reduction_delta_pct,
+                "rag_supported_rate_pct": c.rag_supported_rate_pct,
+                "rag_unsupported_rate_pct": c.rag_unsupported_rate_pct,
+                "control_supported_rate_pct": c.control_supported_rate_pct,
+                "control_unsupported_rate_pct": c.control_unsupported_rate_pct,
+                "hallucination_reduction_delta_pct": c.hallucination_reduction_delta_pct,
+                "rag_numeric_concordance_pct": c.rag_numeric_concordance_pct,
+                "control_numeric_concordance_pct": c.control_numeric_concordance_pct,
+                "rag_total_numbers_cited": c.rag_total_numbers_cited,
+                "rag_matched_numbers": c.rag_matched_numbers,
+                "control_total_numbers_cited": c.control_total_numbers_cited,
+                "control_matched_numbers": c.control_matched_numbers,
+                "rag_non_sql_numeric_concordance_pct": c.rag_non_sql_numeric_concordance_pct,
+                "control_non_sql_numeric_concordance_pct": c.control_non_sql_numeric_concordance_pct,
+                "rag_non_sql_numbers_cited": c.rag_non_sql_numbers_cited,
+                "rag_non_sql_matched_numbers": c.rag_non_sql_matched_numbers,
+                "control_non_sql_numbers_cited": c.control_non_sql_numbers_cited,
+                "control_non_sql_matched_numbers": c.control_non_sql_matched_numbers,
+                "rag_metric_coverage_pct": c.rag_metric_coverage_pct,
+                "control_metric_coverage_pct": c.control_metric_coverage_pct,
+                "rag_covered_metrics": c.rag_covered_metrics,
+                "control_covered_metrics": c.control_covered_metrics,
+                "total_expected_metrics": c.total_expected_metrics,
             }
-            if report.control_comparison
+            if c
             else None
         ),
-        "cases": [
-            {
-                "case_id": r.case_id,
-                "name": r.name,
-                "category": r.category,
-                "total_claims": r.total_claims,
-                "supported_rate_pct": r.supported_rate_pct,
-                "numeric_concordance_pct": r.numeric_concordance_pct,
-                "is_trazada": r.is_trazada,
-                "adversarial_contained": r.adversarial_contained,
-                "failure_reasons": r.failure_reasons,
-                "summary": r.response.summary if r.response else "",
-                "claims": (
-                    [
-                        {
-                            "claim_index": c_idx,
-                            "claim_type": c.claim_type.value if hasattr(c.claim_type, "value") else str(c.claim_type),
-                            "statement": c.statement,
-                            "finding_ids": c.finding_ids,
-                            "kb_fragment_id": c.kb_fragment_id,
-                        }
-                        for c_idx, c in enumerate(r.response.claims, start=1)
-                    ]
-                    if r.response
-                    else []
-                ),
-            }
-            for r in report.case_results
-        ],
+        "cases": [_serialize_case_result(r) for r in report.case_results],
+        "control_cases": [_serialize_case_result(r) for r in report.control_case_results],
     }
 
 

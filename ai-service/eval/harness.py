@@ -2,9 +2,9 @@
 
 import asyncio
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from eval.control_condition import ControlConditionComparison, ControlConditionEvaluator
 from eval.dataset import EvaluationCase, build_evaluation_dataset
 from eval.metrics import (
@@ -40,20 +40,24 @@ class EvaluationReport:
     rag_metrics: AggregateMetrics
     control_comparison: Optional[ControlConditionComparison]
     case_results: List[CaseEvaluationResult]
+    control_case_results: List[CaseEvaluationResult] = field(default_factory=list)
 
     def _format_markdown_comparison_table(self) -> List[str]:
         if self.control_comparison:
             c = self.control_comparison
             return [
-                f"| **Afirmaciones sustentadas en evidencia** | **{c.rag_supported_rate_pct:.1f} %** | {c.control_supported_rate_pct:.1f} % | **+{c.rag_supported_rate_pct - c.control_supported_rate_pct:.1f} %** |",
-                f"| **Afirmaciones sin sustento (Alucinación)** | **{c.rag_unsupported_rate_pct:.1f} %** | {c.control_unsupported_rate_pct:.1f} % | **-{c.hallucination_reduction_delta_pct:.1f} %** (Reducción) |",
-                f"| **Concordancia de valores numéricos** | **{c.rag_numeric_concordance_pct:.1f} %** | {c.control_numeric_concordance_pct:.1f} % | **+{c.rag_numeric_concordance_pct - c.control_numeric_concordance_pct:.1f} %** |",
+                f"| **Afirmaciones con trazabilidad formal (`finding_ids` + KB + cifras)** † | **{c.rag_supported_rate_pct:.1f} %** | {c.control_supported_rate_pct:.1f} % | **+{c.rag_supported_rate_pct - c.control_supported_rate_pct:.1f} %** |",
+                f"| **Afirmaciones sin sustento trazable** † | **{c.rag_unsupported_rate_pct:.1f} %** | {c.control_unsupported_rate_pct:.1f} % | **-{c.hallucination_reduction_delta_pct:.1f} %** (Reducción) |",
+                f"| **Cobertura de métricas reales citadas (denominador fijo)** | **{c.rag_metric_coverage_pct:.1f} %** ({c.rag_covered_metrics}/{c.total_expected_metrics}) | {c.control_metric_coverage_pct:.1f} % ({c.control_covered_metrics}/{c.total_expected_metrics}) | **+{c.rag_metric_coverage_pct - c.control_metric_coverage_pct:.1f} %** |",
+                f"| **Concordancia numérica (condicional a cifras escritas)** | **{c.rag_numeric_concordance_pct:.1f} %** ({c.rag_matched_numbers}/{c.rag_total_numbers_cited}) | {c.control_numeric_concordance_pct:.1f} % ({c.control_matched_numbers}/{c.control_total_numbers_cited}) | **+{c.rag_numeric_concordance_pct - c.control_numeric_concordance_pct:.1f} %** |",
+                f"| **Concordancia numérica (excluyendo literales del SQL)** | **{c.rag_non_sql_numeric_concordance_pct:.1f} %** ({c.rag_non_sql_matched_numbers}/{c.rag_non_sql_numbers_cited}) | {c.control_non_sql_numeric_concordance_pct:.1f} % ({c.control_non_sql_matched_numbers}/{c.control_non_sql_numbers_cited}) | **+{c.rag_non_sql_numeric_concordance_pct - c.control_non_sql_numeric_concordance_pct:.1f} %** |",
             ]
         m = self.rag_metrics
         return [
-            f"| **Afirmaciones sustentadas en evidencia** | **{m.overall_supported_rate_pct:.1f} %** | N/A | N/A |",
-            f"| **Afirmaciones sin sustento (Alucinación)** | **{m.overall_unsupported_rate_pct:.1f} %** | N/A | N/A |",
-            f"| **Concordancia de valores numéricos** | **{m.overall_numeric_concordance_pct:.1f} %** | N/A | N/A |",
+            f"| **Afirmaciones con trazabilidad formal (`finding_ids` + KB + cifras)** | **{m.overall_supported_rate_pct:.1f} %** | N/A | N/A |",
+            f"| **Afirmaciones sin sustento trazable** | **{m.overall_unsupported_rate_pct:.1f} %** | N/A | N/A |",
+            f"| **Cobertura de métricas reales citadas (denominador fijo)** | **{m.overall_metric_coverage_pct:.1f} %** ({m.total_covered_metrics}/{m.total_expected_metrics}) | N/A | N/A |",
+            f"| **Concordancia de valores numéricos** | **{m.overall_numeric_concordance_pct:.1f} %** ({m.total_matched_numbers}/{m.total_numbers_cited}) | N/A | N/A |",
         ]
 
     def _format_markdown_case_summary_table(self) -> List[str]:
@@ -125,6 +129,8 @@ class EvaluationReport:
             "| Métrica | Condición RAG Híbrida | Condición de Control (Sin Contexto) | Delta de Mejora (Aporte Híbrido) |",
             "| :--- | :---: | :---: | :---: |",
             *self._format_markdown_comparison_table(),
+            "",
+            "> † **Nota metodológica (`S3-02`):** En la condición de control, el modelo recibe únicamente SQL (sin `finding_ids` ni `kb_fragment_id`); por ello, la trazabilidad formal mide ausencia estructural de evidencia verificable. La veracidad semántica y el acierto de causa raíz en igualdad de condiciones se evalúan de forma doble ciega en `S3-03`.",
             "",
             "## 3. Distribución de Afirmaciones por Tipo",
             f"- **OBSERVACION:** {m.type_distribution_pct.get('OBSERVACION', 0.0):.1f} %",
@@ -225,7 +231,7 @@ class AiEvaluationHarness:
         )
         rag_metrics = calculate_aggregate_metrics(rag_results)
 
-        control_comparison = await self._evaluate_control_phase(
+        control_comparison, control_results = await self._evaluate_control_phase(
             include_control=include_control,
             cases=cases_to_evaluate,
             rag_metrics=rag_metrics,
@@ -249,6 +255,7 @@ class AiEvaluationHarness:
             rag_metrics=rag_metrics,
             control_comparison=control_comparison,
             case_results=rag_results,
+            control_case_results=control_results,
         )
 
     def _resolve_delay(self, explicit_delay: Optional[float]) -> float:
@@ -313,9 +320,9 @@ class AiEvaluationHarness:
         checkpoint_path: Optional[Path],
         delay_seconds: float,
         budget: List[Optional[int]],
-    ) -> Optional[ControlConditionComparison]:
+    ) -> Tuple[Optional[ControlConditionComparison], List[CaseEvaluationResult]]:
         if not include_control:
-            return None
+            return None, []
         control_results = await self._run_phase(
             cases=cases,
             bucket=checkpoint["control"],
@@ -331,7 +338,7 @@ class AiEvaluationHarness:
         )
         ctrl_metrics = calculate_aggregate_metrics(control_results)
         reduction_delta = ctrl_metrics.overall_unsupported_rate_pct - rag_metrics.overall_unsupported_rate_pct
-        return ControlConditionComparison(
+        comparison = ControlConditionComparison(
             rag_supported_rate_pct=rag_metrics.overall_supported_rate_pct,
             rag_unsupported_rate_pct=rag_metrics.overall_unsupported_rate_pct,
             control_supported_rate_pct=ctrl_metrics.overall_supported_rate_pct,
@@ -339,4 +346,20 @@ class AiEvaluationHarness:
             hallucination_reduction_delta_pct=round(max(0.0, reduction_delta), 2),
             rag_numeric_concordance_pct=rag_metrics.overall_numeric_concordance_pct,
             control_numeric_concordance_pct=ctrl_metrics.overall_numeric_concordance_pct,
+            rag_total_numbers_cited=rag_metrics.total_numbers_cited,
+            rag_matched_numbers=rag_metrics.total_matched_numbers,
+            control_total_numbers_cited=ctrl_metrics.total_numbers_cited,
+            control_matched_numbers=ctrl_metrics.total_matched_numbers,
+            rag_non_sql_numbers_cited=rag_metrics.total_non_sql_numbers_cited,
+            rag_non_sql_matched_numbers=rag_metrics.total_non_sql_matched_numbers,
+            rag_non_sql_numeric_concordance_pct=rag_metrics.overall_non_sql_numeric_concordance_pct,
+            control_non_sql_numbers_cited=ctrl_metrics.total_non_sql_numbers_cited,
+            control_non_sql_matched_numbers=ctrl_metrics.total_non_sql_matched_numbers,
+            control_non_sql_numeric_concordance_pct=ctrl_metrics.overall_non_sql_numeric_concordance_pct,
+            rag_metric_coverage_pct=rag_metrics.overall_metric_coverage_pct,
+            control_metric_coverage_pct=ctrl_metrics.overall_metric_coverage_pct,
+            rag_covered_metrics=rag_metrics.total_covered_metrics,
+            control_covered_metrics=ctrl_metrics.total_covered_metrics,
+            total_expected_metrics=rag_metrics.total_expected_metrics,
         )
+        return comparison, control_results
