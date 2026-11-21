@@ -33,6 +33,21 @@ class ControlConditionComparison:
     hallucination_reduction_delta_pct: float  # control_unsupported - rag_unsupported
     rag_numeric_concordance_pct: float
     control_numeric_concordance_pct: float
+    rag_total_numbers_cited: int = 0
+    rag_matched_numbers: int = 0
+    control_total_numbers_cited: int = 0
+    control_matched_numbers: int = 0
+    rag_non_sql_numbers_cited: int = 0
+    rag_non_sql_matched_numbers: int = 0
+    rag_non_sql_numeric_concordance_pct: float = 100.0
+    control_non_sql_numbers_cited: int = 0
+    control_non_sql_matched_numbers: int = 0
+    control_non_sql_numeric_concordance_pct: float = 100.0
+    rag_metric_coverage_pct: float = 0.0
+    control_metric_coverage_pct: float = 0.0
+    rag_covered_metrics: int = 0
+    control_covered_metrics: int = 0
+    total_expected_metrics: int = 0
 
 
 class ControlConditionEvaluator:

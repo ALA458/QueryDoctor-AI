@@ -13,9 +13,13 @@ if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
 from eval.manual_audit import (  # noqa: E402
+    comparative_report_to_dict,
     prepare_blind_audit_bundle,
+    prepare_comparative_audit_bundle,
     render_audit_markdown,
+    render_comparative_audit_markdown,
     report_to_dict,
+    score_comparative_audit,
     score_manual_audit,
 )
 
@@ -103,6 +107,37 @@ def _build_parser() -> argparse.ArgumentParser:
         default="lab/results/raw/s3-03-audit-metrics.json",
         help="Ruta de salida para métricas crudas en JSON",
     )
+
+    prep_cmp = subparsers.add_parser(
+        "prepare-comparative",
+        help="Genera cuaderno doble ciego A/B mezclando RAG Híbrido y Control (sin IDs internos)",
+    )
+    prep_cmp.add_argument(
+        "--report",
+        type=str,
+        default="lab/results/ai_evaluation_report.json",
+        help="Ruta al reporte JSON generado por run_ai_harness.py con cases y control_cases",
+    )
+    prep_cmp.add_argument(
+        "--out-dir",
+        type=str,
+        default="lab/results/auditoria",
+        help="Directorio de salida para el paquete de revisión comparativa",
+    )
+    prep_cmp.add_argument("--seed", type=int, default=20261120, help="Semilla reproducible de barajado")
+    prep_cmp.add_argument("--r1-name", type=str, default="Joel González", help="Nombre del Revisor 1")
+    prep_cmp.add_argument("--r2-name", type=str, default="Maykol Madrid", help="Nombre del Revisor 2")
+
+    score_cmp = subparsers.add_parser(
+        "score-comparative",
+        help="Calcula Kappa por brazo, falsos pasantes RNF-FUN-03 y prueba pareada de McNemar",
+    )
+    score_cmp.add_argument("--manifest", type=str, default="lab/results/auditoria/audit_manifest.json")
+    score_cmp.add_argument("--r1", type=str, default="lab/results/auditoria/planilla_revisor_1.csv")
+    score_cmp.add_argument("--r2", type=str, default="lab/results/auditoria/planilla_revisor_2.csv")
+    score_cmp.add_argument("--adjudication", type=str, default=None)
+    score_cmp.add_argument("--out-md", type=str, default="lab/results/S3-03-auditoria-manual.md")
+    score_cmp.add_argument("--out-json", type=str, default="lab/results/raw/s3-03-audit-metrics.json")
     return parser
 
 
@@ -123,6 +158,51 @@ def main() -> None:
             f"[OK] Paquete ciego generado en {out_dir}: "
             f"{manifest['total_cases']} casos, {manifest['total_claims']} afirmaciones (seed={manifest['seed']})."
         )
+        return
+
+    if args.command == "prepare-comparative":
+        report_path = _resolve_repo_path(repo_root, args.report, "lab/results/ai_evaluation_report.json")
+        out_dir = _resolve_repo_path(repo_root, args.out_dir, "lab/results/auditoria")
+        manifest = prepare_comparative_audit_bundle(
+            report_path,
+            out_dir,
+            seed=args.seed,
+            reviewer_1_name=args.r1_name,
+            reviewer_2_name=args.r2_name,
+            allowed_root=repo_root,
+        )
+        print(
+            f"[OK] Paquete doble ciego A/B generado en {out_dir}: "
+            f"{manifest['total_items']} ítems ({manifest['total_claims']} afirmaciones, seed={manifest['seed']})."
+        )
+        return
+
+    if args.command == "score-comparative":
+        manifest_path = _resolve_repo_path(repo_root, args.manifest, "lab/results/auditoria/audit_manifest.json")
+        r1_path = _resolve_repo_path(repo_root, args.r1, "lab/results/auditoria/planilla_revisor_1.csv")
+        r2_path = _resolve_repo_path(repo_root, args.r2, "lab/results/auditoria/planilla_revisor_2.csv")
+        adj_path = (
+            _resolve_repo_path(repo_root, args.adjudication, "lab/results/auditoria/desacuerdos_resueltos.csv")
+            if args.adjudication
+            else None
+        )
+        out_md = _resolve_repo_path(repo_root, args.out_md, "lab/results/S3-03-auditoria-manual.md")
+        out_json = _resolve_repo_path(repo_root, args.out_json, "lab/results/raw/s3-03-audit-metrics.json")
+
+        cmp_report = score_comparative_audit(manifest_path, r1_path, r2_path, adjudication_csv=adj_path)
+        _write_repo_text_file(repo_root, out_md, render_comparative_audit_markdown(cmp_report))
+        _write_repo_text_file(
+            repo_root,
+            out_json,
+            json.dumps(comparative_report_to_dict(cmp_report), indent=2, ensure_ascii=False),
+        )
+        print(
+            f"[OK] S3-03 v2 puntuado: kappa(global)={cmp_report.case_kappa_all.kappa:.4f}, "
+            f"McNemar causa_raiz p={cmp_report.root_cause_mcnemar.p_value_exact:.6g}, "
+            f"falsos_pasantes={cmp_report.strict_false_passer_ci.successes}/{cmp_report.first_attempt_pass_count}"
+        )
+        print(f"     Informe Markdown: {out_md}")
+        print(f"     Métricas JSON:    {out_json}")
         return
 
     manifest_path = _resolve_repo_path(repo_root, args.manifest, "lab/results/auditoria/audit_manifest.json")
