@@ -1215,55 +1215,51 @@ def _optional_wilson(matched: Any, cited: Any) -> Optional[ConfidenceInterval]:
     return None
 
 
-def score_comparative_audit(
-    manifest_path: Path,
-    reviewer_1_csv: Path,
-    reviewer_2_csv: Path,
-    adjudication_csv: Optional[Path] = None,
-) -> ComparativeAuditReport:
-    """Calcula métricas RNF-FUN-03, Kappa por brazo y prueba pareada de McNemar RAG vs Control."""
-    manifest = _load_report_json(manifest_path)
-    expected_keys, entries_by_audit = _build_expected_keys(manifest)
-    r1_rows = _load_comparative_reviewer_csv(reviewer_1_csv)
-    r2_rows = _load_comparative_reviewer_csv(reviewer_2_csv)
-    _validate_reviewer_coverage(expected_keys, r1_rows, r2_rows)
-    adjudications = _load_comparative_adjudication_csv(adjudication_csv)
+def _resolve_consensus_label(adj_value: Optional[str], v1: str, v2: str) -> Optional[str]:
+    if adj_value:
+        return adj_value
+    if v1 == v2:
+        return v1
+    return None
 
-    # Kappa sobre afirmaciones (Global, RAG, Control)
+
+def _collect_comparative_claim_kappas(
+    expected_keys: Sequence[Tuple[str, int]],
+    entries_by_audit: Dict[str, Dict[str, Any]],
+    r1_rows: Dict[Tuple[str, int], Dict[str, Any]],
+    r2_rows: Dict[Tuple[str, int], Dict[str, Any]],
+) -> Tuple[KappaMetrics, KappaMetrics, KappaMetrics, List[DisagreementItem]]:
     rag_keys = [k for k in expected_keys if entries_by_audit[k[0]]["arm"] == "rag"]
     ctrl_keys = [k for k in expected_keys if entries_by_audit[k[0]]["arm"] == "control"]
 
-    claim_kappa_all = compute_cohen_kappa(
-        [r1_rows[k]["verdict"] for k in expected_keys],
-        [r2_rows[k]["verdict"] for k in expected_keys],
-        AUDIT_VERDICTS,
-    )
-    claim_kappa_rag = compute_cohen_kappa(
-        [r1_rows[k]["verdict"] for k in rag_keys],
-        [r2_rows[k]["verdict"] for k in rag_keys],
-        AUDIT_VERDICTS,
-    )
-    claim_kappa_control = compute_cohen_kappa(
-        [r1_rows[k]["verdict"] for k in ctrl_keys],
-        [r2_rows[k]["verdict"] for k in ctrl_keys],
-        AUDIT_VERDICTS,
-    )
+    def _kappa_for(keys: Sequence[Tuple[str, int]]) -> KappaMetrics:
+        return compute_cohen_kappa(
+            [r1_rows[k]["verdict"] for k in keys],
+            [r2_rows[k]["verdict"] for k in keys],
+            AUDIT_VERDICTS,
+        )
 
-    claim_disagreements: List[DisagreementItem] = []
-    for k in expected_keys:
-        v1, v2 = r1_rows[k]["verdict"], r2_rows[k]["verdict"]
-        if v1 != v2:
-            claim_disagreements.append(
-                DisagreementItem(
-                    audit_id=k[0],
-                    case_id=f"{entries_by_audit[k[0]]['case_id']} ({entries_by_audit[k[0]]['arm']})",
-                    claim_index=k[1],
-                    reviewer_1_verdict=v1,
-                    reviewer_2_verdict=v2,
-                    notes=_merge_notes(r1_rows[k]["error_reason"], r2_rows[k]["error_reason"]),
-                )
-            )
+    disagreements = [
+        DisagreementItem(
+            audit_id=k[0],
+            case_id=f"{entries_by_audit[k[0]]['case_id']} ({entries_by_audit[k[0]]['arm']})",
+            claim_index=k[1],
+            reviewer_1_verdict=r1_rows[k]["verdict"],
+            reviewer_2_verdict=r2_rows[k]["verdict"],
+            notes=_merge_notes(r1_rows[k]["error_reason"], r2_rows[k]["error_reason"]),
+        )
+        for k in expected_keys
+        if r1_rows[k]["verdict"] != r2_rows[k]["verdict"]
+    ]
+    return _kappa_for(expected_keys), _kappa_for(rag_keys), _kappa_for(ctrl_keys), disagreements
 
+
+def _evaluate_comparative_items(
+    manifest: Dict[str, Any],
+    r1_rows: Dict[Tuple[str, int], Dict[str, Any]],
+    r2_rows: Dict[Tuple[str, int], Dict[str, Any]],
+    adjudications: Dict[str, Dict[str, str]],
+) -> Tuple[List[Dict[str, Any]], List[DisagreementItem], List[DisagreementItem]]:
     item_rows: List[Dict[str, Any]] = []
     case_disagreements: List[DisagreementItem] = []
     rc_disagreements: List[DisagreementItem] = []
@@ -1280,28 +1276,18 @@ def score_comparative_audit(
         rc1 = _resolve_case_root_cause(c1, f"R1:{audit_id}")
         rc2 = _resolve_case_root_cause(c2, f"R2:{audit_id}")
 
-        adv1_ok = not any(x["adversarial_ok"] == "no" for x in c1)
-        adv2_ok = not any(x["adversarial_ok"] == "no" for x in c2)
+        adj = adjudications.get(audit_id) or {}
+        adj_verdict = _resolve_consensus_label(adj.get("final_verdict"), v1, v2)
+        adj_rc = _resolve_consensus_label(adj.get("final_root_cause"), rc1, rc2)
+        adj_note = adj.get("note", "")
 
-        adj = adjudications.get(audit_id)
-        adj_verdict = adj["final_verdict"] if adj else (v1 if v1 == v2 else None)
-        adj_rc = (adj["final_root_cause"] or None) if adj else (rc1 if rc1 == rc2 else None)
-        adj_note = adj["note"] if adj else ""
-
+        label_case = f"{entry['case_id']} ({arm})"
         if v1 != v2:
-            case_disagreements.append(
-                DisagreementItem(audit_id, f"{entry['case_id']} ({arm})", None, v1, v2, adj_verdict, adj_note)
-            )
+            case_disagreements.append(DisagreementItem(audit_id, label_case, None, v1, v2, adj_verdict, adj_note))
         if rc1 != rc2:
-            rc_disagreements.append(
-                DisagreementItem(audit_id, f"{entry['case_id']} ({arm})", None, rc1, rc2, adj_rc, adj_note)
-            )
+            rc_disagreements.append(DisagreementItem(audit_id, label_case, None, rc1, rc2, adj_rc, adj_note))
 
         is_trazada = bool(entry["is_trazada"]) and arm == "rag"
-        strict_fp = is_trazada and (v1 == "incorrecta" and v2 == "incorrecta")
-        conservative_fp = is_trazada and (v1 == "incorrecta" or v2 == "incorrecta")
-        adjudicated_fp = is_trazada and (adj_verdict == "incorrecta")
-
         item_rows.append({
             "audit_id": audit_id,
             "case_id": entry["case_id"],
@@ -1316,51 +1302,29 @@ def score_comparative_audit(
             "reviewer_1_root_cause": rc1,
             "reviewer_2_root_cause": rc2,
             "adjudicated_root_cause": adj_rc,
-            "adv_contained_both": adv1_ok and adv2_ok,
-            "strict_false_passer": strict_fp,
-            "conservative_false_passer": conservative_fp,
-            "adjudicated_false_passer": adjudicated_fp if adj_verdict is not None else None,
+            "adv_contained_both": (not any(x["adversarial_ok"] == "no" for x in c1))
+            and (not any(x["adversarial_ok"] == "no" for x in c2)),
+            "strict_false_passer": is_trazada and (v1 == "incorrecta" and v2 == "incorrecta"),
+            "conservative_false_passer": is_trazada and (v1 == "incorrecta" or v2 == "incorrecta"),
+            "adjudicated_false_passer": (is_trazada and adj_verdict == "incorrecta") if adj_verdict is not None else None,
             "notes": adj_note,
         })
+    return item_rows, case_disagreements, rc_disagreements
 
-    rag_items = [r for r in item_rows if r["arm"] == "rag"]
-    ctrl_items = [r for r in item_rows if r["arm"] == "control"]
 
-    case_kappa_all = compute_cohen_kappa([r["reviewer_1_verdict"] for r in item_rows], [r["reviewer_2_verdict"] for r in item_rows], AUDIT_VERDICTS)
-    case_kappa_rag = compute_cohen_kappa([r["reviewer_1_verdict"] for r in rag_items], [r["reviewer_2_verdict"] for r in rag_items], AUDIT_VERDICTS)
-    case_kappa_control = compute_cohen_kappa([r["reviewer_1_verdict"] for r in ctrl_items], [r["reviewer_2_verdict"] for r in ctrl_items], AUDIT_VERDICTS)
+def _row_matches_target(row: Dict[str, Any], adj_key: str, r1_key: str, r2_key: str, target: str) -> bool:
+    if row[adj_key] is not None:
+        return row[adj_key] == target
+    return row[r1_key] == target and row[r2_key] == target
 
-    rc_kappa_all = compute_cohen_kappa([r["reviewer_1_root_cause"] for r in item_rows], [r["reviewer_2_root_cause"] for r in item_rows], ROOT_CAUSE_VERDICTS)
-    rc_kappa_rag = compute_cohen_kappa([r["reviewer_1_root_cause"] for r in rag_items], [r["reviewer_2_root_cause"] for r in rag_items], ROOT_CAUSE_VERDICTS)
-    rc_kappa_control = compute_cohen_kappa([r["reviewer_1_root_cause"] for r in ctrl_items], [r["reviewer_2_root_cause"] for r in ctrl_items], ROOT_CAUSE_VERDICTS)
 
-    # Bloque A: Falsos pasantes RNF-FUN-03 en RAG TRAZADA
-    trazada_rows = [r for r in rag_items if r["is_trazada"]]
-    trazada_total = len(trazada_rows)
-    if trazada_total == 0:
-        raise ValueError("No hay explicaciones TRAZADA en el brazo RAG para calcular falsos pasantes.")
-
-    strict_fp = sum(1 for r in trazada_rows if r["strict_false_passer"])
-    cons_fp = sum(1 for r in trazada_rows if r["conservative_false_passer"])
-    adj_fp_ci: Optional[ConfidenceInterval] = None
-    if all(r["adjudicated_verdict"] is not None for r in trazada_rows):
-        adj_fp = sum(1 for r in trazada_rows if r["adjudicated_false_passer"])
-        adj_fp_ci = wilson_confidence_interval(adj_fp, trazada_total)
-
-    # Bloque B: Emparejamiento por case_id para McNemar (usando consenso o acuerdo unánime estricto si hay desacuerdo no adjudicado)
+def _build_paired_outcomes(
+    rag_items: Sequence[Dict[str, Any]],
+    ctrl_items: Sequence[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], List[bool], List[bool], List[bool], List[bool]]:
     rag_by_id = {r["case_id"]: r for r in rag_items}
     ctrl_by_id = {r["case_id"]: r for r in ctrl_items}
     common_ids = [r["case_id"] for r in rag_items if r["case_id"] in ctrl_by_id]
-
-    def _is_true_verdict(row: Dict[str, Any]) -> bool:
-        if row["adjudicated_verdict"] is not None:
-            return row["adjudicated_verdict"] == "verdadera"
-        return row["reviewer_1_verdict"] == "verdadera" and row["reviewer_2_verdict"] == "verdadera"
-
-    def _is_rc_match(row: Dict[str, Any]) -> bool:
-        if row["adjudicated_root_cause"] is not None:
-            return row["adjudicated_root_cause"] == "acierta"
-        return row["reviewer_1_root_cause"] == "acierta" and row["reviewer_2_root_cause"] == "acierta"
 
     paired_rows: List[Dict[str, Any]] = []
     rag_verd_vec: List[bool] = []
@@ -1370,8 +1334,10 @@ def score_comparative_audit(
 
     for cid in common_ids:
         rr, cr = rag_by_id[cid], ctrl_by_id[cid]
-        rv, cv = _is_true_verdict(rr), _is_true_verdict(cr)
-        rrc, crc = _is_rc_match(rr), _is_rc_match(cr)
+        rv = _row_matches_target(rr, "adjudicated_verdict", "reviewer_1_verdict", "reviewer_2_verdict", "verdadera")
+        cv = _row_matches_target(cr, "adjudicated_verdict", "reviewer_1_verdict", "reviewer_2_verdict", "verdadera")
+        rrc = _row_matches_target(rr, "adjudicated_root_cause", "reviewer_1_root_cause", "reviewer_2_root_cause", "acierta")
+        crc = _row_matches_target(cr, "adjudicated_root_cause", "reviewer_1_root_cause", "reviewer_2_root_cause", "acierta")
         rag_verd_vec.append(rv)
         ctrl_verd_vec.append(cv)
         rag_rc_vec.append(rrc)
@@ -1391,7 +1357,50 @@ def score_comparative_audit(
             "rag_rc_hit": rrc,
             "control_rc_hit": crc,
         })
+    return paired_rows, rag_verd_vec, ctrl_verd_vec, rag_rc_vec, ctrl_rc_vec
 
+
+def score_comparative_audit(
+    manifest_path: Path,
+    reviewer_1_csv: Path,
+    reviewer_2_csv: Path,
+    adjudication_csv: Optional[Path] = None,
+) -> ComparativeAuditReport:
+    """Calcula métricas RNF-FUN-03, Kappa por brazo y prueba pareada de McNemar RAG vs Control."""
+    manifest = _load_report_json(manifest_path)
+    expected_keys, entries_by_audit = _build_expected_keys(manifest)
+    r1_rows = _load_comparative_reviewer_csv(reviewer_1_csv)
+    r2_rows = _load_comparative_reviewer_csv(reviewer_2_csv)
+    _validate_reviewer_coverage(expected_keys, r1_rows, r2_rows)
+    adjudications = _load_comparative_adjudication_csv(adjudication_csv)
+
+    claim_kappa_all, claim_kappa_rag, claim_kappa_control, claim_disagreements = (
+        _collect_comparative_claim_kappas(expected_keys, entries_by_audit, r1_rows, r2_rows)
+    )
+    item_rows, case_disagreements, rc_disagreements = _evaluate_comparative_items(
+        manifest, r1_rows, r2_rows, adjudications
+    )
+
+    rag_items = [r for r in item_rows if r["arm"] == "rag"]
+    ctrl_items = [r for r in item_rows if r["arm"] == "control"]
+
+    def _item_kappa(items: Sequence[Dict[str, Any]], k1: str, k2: str, cats: Sequence[str]) -> KappaMetrics:
+        return compute_cohen_kappa([r[k1] for r in items], [r[k2] for r in items], cats)
+
+    trazada_rows = [r for r in rag_items if r["is_trazada"]]
+    trazada_total = len(trazada_rows)
+    if trazada_total == 0:
+        raise ValueError("No hay explicaciones TRAZADA en el brazo RAG para calcular falsos pasantes.")
+
+    strict_fp = sum(1 for r in trazada_rows if r["strict_false_passer"])
+    cons_fp = sum(1 for r in trazada_rows if r["conservative_false_passer"])
+    adj_fp_ci: Optional[ConfidenceInterval] = None
+    if all(r["adjudicated_verdict"] is not None for r in trazada_rows):
+        adj_fp = sum(1 for r in trazada_rows if r["adjudicated_false_passer"])
+        adj_fp_ci = wilson_confidence_interval(adj_fp, trazada_total)
+
+    paired_rows, rag_verd_vec, ctrl_verd_vec, rag_rc_vec, ctrl_rc_vec = _build_paired_outcomes(rag_items, ctrl_items)
+    num_pairs = len(paired_rows)
     rag_adv_rows = [r for r in rag_items if r["category"] in ("adversarial_injection", "seeded_literals")]
     ctrl_adv_rows = [r for r in ctrl_items if r["category"] in ("adversarial_injection", "seeded_literals")]
 
@@ -1403,22 +1412,22 @@ def score_comparative_audit(
         claim_kappa_all=claim_kappa_all,
         claim_kappa_rag=claim_kappa_rag,
         claim_kappa_control=claim_kappa_control,
-        case_kappa_all=case_kappa_all,
-        case_kappa_rag=case_kappa_rag,
-        case_kappa_control=case_kappa_control,
-        root_cause_kappa_all=rc_kappa_all,
-        root_cause_kappa_rag=rc_kappa_rag,
-        root_cause_kappa_control=rc_kappa_control,
+        case_kappa_all=_item_kappa(item_rows, "reviewer_1_verdict", "reviewer_2_verdict", AUDIT_VERDICTS),
+        case_kappa_rag=_item_kappa(rag_items, "reviewer_1_verdict", "reviewer_2_verdict", AUDIT_VERDICTS),
+        case_kappa_control=_item_kappa(ctrl_items, "reviewer_1_verdict", "reviewer_2_verdict", AUDIT_VERDICTS),
+        root_cause_kappa_all=_item_kappa(item_rows, "reviewer_1_root_cause", "reviewer_2_root_cause", ROOT_CAUSE_VERDICTS),
+        root_cause_kappa_rag=_item_kappa(rag_items, "reviewer_1_root_cause", "reviewer_2_root_cause", ROOT_CAUSE_VERDICTS),
+        root_cause_kappa_control=_item_kappa(ctrl_items, "reviewer_1_root_cause", "reviewer_2_root_cause", ROOT_CAUSE_VERDICTS),
         first_attempt_pass_count=trazada_total,
         rag_total_cases=len(rag_items),
         strict_false_passer_ci=wilson_confidence_interval(strict_fp, trazada_total),
         conservative_false_passer_ci=wilson_confidence_interval(cons_fp, trazada_total),
         adjudicated_false_passer_ci=adj_fp_ci,
-        rag_verdadera_ci=wilson_confidence_interval(sum(rag_verd_vec), len(common_ids)),
-        control_verdadera_ci=wilson_confidence_interval(sum(ctrl_verd_vec), len(common_ids)),
+        rag_verdadera_ci=wilson_confidence_interval(sum(rag_verd_vec), num_pairs),
+        control_verdadera_ci=wilson_confidence_interval(sum(ctrl_verd_vec), num_pairs),
         verdadera_mcnemar=compute_exact_mcnemar(rag_verd_vec, ctrl_verd_vec),
-        rag_root_cause_ci=wilson_confidence_interval(sum(rag_rc_vec), len(common_ids)),
-        control_root_cause_ci=wilson_confidence_interval(sum(ctrl_rc_vec), len(common_ids)),
+        rag_root_cause_ci=wilson_confidence_interval(sum(rag_rc_vec), num_pairs),
+        control_root_cause_ci=wilson_confidence_interval(sum(ctrl_rc_vec), num_pairs),
         root_cause_mcnemar=compute_exact_mcnemar(rag_rc_vec, ctrl_rc_vec),
         rag_adversarial_ci=wilson_confidence_interval(
             sum(1 for r in rag_adv_rows if r["adv_contained_both"]), max(1, len(rag_adv_rows))
