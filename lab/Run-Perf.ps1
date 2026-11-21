@@ -163,6 +163,22 @@ function Assert-Secrets {
         throw ("Faltan secretos en ${secretsDir}: $($missing -join ', '). perf_dba_password.txt es la contrasena que la " +
             'medicion le pone al DBA en el primer ingreso (12+ caracteres con mayusculas, minusculas, numeros y simbolos).')
     }
+
+    # Misma politica que Identity en la Api (AuthServiceCollectionExtensions): se revisa antes de borrar nada, para no
+    # perder una base y una espera por una contrasena que la Api va a rechazar. Nunca se imprime la contrasena.
+    $perf = [IO.File]::ReadAllText((Join-Path $secretsDir 'perf_dba_password.txt')).Trim()
+    $initial = [IO.File]::ReadAllText((Join-Path $secretsDir 'initial_dba_password.txt')).Trim()
+    $faltan = @()
+    if ($perf.Length -lt 12) { $faltan += '12 o mas caracteres' }
+    if ($perf -cnotmatch '[a-z]') { $faltan += 'una minuscula' }
+    if ($perf -cnotmatch '[A-Z]') { $faltan += 'una mayuscula' }
+    if ($perf -notmatch '[0-9]') { $faltan += 'un digito' }
+    if ($perf -notmatch '[^a-zA-Z0-9]') { $faltan += 'un simbolo (por ejemplo ! # % * - _)' }
+    if ($perf -ceq $initial) { $faltan += 'ser distinta de initial_dba_password.txt' }
+    $perf = $null; $initial = $null
+    if ($faltan.Count -gt 0) {
+        throw "perf_dba_password.txt no cumple la politica de contrasenas de la Api. Le falta: $($faltan -join ', ')."
+    }
 }
 
 # Entorno de la medicion (sin secretos): para la seccion "Entorno" del informe.
@@ -411,12 +427,14 @@ function Measure-IngestPhase([string]$Label, [string]$Phase, [Guid]$ConnectionId
 
 function Invoke-IngestRepetition([string]$Label) {
     Write-Host "== S3-07 ingest: repeticion $Label" -ForegroundColor Cyan
-    Wait-SafeWindow
+    # Antes de registrar la conexion no hay ingesta programada: vaciar y cargar Query Store no necesita esperar.
     Write-Host '  Query Store vaciado (intervalo de 60 min) y primera pasada de la carga'
     Invoke-LabSqlFile (Join-Path $perfSqlDir '04-perf-reset-querystore.sql') -Quiet | Out-Null
     Invoke-LabSqlFile (Join-Path $perfSqlDir '02-perf-workload.sql') -DiscardResults | Out-Null
     $null = Assert-PerfCount (Join-Path $rawDir "ingest-$Label-count.txt")
 
+    # Desde el sondeo existe la ingesta programada del minuto :05: se arranca lejos de ese minuto.
+    Wait-SafeWindow
     Reset-PlatformDb
     $setupFile = Join-Path $rawDir "ingest-$Label-setup.json"
     Invoke-PerfTool setup --secrets $secretsDir --out $setupFile --base-url $BaseUrl
