@@ -48,17 +48,20 @@ function Assert-Container {
 # Ejecuta un archivo .sql como sa dentro del contenedor. El archivo se copia con docker cp (en vez de pasarlo por una
 # tuberia) para que PowerShell 5.1 no le agregue un BOM que sqlcmd no entiende.
 # -DiscardResults: las filas se tiran dentro del contenedor y solo vuelven los mensajes (RAISERROR/PRINT).
+# Cada linea se muestra en pantalla en cuanto llega (el avance de la carga) y tambien se devuelve para el registro.
 function Invoke-LabSqlFile {
     param([string]$File, [switch]$DiscardResults)
     $target = '/tmp/qd-perf-' + [IO.Path]::GetFileName($File)
     docker cp $File "${SqlContainer}:$target" | Out-Null
     if ($LASTEXITCODE -ne 0) { throw "docker cp fallo para $File" }
     $sqlcmd = '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -C -I -b -W -i ' + $target
-    $redirect = if ($DiscardResults) { ' -r0 2>&1 >/dev/null' } else { ' 2>&1' }
+    # -r1 manda a stderr TODOS los mensajes (con -r0 solo los de severidad >= 11 y se perdia el avance).
+    $redirect = if ($DiscardResults) { ' -r1 2>&1 >/dev/null' } else { ' 2>&1' }
     $cmd = 'export SQLCMDPASSWORD=$(cat /run/secrets/mssql_sa_password); ' + $sqlcmd + $redirect
-    $out = docker exec $SqlContainer bash -c $cmd
+    $out = @(docker exec $SqlContainer bash -c $cmd | ForEach-Object { Write-Host $_; $_ })
     $code = $LASTEXITCODE
-    docker exec $SqlContainer rm -f $target | Out-Null
+    # docker cp deja el archivo como root y el contenedor corre como mssql: se borra como root.
+    docker exec -u root $SqlContainer rm -f $target | Out-Null
     if ($code -ne 0) { throw "sqlcmd fallo con $([IO.Path]::GetFileName($File)) (exit $code):`n$($out -join "`n")" }
     $out
 }
@@ -73,13 +76,12 @@ if ($Step -in 'prepare', 'all') {
 
     Write-Host "== S3-07 prepare: $RequiredQueries consultas distintas (primera pasada)" -ForegroundColor Cyan
     $log += '##### 02-perf-workload.sql (pasada 1)'
-    $log += Invoke-LabSqlFile (Join-Path $perfSqlDir '02-perf-workload.sql') -DiscardResults | ForEach-Object { Write-Host $_; $_ }
+    $log += Invoke-LabSqlFile (Join-Path $perfSqlDir '02-perf-workload.sql') -DiscardResults
 
     Write-Host '== S3-07 prepare: conteo en sys.query_store_query' -ForegroundColor Cyan
     $count = @(Invoke-LabSqlFile (Join-Path $perfSqlDir '03-perf-count.sql'))
     $log += '##### 03-perf-count.sql'
     $log += $count
-    $count | ForEach-Object { Write-Host $_ }
     Save-Utf8NoBom (Join-Path $rawDir 'prepare.txt') ($log -join "`n")
 
     $summary = $count | Where-Object { $_ -match 'PERF_COUNT=(\d+)' } | Select-Object -Last 1
