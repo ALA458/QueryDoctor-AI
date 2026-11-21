@@ -1,0 +1,8 @@
+# S3-07 · SOLO LABORATORIO (RNF-RND-01, RNF-RND-02). Lo usa lab/Run-Perf.ps1 junto con docker-compose.lab.yml.
+# Uso:   docker compose -f docker-compose.yml -f docker-compose.lab.yml -f lab/perf/docker-compose.perf.yml up -d
+# Top-N = 5000 (el máximo que acepta IngestionOptions.Validate) para que una ingesta traiga las 5 000 consultas de la
+# prueba. El resto de la ingesta queda con sus valores por defecto (supuesto S7 de S3-07). Sin secretos.
+services:
+  worker:
+    environment:
+      Ingestion__TopN: "5000"
