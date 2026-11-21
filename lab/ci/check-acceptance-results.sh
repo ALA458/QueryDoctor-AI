@@ -13,7 +13,10 @@ dir="${1:?Uso: check-acceptance-results.sh <carpeta> <plataforma>}"
 platform="${2:?Falta la plataforma (sql2022, sql2019)}"
 status=0
 
-counter() { grep -o "<Counters [^>]*>" "$1" | grep -oE "\b$2=\"[0-9]+\"" | grep -oE '[0-9]+'; }
+counter() {
+    local trx="$1" name="$2"
+    grep -o "<Counters [^>]*>" "$trx" | grep -oE "\b$name=\"[0-9]+\"" | grep -oE '[0-9]+'
+}
 
 check() {
     local suite="$1" allowed_skips="$2"
