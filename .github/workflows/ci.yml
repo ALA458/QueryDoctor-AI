@@ -43,6 +43,92 @@ jobs:
             - name: Ejecutar arnes del motor (CA-HU20.1, S3-01)
               run: dotnet run --project tools/QueryDoctor.EngineHarness --no-build --configuration Release -- --corpus all --check-targets
 
+    # S3-06 (RNF-COM-01): pruebas de aceptación contra SQL Server real, una vez por plataforma de la matriz de soporte.
+    # Corre LabTests y AcceptanceTests con QD_LAB_SQL definida: aquí no hay Skipped por falta de laboratorio (D7).
+    # SQL Server se arranca con "docker run" y no como "services:", porque un contenedor de servicio necesita la
+    # contraseña de sa antes de los pasos: tendría que estar en este archivo (invariante 4) o en un secreto manual.
+    # Aquí las contraseñas se generan al azar en cada corrida, se enmascaran y no salen del runner.
+    acceptance:
+        name: Aceptacion (${{ matrix.platform }})
+        runs-on: ubuntu-latest
+        timeout-minutes: 40
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - platform: sql2022
+                      image: mcr.microsoft.com/mssql/server:2022-latest
+                    - platform: sql2019
+                      image: mcr.microsoft.com/mssql/server:2019-latest
+
+        steps:
+            - name: Descargar codigo
+              uses: actions/checkout@v7
+
+            - name: Setup de .NET
+              uses: actions/setup-dotnet@v6
+              with:
+                global-json-file: global.json
+
+            - name: Generar contrasenas del laboratorio (solo esta corrida)
+              run: |
+                sa="Qd!9a$(openssl rand -hex 16)"
+                reader="Rd!9a$(openssl rand -hex 16)"
+                echo "::add-mask::$sa"
+                echo "::add-mask::$reader"
+                printf '%s' "$reader" > "$RUNNER_TEMP/mssql_reader_password.txt"
+                {
+                  echo "SA_PASSWORD=$sa"
+                  echo "READER_PASSWORD=$reader"
+                  echo "QD_LAB_READER_PASSWORD_FILE=$RUNNER_TEMP/mssql_reader_password.txt"
+                } >> "$GITHUB_ENV"
+
+            # "-e MSSQL_SA_PASSWORD" sin valor: Docker la toma del entorno y la contraseña no queda en los argumentos del
+            # proceso, visibles con "ps" en el runner (auditoría B4 de S3-06).
+            - name: Arrancar SQL Server (${{ matrix.image }})
+              env:
+                MSSQL_SA_PASSWORD: ${{ env.SA_PASSWORD }}
+              run: |
+                docker run -d --name qd-lab -e ACCEPT_EULA=Y -e MSSQL_PID=Developer \
+                  -e MSSQL_SA_PASSWORD -p 127.0.0.1:1433:1433 "${{ matrix.image }}"
+
+            - name: Preparar el laboratorio (lab/sql 01, 04, 02, 03, 11 y carga 05 + 12 dos veces)
+              run: bash lab/ci/prepare-acceptance-lab.sh qd-lab
+
+            - name: Restaurar paquetes (incluye NuGet Audit)
+              run: dotnet restore
+
+            - name: Compilar
+              run: dotnet build --no-restore --configuration Release
+
+            - name: Pruebas de laboratorio y de aceptacion
+              env:
+                QD_LAB_SQL: 127.0.0.1
+                QD_LAB_PLATFORM: ${{ matrix.platform }}
+              run: |
+                for project in LabTests AcceptanceTests; do
+                  dotnet test "tests/QueryDoctor.$project" --no-build --configuration Release \
+                    --logger "trx;LogFileName=$project-${{ matrix.platform }}.trx" \
+                    --logger "console;verbosity=normal" \
+                    --results-directory "$RUNNER_TEMP/acceptance-results"
+                done
+
+            # D7: un Skipped no es evidencia. dotnet test sale con 0 aunque todo se omita, así que se exige lo ejecutado.
+            - name: Comprobar que no hubo pruebas omitidas de mas
+              run: bash lab/ci/check-acceptance-results.sh "$RUNNER_TEMP/acceptance-results" "${{ matrix.platform }}"
+
+            - name: Publicar resultados (trx con el trait Criterio por prueba)
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                name: acceptance-${{ matrix.platform }}
+                path: ${{ runner.temp }}/acceptance-results/*.trx
+                if-no-files-found: warn
+
+            - name: Detener SQL Server
+              if: always()
+              run: docker rm -f qd-lab || true
+
     web:
         name: Frontend (pruebas de vista)
         runs-on: ubuntu-latest

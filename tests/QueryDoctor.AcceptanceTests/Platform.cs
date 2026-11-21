@@ -1,0 +1,120 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
+using QueryDoctor.LabTests;
+
+namespace QueryDoctor.AcceptanceTests;
+
+/// <summary>Pasos de usuario por la Api pública, como los haría la SPA. Nada de esto entra a la base por debajo.</summary>
+internal static class Platform
+{
+    /// <summary>Tiempo máximo para que el Worker termine un trabajo encolado (sondeo, ingesta + análisis, explain).</summary>
+    public static readonly TimeSpan JobTimeout = TimeSpan.FromSeconds(120);
+
+    /// <summary>Registra una conexión con autenticación SQL y TLS obligatorio (RNF-SEG-03). Devuelve su id.</summary>
+    public static async Task<Guid> RegisterAsync(HttpClient dba, string server, string database, string user, string password)
+    {
+        using var response = await dba.PostAsJsonAsync("/connections", new
+        {
+            platform = "SqlServer",
+            server,
+            databaseName = database,
+            authenticationMethod = "SqlAuthentication",
+            encryption = "Mandatory",
+            username = user,
+            password,
+        });
+
+        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Pending", body.GetProperty("status").GetString());
+        return body.GetProperty("id").GetGuid();
+    }
+
+    /// <summary>Espera a que el Worker sondee la conexión y devuelve el detalle de <c>GET /connections/{id}</c>.</summary>
+    public static Task<JsonElement> ProbedConnectionAsync(HttpClient client, Guid id) =>
+        UntilAsync(
+            () => GetJsonAsync(client, $"/connections/{id}"),
+            detail => detail.GetProperty("status").GetString() != "Pending",
+            $"el sondeo de {id}");
+
+    /// <summary>
+    /// Pide una ingesta manual (<c>POST /connections/{id}/ingestions</c>) y espera a que el Worker termine la ejecución
+    /// nueva (ingesta + análisis + score van en el mismo trabajo). Devuelve esa ejecución de <c>GET …/ingestions</c>.
+    /// </summary>
+    public static async Task<JsonElement> IngestAsync(HttpClient dba, Guid id)
+    {
+        var before = (await GetJsonAsync(dba, $"/connections/{id}/ingestions")).GetArrayLength();
+
+        using (var response = await dba.PostAsync($"/connections/{id}/ingestions", null))
+        {
+            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        }
+
+        var runs = await UntilAsync(
+            () => GetJsonAsync(dba, $"/connections/{id}/ingestions"),
+            list => list.GetArrayLength() > before && list[0].GetProperty("status").GetString() != "Running",
+            $"la ingesta de {id}");
+        var run = runs[0];
+
+        if (run.GetProperty("status").GetString() == "Succeeded")
+        {
+            // La ejecución queda Succeeded al confirmar el upsert, pero el análisis y el score corren después en el mismo
+            // trabajo (IngestConnection → RecalculateConnectionScores). Se espera la señal que vería la SPA: un score
+            // calculado después del fin de la ingesta. Ver el riesgo anotado en S3-06.
+            var finishedAt = run.GetProperty("finishedAt").GetDateTimeOffset();
+            await UntilAsync(
+                () => LatestScoreAsync(dba, id),
+                calculatedAt => calculatedAt >= finishedAt,
+                $"el análisis y el score de {id}");
+        }
+
+        return run;
+    }
+
+    /// <summary>Fecha del score más reciente de la conexión, leída del detalle de su primera consulta.</summary>
+    private static async Task<DateTimeOffset?> LatestScoreAsync(HttpClient client, Guid connectionId)
+    {
+        var queries = await GetJsonAsync(client, $"/queries?connectionId={connectionId}&window=30d");
+        if (queries.GetArrayLength() == 0)
+        {
+            return null;
+        }
+
+        var detail = await GetJsonAsync(client, $"/queries/{queries[0].GetProperty("id").GetGuid()}?window=30d");
+        return detail.GetProperty("score") is { ValueKind: JsonValueKind.Object } score
+            ? score.GetProperty("calculatedAt").GetDateTimeOffset()
+            : null;
+    }
+
+    public static async Task<JsonElement> GetJsonAsync(HttpClient client, string path)
+    {
+        using var response = await client.GetAsync(path);
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"GET {path} respondió {(int)response.StatusCode}.");
+        return await response.Content.ReadFromJsonAsync<JsonElement>();
+    }
+
+    /// <summary>Repite la lectura hasta que se cumpla la condición o venza <see cref="JobTimeout"/>.</summary>
+    public static async Task<T> UntilAsync<T>(Func<Task<T>> read, Func<T, bool> done, string what)
+    {
+        var deadline = DateTimeOffset.UtcNow + JobTimeout;
+        while (true)
+        {
+            var value = await read();
+            if (done(value))
+            {
+                return value;
+            }
+
+            if (DateTimeOffset.UtcNow > deadline)
+            {
+                throw new TimeoutException($"Se agotó el tiempo esperando {what} ({JobTimeout.TotalSeconds} s).");
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(500));
+        }
+    }
+
+    /// <summary>La contraseña común de las cuentas del laboratorio (04 y 11 la toman de READER_PASSWORD).</summary>
+    public static string LabPassword => LabEnvironment.ReaderPassword();
+}

@@ -127,6 +127,30 @@ public static class DependencyInjection
     }
 
     /// <summary>
+    /// Composición de servicios del host Worker (S3-06): la llaman <c>QueryDoctor.Worker/Program.cs</c> y la suite de
+    /// aceptación, para que la prueba de punta a punta arme exactamente el mismo Worker y no una copia que se desfase.
+    /// Los servidores de Hangfire y la guarda de TLS del laboratorio siguen en el host: son decisiones de proceso.
+    /// </summary>
+    /// <remarks>
+    /// Solo el Worker: acceso Sistema (S2-12), Gateway y sondeo (invariante 2), ingesta, enmascarado sin configuración
+    /// (invariante 5), explain (único que habla con la IA) y retención (RNF-SEG-10).
+    /// </remarks>
+    public static IServiceCollection AddWorkerServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        services.AddInfrastructure(configuration);
+        services.AddQueryDoctorHangfire(configuration);
+        services.AddSystemAccessScope();
+        services.AddTargetTelemetry(configuration);
+        services.AddIngestion(configuration);
+        services.AddLiteralMasking();
+        services.AddExplanations(configuration);
+        services.AddRetention(configuration);
+        return services;
+    }
+
+    /// <summary>
     /// Alta de conexiones para la Api (S1-09): caso de uso y encolado de probe_connection.
     /// No registra el Gateway: la Api solo guarda y encola.
     /// </summary>

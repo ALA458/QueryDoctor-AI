@@ -5,27 +5,12 @@ using QueryDoctor.Infrastructure.Connections;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddQueryDoctorHangfire(builder.Configuration);
-
-// S2-12 (RNF-SEG-12): el Worker es un proceso de la plataforma e ingiere, sondea y explica todas las conexiones.
-// Se declara aquí de forma explícita; AddInfrastructure no registra ningún acceso por defecto.
-builder.Services.AddSystemAccessScope();
-
-// Solo el Worker llega a bases objetivo (invariante 2): Gateway, CapabilityProbe y probe_connection (S1-09).
-builder.Services.AddTargetTelemetry(builder.Configuration);
-
-// S1-11: ingest_connection en la cola ingest (la atiende el servidor principal de abajo).
-builder.Services.AddIngestion(builder.Configuration);
-
-// S2-04: el contexto hacia la IA se arma y enmascara en el Worker (invariante 5). Sin configuración: no se apaga.
-builder.Services.AddLiteralMasking();
-
-// S2-05: trabajo explain (único que habla con el servicio de IA, invariante 2), con degradación si la IA falla.
-builder.Services.AddExplanations(builder.Configuration);
-
-// S2-13 (RNF-SEG-10): purga automática del texto SQL y de los planes al vencer Retention:SqlTextAndPlanDays.
-builder.Services.AddRetention(builder.Configuration);
+// S3-06: la composición vive en AddWorkerServices para que la suite de aceptación arme este mismo Worker. Incluye:
+// - S2-12 (RNF-SEG-12): acceso Sistema declarado de forma explícita (AddInfrastructure no registra ninguno).
+// - Invariante 2: Gateway, CapabilityProbe y probe_connection solo aquí (S1-09); ingest_connection (S1-11).
+// - S2-04: enmascarado sin configuración, no se apaga (invariante 5); S2-05: explain, único que habla con la IA.
+// - S2-13 (RNF-SEG-10): purga automática al vencer Retention:SqlTextAndPlanDays.
+builder.Services.AddWorkerServices(builder.Configuration);
 
 // Invariante 3: la excepción de TLS del laboratorio (docker-compose.lab.yml) no arranca fuera de Development.
 LabCertificateGuard.EnsureAllowed(builder.Configuration, builder.Environment.EnvironmentName);

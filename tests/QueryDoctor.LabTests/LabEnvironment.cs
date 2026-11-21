@@ -62,11 +62,27 @@ internal static class LabEnvironment
 [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
 public sealed class LabFactAttribute : FactAttribute
 {
+    private string? _skip;
+
     public LabFactAttribute()
     {
         if (!LabEnvironment.IsEnabled)
         {
-            Skip = LabEnvironment.SkipReason;
+            _skip = LabEnvironment.SkipReason;
         }
+    }
+
+    /// <summary>
+    /// S3-06: versión mayor mínima en la que el caso existe (p. ej. 16 para VIEW DATABASE PERFORMANCE STATE). En una
+    /// plataforma anterior la prueba no aplica y sale omitida con ese motivo, que no es lo mismo que "sin laboratorio".
+    /// </summary>
+    public int MinimumMajorVersion { get; set; }
+
+    public override string? Skip
+    {
+        get => _skip ?? (LabEnvironment.IsEnabled && LabPlatform.Current.MajorVersion < MinimumMajorVersion
+            ? $"No aplica en {LabPlatform.Current.Name}: el caso existe desde la versión {MinimumMajorVersion}.x."
+            : null);
+        set => _skip = value;
     }
 }

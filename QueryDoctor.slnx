@@ -7,6 +7,7 @@
     <Project Path="src/QueryDoctor.Worker/QueryDoctor.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/QueryDoctor.AcceptanceTests/QueryDoctor.AcceptanceTests.csproj" />
     <Project Path="tests/QueryDoctor.ArchitectureTests/QueryDoctor.ArchitectureTests.csproj" />
     <Project Path="tests/QueryDoctor.IntegrationTests/QueryDoctor.IntegrationTests.csproj" />
     <Project Path="tests/QueryDoctor.LabTests/QueryDoctor.LabTests.csproj" />

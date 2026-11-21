@@ -15,7 +15,12 @@ GO
 CREATE DATABASE QD_Lab;
 GO
 
-ALTER DATABASE QD_Lab SET COMPATIBILITY_LEVEL = 160;
+-- S3-06: el nivel de compatibilidad maximo de cada version (160 en SQL Server 2022, 150 en 2019), para que el mismo
+-- laboratorio sirva a la matriz de aceptacion (RNF-COM-01). En 2022 sigue siendo 160: los fixtures de S1-07 no cambian.
+-- Es un script del laboratorio ejecutado como sa, no una sentencia de la plataforma (invariante 1 no aplica).
+DECLARE @compat nvarchar(3) =
+    CASE WHEN CAST(SERVERPROPERTY('ProductMajorVersion') AS int) >= 16 THEN N'160' ELSE N'150' END;
+EXEC (N'ALTER DATABASE QD_Lab SET COMPATIBILITY_LEVEL = ' + @compat + N';');
 ALTER DATABASE QD_Lab SET RECOVERY SIMPLE;
 ALTER DATABASE QD_Lab SET QUERY_STORE = ON;
 ALTER DATABASE QD_Lab SET QUERY_STORE

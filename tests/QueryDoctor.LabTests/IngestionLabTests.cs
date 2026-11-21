@@ -145,7 +145,7 @@ internal sealed class LabIngestionHarness : IDisposable
 }
 
 /// <summary>
-/// S1-11 contra SQL Server 2022 real (D7). Requiere: compose sqlserver arriba, Run-Lab build + login, la carga
+/// S1-11 contra el SQL Server real del laboratorio (D7; S3-06: 2022 o 2019 según QD_LAB_PLATFORM). Requiere: compose sqlserver arriba, Run-Lab build + login, la carga
 /// (Run-Lab -Step workload) en las últimas 24 h y lab/sql/11-probe-fixtures.sql. Docker para el PostgreSQL desechable.
 /// </summary>
 public sealed class IngestionLabTests
@@ -161,6 +161,8 @@ public sealed class IngestionLabTests
     // CA-HU03.1 y CA-HU03.2: textos, planes y métricas por intervalo; la segunda ingesta no duplica ni cambia lo
     // consolidado. RF-ING-04: las filas guardadas son únicas por (plan, tipo de ejecución, intervalo).
     [LabFact]
+    [Trait("Criterio", "CA-HU03.1")]
+    [Trait("Criterio", "CA-HU03.2")]
     public async Task UnaIngestaRealDeQdLabGuardaTodoYLaSegundaNoDuplica()
     {
         using var lab = await LabIngestionHarness.CreateAsync();
@@ -202,7 +204,7 @@ public sealed class IngestionLabTests
             var esc06Plan = plans.First(p => p.QueryId == esc06.Id);
             Assert.Equal(PlanAnalysisStatus.Pending, esc06Plan.AnalysisStatus);
             Assert.True(lab.Decrypt(esc06Plan.EncryptedPlanXml!).Length > 300_000);
-            Assert.StartsWith("16.", esc06Plan.EngineVersion, StringComparison.Ordinal);
+            Assert.StartsWith(LabPlatform.Current.VersionPrefix, esc06Plan.EngineVersion, StringComparison.Ordinal);
 
             Assert.NotEmpty(stats);
             Assert.Equal(stats.Count, stats.Select(s => (s.PlanId, s.ExecutionType, s.IntervalId)).Distinct().Count());
@@ -240,6 +242,7 @@ public sealed class IngestionLabTests
 
     // RF-ING-10: con TopN = 2 solo entran las dos consultas de mayor duración total.
     [LabFact]
+    [Trait("Criterio", "RF-ING-10")]
     public async Task ElTopNLimitaLasConsultasIngeridas()
     {
         using var lab = await LabIngestionHarness.CreateAsync();
@@ -254,6 +257,7 @@ public sealed class IngestionLabTests
 
     // CA-HU02.2 / RF-ING-08: Query Store OFF → omitida con causa, sin leer estadísticas y sin tocar lo guardado.
     [LabFact]
+    [Trait("Criterio", "CA-HU02.2")]
     public async Task ConQueryStoreOffLaIngestaSeOmiteInformaLaCausaYConservaLosDatos()
     {
         using var lab = await LabIngestionHarness.CreateAsync();
