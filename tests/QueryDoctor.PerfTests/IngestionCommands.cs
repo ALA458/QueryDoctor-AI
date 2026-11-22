@@ -110,8 +110,12 @@ public static class IngestionCommands
         await JsonSerializer.SerializeAsync(stream, value, IndentedJson, cancellationToken);
     }
 
-    private static async Task LoginAsDbaAsync(PlatformClient client, LabSecrets secrets, CancellationToken cancellationToken)
+    /// <summary>Entra como el DBA <c>dba</c>; en una base recién sembrada hace antes el cambio obligatorio de contraseña.</summary>
+    public static async Task LoginAsDbaAsync(PlatformClient client, LabSecrets secrets, CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentNullException.ThrowIfNull(secrets);
+
         var perf = secrets.PerfDba();
         bool mustChange;
         try

@@ -6,7 +6,10 @@ namespace QueryDoctor.PerfTests;
 /// S3-07 (RNF-RND-01, RNF-RND-02). Lo invoca lab/Run-Perf.ps1; no corre en la CI.
 ///   setup  --secrets DIR --out FILE [--base-url URL] [--timeout-seconds N]
 ///   ingest --secrets DIR --connection-id GUID --out FILE [--base-url URL] [--timeout-seconds N]
-/// Salida: JSON en --out. Códigos: 0 bien, 1 falló la medición, 2 argumentos inválidos.
+///   dashboard --secrets DIR --connection-id GUID --out CARPETA [--requests 500] [--warmup 20] [--concurrency 1,5]
+///             [--repetitions 3] [--max-seconds 300] [--seed 3007] [--detail-sample 100]
+/// Salida: JSON en --out (dashboard: JSON + CSV crudo + CSV de resumen en la carpeta). Códigos: 0 bien, 1 falló la
+/// medición, 2 argumentos inválidos. Que una meta no se cumpla NO es un fallo: se reporta.
 /// </summary>
 internal static class Program
 {
@@ -66,6 +69,30 @@ internal static class Program
                         return 0;
                     }
 
+                case "dashboard":
+                    {
+                        var options = new DashboardOptions(
+                            parsed.RequiredGuid("connection-id"),
+                            parsed.OptionalInt("requests", 500, 1, 100_000),
+                            parsed.OptionalInt("warmup", 20, 0, 10_000),
+                            parsed.OptionalIntList("concurrency", [1, 5], 1, 64),
+                            parsed.OptionalInt("repetitions", 3, 1, 20),
+                            parsed.OptionalInt("max-seconds", 300, 10, 7200),
+                            parsed.OptionalInt("seed", 3007, 0, int.MaxValue),
+                            parsed.OptionalInt("detail-sample", 100, 1, 5000));
+
+                        // 120 s por solicitud: por encima de los 60 s con los que Nginx corta (504), para que el corte se
+                        // vea como respuesta de Nginx y no como tiempo límite del cliente.
+                        using var client = new PlatformClient(baseUrl, TimeSpan.FromSeconds(120));
+                        var (report, samples) = await DashboardCommands.RunAsync(client, secrets, options, cts.Token);
+                        Directory.CreateDirectory(output);
+                        await IngestionCommands.WriteJsonAsync(Path.Combine(output, "dashboard-report.json"), report, cts.Token);
+                        await DashboardCommands.WriteSamplesCsvAsync(Path.Combine(output, "dashboard-samples.csv"), samples, cts.Token);
+                        await DashboardCommands.WriteSummaryCsvAsync(Path.Combine(output, "dashboard-summary.csv"), report, cts.Token);
+                        Console.WriteLine($"dashboard: {report.QueriesInList} consultas en el listado, {samples.Count} solicitudes medidas");
+                        return 0;
+                    }
+
                 default:
                     Console.Error.WriteLine($"Comando desconocido: {parsed.Command}.");
                     PrintUsage();
@@ -92,5 +119,7 @@ internal static class Program
         Console.WriteLine("Uso: dotnet run --project tests/QueryDoctor.PerfTests -- <comando> [opciones]");
         Console.WriteLine("  setup  --secrets <carpeta> --out <archivo.json> [--base-url http://127.0.0.1:8080] [--timeout-seconds 180]");
         Console.WriteLine("  ingest --secrets <carpeta> --connection-id <guid> --out <archivo.json> [--base-url ...] [--timeout-seconds 1800]");
+        Console.WriteLine("  dashboard --secrets <carpeta> --connection-id <guid> --out <carpeta> [--requests 500] [--warmup 20]");
+        Console.WriteLine("            [--concurrency 1,5] [--repetitions 3] [--max-seconds 300] [--seed 3007] [--detail-sample 100]");
     }
 }

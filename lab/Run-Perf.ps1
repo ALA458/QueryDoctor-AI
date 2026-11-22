@@ -9,7 +9,10 @@
                vaciado y recargado; volumen de PostgreSQL nuevo). En cada una: primera ingesta completa y una ingesta
                incremental posterior, con Extended Events (CPU de la sesion de la plataforma, esperas de bloqueo),
                carga de usuario concurrente y muestreo de memoria del Worker.
-    dashboard  (parte 3) latencia p50/p95/p99 del listado y del detalle.
+    dashboard  RNF-RND-02 / CA-HU04.2. Base limpia con exactamente una ingesta completa de las 5 000 consultas; con
+               el Worker detenido (sin ingestas programadas ni trabajos de fondo), latencia p50/p95/p99 del listado
+               (sort=score) y del detalle sin IA, a concurrencia 1 y 5, por Nginx. Informativos: listado por consumo y
+               arbol del plan (solo concurrencia 1). Muestrea CPU y memoria de la Api y de PostgreSQL.
     all        todos, en orden.
   SOLO LABORATORIO:
   - Usa sa del contenedor sqlserver. La contrasena se lee DENTRO del contenedor (/run/secrets) y va por la variable
@@ -28,6 +31,12 @@
   Repeticiones medidas de la ingesta (ademas del calentamiento). Por omision 3.
 .PARAMETER SkipBuild
   No reconstruir las imagenes api/worker/web ni la consola de medicion.
+.PARAMETER DashRequests
+  Solicitudes medidas por escenario del tablero (por omision 500). Para una prueba corta, por ejemplo 20.
+.PARAMETER DashRepetitions
+  Repeticiones de la medicion del tablero (por omision 3).
+.PARAMETER DashMaxSeconds
+  Tope de tiempo por escenario del tablero, en segundos (por omision 300).
 #>
 [CmdletBinding()]
 param(
@@ -36,7 +45,15 @@ param(
     [ValidateRange(1, 10)]
     [int]$Repetitions = 3,
     [switch]$SkipBuild,
-    [string]$BaseUrl = 'http://127.0.0.1:8080'
+    [string]$BaseUrl = 'http://127.0.0.1:8080',
+    # Tablero (supuesto S5): N solicitudes medidas por escenario, repeticion y concurrencia, y tope de tiempo por
+    # escenario (si se alcanza, se reporta la N real; no se oculta).
+    [ValidateRange(1, 100000)]
+    [int]$DashRequests = 500,
+    [ValidateRange(1, 20)]
+    [int]$DashRepetitions = 3,
+    [ValidateRange(10, 7200)]
+    [int]$DashMaxSeconds = 300
 )
 
 $ErrorActionPreference = 'Stop'
@@ -262,18 +279,38 @@ function Stop-ConcurrentLoad($Procs) {
 }
 
 # docker stats no da marcas de tiempo: un trabajo en segundo plano lo llama en bucle y antepone la hora UTC.
-function Start-StatsSampler([string]$File) {
+function Start-StatsSampler([string]$File, [string[]]$Containers = @($WorkerContainer, $SqlContainer)) {
     $stop = "$File.stop"
     Remove-Item $File, $stop -ErrorAction SilentlyContinue
-    $job = Start-Job -ArgumentList $File, $stop, $WorkerContainer, $SqlContainer -ScriptBlock {
-        param($f, $s, $worker, $sql)
+    $job = Start-Job -ArgumentList $File, $stop, $Containers -ScriptBlock {
+        param($f, $s, $names)
         while (-not (Test-Path $s)) {
             $ts = [DateTime]::UtcNow.ToString('o')
-            $lines = docker stats --no-stream --format '{{json .}}' $worker $sql
+            $lines = docker stats --no-stream --format '{{json .}}' @names
             foreach ($l in $lines) { [IO.File]::AppendAllText($f, "$ts|$l`n") }
         }
     }
     [pscustomobject]@{ Job = $job; Stop = $stop; File = $File }
+}
+
+# Resumen por contenedor de todo el archivo de muestras (CPU en % de un nucleo, como docker stats; memoria en MiB).
+function Measure-ContainerStats([string]$File) {
+    if (-not (Test-Path $File)) { return @() }
+    $rows = foreach ($line in Get-Content $File) {
+        $parts = $line.Split('|', 2)
+        if ($parts.Count -lt 2) { continue }
+        $s = $parts[1] | ConvertFrom-Json
+        [pscustomobject]@{ Name = $s.Name; Cpu = [double]::Parse($s.CPUPerc.TrimEnd('%'), $Invariant); Mem = ConvertTo-MiB ($s.MemUsage.Split('/')[0]) }
+    }
+    $rows | Group-Object Name | ForEach-Object {
+        $cpu = $_.Group.Cpu | Measure-Object -Average -Maximum
+        $mem = $_.Group.Mem | Measure-Object -Average -Maximum
+        [pscustomobject]@{
+            contenedor = $_.Name; muestras = $_.Count
+            cpu_media_pct = [math]::Round($cpu.Average, 2); cpu_pico_pct = [math]::Round($cpu.Maximum, 2)
+            mem_media_mib = [math]::Round($mem.Average, 1); mem_pico_mib = [math]::Round($mem.Maximum, 1)
+        }
+    }
 }
 
 function Stop-StatsSampler($Sampler) {
@@ -476,16 +513,22 @@ if ($Step -in 'prepare', 'all') {
     Write-Host '  Salida guardada en lab/results/raw/perf/prepare.txt'
 }
 
-if ($Step -in 'ingest', 'all') {
-    Assert-Container $SqlContainer
-    Assert-Secrets
-    if (-not $SkipBuild) {
-        Write-Host '== S3-07 ingest: compilando la consola de medicion e imagenes api/worker/web' -ForegroundColor Cyan
+$script:Built = $false
+function Initialize-Tooling {
+    if (-not $SkipBuild -and -not $script:Built) {
+        Write-Host '== S3-07: compilando la consola de medicion e imagenes api/worker/web' -ForegroundColor Cyan
         & dotnet build (Join-Path $root 'tests\QueryDoctor.PerfTests') -c Release -nologo -v q
         if ($LASTEXITCODE -ne 0) { throw 'No compilo tests/QueryDoctor.PerfTests.' }
         Invoke-Compose build api worker web
+        $script:Built = $true
     }
     if (-not (Test-Path $PerfDll)) { throw "Falta ${PerfDll}: corre sin -SkipBuild." }
+}
+
+if ($Step -in 'ingest', 'all') {
+    Assert-Container $SqlContainer
+    Assert-Secrets
+    Initialize-Tooling
 
     $rows = @()
     try {
@@ -514,5 +557,61 @@ if ($Step -in 'ingest', 'all') {
 }
 
 if ($Step -in 'dashboard', 'all') {
-    throw 'El paso dashboard se agrega en la parte 3 de S3-07.'
+    Assert-Container $SqlContainer
+    Assert-Secrets
+    Initialize-Tooling
+
+    try {
+        Write-Host '== S3-07 dashboard: base limpia con las 5 000 consultas (una ingesta completa)' -ForegroundColor Cyan
+        Invoke-LabSqlFile (Join-Path $perfSqlDir '04-perf-reset-querystore.sql') -Quiet | Out-Null
+        Invoke-LabSqlFile (Join-Path $perfSqlDir '02-perf-workload.sql') -DiscardResults | Out-Null
+        $null = Assert-PerfCount (Join-Path $rawDir 'dashboard-count.txt')
+
+        Wait-SafeWindow
+        Reset-PlatformDb
+        $setupFile = Join-Path $rawDir 'dashboard-setup.json'
+        Invoke-PerfTool setup --secrets $secretsDir --out $setupFile --base-url $BaseUrl
+        $connectionId = [Guid]((Get-Content $setupFile -Raw | ConvertFrom-Json).connectionId)
+        Invoke-PerfTool ingest --secrets $secretsDir --connection-id $connectionId --out (Join-Path $rawDir 'dashboard-ingest-run.json') --base-url $BaseUrl --timeout-seconds 3600
+        $job = Wait-HangfireJob $connectionId
+        $counts = Get-PlatformCounts $connectionId
+        $countsText = "consultas=$($counts.Queries) planes=$($counts.Plans) runtime_stats=$($counts.RuntimeStats) " +
+            "analisis=$($counts.AnalysisRuns) hallazgos=$($counts.Findings) scores=$($counts.HealthScores) trabajo=$($job.State)"
+        Save-Utf8NoBom (Join-Path $rawDir 'dashboard-pg.txt') $countsText
+        Write-Host "  PostgreSQL: $countsText"
+        if ($counts.Queries -ne $RequiredQueries) {
+            Write-Warning "PostgreSQL tiene $($counts.Queries) consultas (se esperaban $RequiredQueries): la medicion se hace igual y se reporta con ese numero."
+        }
+
+        # Sin Worker no hay ingestas programadas ni trabajos de fondo compitiendo con la Api durante la medicion.
+        # La Api no depende del Worker para leer (invariante 2: solo encola).
+        Write-Host '  Worker detenido durante la medicion del tablero'
+        Invoke-Compose stop worker | Out-Null
+
+        $statsFile = Join-Path $rawDir 'dashboard-stats.txt'
+        $sampler = Start-StatsSampler $statsFile @('querydoctor-api-1', $DbContainer)
+        try {
+            Write-Host "== S3-07 dashboard: $DashRepetitions repeticion(es) x concurrencia 1 y 5 x $DashRequests solicitudes (tope $DashMaxSeconds s por escenario)" -ForegroundColor Cyan
+            Invoke-PerfTool dashboard --secrets $secretsDir --connection-id $connectionId --out $rawDir --base-url $BaseUrl `
+                --requests $DashRequests --repetitions $DashRepetitions --max-seconds $DashMaxSeconds
+        }
+        finally {
+            Stop-StatsSampler $sampler
+        }
+
+        $containers = @(Measure-ContainerStats $statsFile)
+        Export-InvariantCsv $containers (Join-Path $rawDir 'dashboard-containers.csv')
+
+        Write-Host '== S3-07 dashboard: resumen de todas las repeticiones juntas' -ForegroundColor Cyan
+        Import-Csv (Join-Path $rawDir 'dashboard-summary.csv') | Where-Object repeticion -eq 'todas' |
+            Format-Table -AutoSize concurrencia, escenario, meta_ms, medidas, errores, tope_tiempo, p50_ms, p95_ms, p99_ms, max_ms, cumple |
+            Out-String -Width 160 | Write-Host
+        $containers | Format-Table -AutoSize | Out-String -Width 160 | Write-Host
+        Write-Host '  Datos crudos en lab/results/raw/perf/ (dashboard-report.json, dashboard-samples.csv, dashboard-summary.csv)'
+    }
+    finally {
+        Write-Host '== S3-07 dashboard: QD_Lab con intervalo de 1 min y Worker de nuevo arriba' -ForegroundColor Cyan
+        Invoke-LabSqlFile (Join-Path $perfSqlDir '09-perf-restore.sql') -Quiet | Out-Null
+        Invoke-Compose up -d worker | Out-Null
+    }
 }

@@ -66,6 +66,30 @@ public sealed class PerfArgs
         return value;
     }
 
+    /// <summary>Lista de enteros separados por comas (por ejemplo <c>--concurrency 1,5</c>), sin repetidos.</summary>
+    public IReadOnlyList<int> OptionalIntList(string name, IReadOnlyList<int> fallback, int min, int max)
+    {
+        ArgumentNullException.ThrowIfNull(fallback);
+        if (!_values.TryGetValue(name, out var raw))
+        {
+            return fallback;
+        }
+
+        var values = new List<int>();
+        foreach (var part in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!int.TryParse(part, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var value)
+                || value < min || value > max || values.Contains(value))
+            {
+                throw new ArgumentException($"--{name} debe ser una lista de enteros distintos entre {min} y {max} (por ejemplo 1,5).");
+            }
+
+            values.Add(value);
+        }
+
+        return values.Count > 0 ? values : throw new ArgumentException($"--{name} está vacía.");
+    }
+
     public Guid RequiredGuid(string name) =>
         Guid.TryParse(Required(name), out var id) ? id : throw new ArgumentException($"--{name} no es un GUID válido.");
 }
