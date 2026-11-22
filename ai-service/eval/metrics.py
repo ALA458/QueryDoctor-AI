@@ -113,6 +113,12 @@ class CaseEvaluationResult:
     total_numbers_cited: int
     matched_numbers: int
     numeric_concordance_pct: float
+    sql_literal_numbers_cited: int
+    non_sql_numbers_cited: int
+    non_sql_matched_numbers: int
+    expected_metrics_count: int
+    covered_metrics_count: int
+    metric_coverage_pct: float
     type_counts: Dict[str, int]
     total_interpretations: int
     unsupported_interpretations: int
@@ -136,6 +142,12 @@ class AggregateMetrics:
     total_numbers_cited: int
     total_matched_numbers: int
     overall_numeric_concordance_pct: float
+    total_non_sql_numbers_cited: int
+    total_non_sql_matched_numbers: int
+    overall_non_sql_numeric_concordance_pct: float
+    total_expected_metrics: int
+    total_covered_metrics: int
+    overall_metric_coverage_pct: float
     type_distribution_pct: Dict[str, float]
     total_interpretations: int
     total_unsupported_interpretations: int
@@ -144,6 +156,21 @@ class AggregateMetrics:
     no_verificada_cases_count: int
     adversarial_cases_count: int
     adversarial_success_rate_pct: float
+
+
+def _collect_observable_case_metrics(case: EvaluationCase) -> List[float]:
+    """Reúne valores únicos de métricas de ejecución y hallazgos del caso (denominador fijo de cobertura)."""
+    seen: List[float] = []
+    raw_values: List[float] = []
+    if case.request.metrics:
+        raw_values.extend(float(v) for v in case.request.metrics.values() if isinstance(v, (int, float)))
+    for f in case.request.findings:
+        if f.metrics:
+            raw_values.extend(float(v) for v in f.metrics.values() if isinstance(v, (int, float)))
+    for val in raw_values:
+        if not any(math.isclose(val, existing, rel_tol=1e-9, abs_tol=1e-9) for existing in seen):
+            seen.append(val)
+    return seen
 
 
 def _collect_ground_truth_numbers(case: EvaluationCase) -> List[float]:
@@ -344,8 +371,32 @@ def _calc_percentage(numerator: int, denominator: int, default: float = 0.0) -> 
 def evaluate_explanation(response: ExplainResponse, case: EvaluationCase) -> CaseEvaluationResult:
     """Evalúa una respuesta de IA frente al caso de referencia según RF-EVA-02 y ExplanationValidator.cs."""
     ground_truth_numbers = _collect_ground_truth_numbers(case)
+    observable_metrics = _collect_observable_case_metrics(case)
+    sql_literals = extract_numbers_from_text(case.request.sql_text)
 
     analysis = _process_claims(response.claims, case, ground_truth_numbers)
+
+    all_claim_numbers: List[float] = []
+    non_sql_cited = 0
+    non_sql_matched = 0
+    sql_literal_cited = 0
+    for claim in response.claims:
+        for num in extract_numbers_from_text(claim.statement):
+            all_claim_numbers.append(num)
+            if is_number_concordant(num, sql_literals, rel_tol=1e-9, abs_tol=1e-9):
+                sql_literal_cited += 1
+            else:
+                non_sql_cited += 1
+                if is_number_concordant(num, ground_truth_numbers):
+                    non_sql_matched += 1
+
+    summary_numbers = extract_numbers_from_text(response.summary)
+    all_response_numbers = all_claim_numbers + summary_numbers
+    covered_metrics = sum(
+        1 for gt_val in observable_metrics if is_number_concordant(gt_val, all_response_numbers)
+    )
+    expected_metrics_count = len(observable_metrics)
+    metric_coverage_pct = _calc_percentage(covered_metrics, expected_metrics_count, 100.0)
 
     total_claims = len(response.claims)
     supported_rate_pct = _calc_percentage(analysis.supported_claims, total_claims, 0.0)
@@ -354,7 +405,6 @@ def evaluate_explanation(response: ExplainResponse, case: EvaluationCase) -> Cas
     unsupported_interp_rate_pct = _calc_percentage(analysis.unsupported_interpretations, analysis.total_interpretations, 0.0)
 
     # Validar concordancia de números presentes en el resumen (summary) según ExplanationValidator.cs
-    summary_numbers = extract_numbers_from_text(response.summary)
     summary_numbers_ok = all(is_number_concordant(num, ground_truth_numbers) for num in summary_numbers)
     if not summary_numbers_ok:
         analysis.failure_reasons.append("El resumen (summary) cita cifras numéricas no concordantes con la evidencia.")
@@ -378,6 +428,12 @@ def evaluate_explanation(response: ExplainResponse, case: EvaluationCase) -> Cas
         total_numbers_cited=analysis.total_numbers_cited,
         matched_numbers=analysis.matched_numbers,
         numeric_concordance_pct=round(numeric_concordance_pct, 2),
+        sql_literal_numbers_cited=sql_literal_cited,
+        non_sql_numbers_cited=non_sql_cited,
+        non_sql_matched_numbers=non_sql_matched,
+        expected_metrics_count=expected_metrics_count,
+        covered_metrics_count=covered_metrics,
+        metric_coverage_pct=round(metric_coverage_pct, 2),
         type_counts=analysis.type_counts,
         total_interpretations=analysis.total_interpretations,
         unsupported_interpretations=analysis.unsupported_interpretations,
@@ -398,6 +454,10 @@ def calculate_aggregate_metrics(results: List[CaseEvaluationResult]) -> Aggregat
 
     total_numbers_cited = sum(r.total_numbers_cited for r in results)
     total_matched_numbers = sum(r.matched_numbers for r in results)
+    total_non_sql_cited = sum(r.non_sql_numbers_cited for r in results)
+    total_non_sql_matched = sum(r.non_sql_matched_numbers for r in results)
+    total_expected_metrics = sum(r.expected_metrics_count for r in results)
+    total_covered_metrics = sum(r.covered_metrics_count for r in results)
 
     total_obs = sum(r.type_counts.get("OBSERVACION", 0) for r in results)
     total_int = sum(r.type_counts.get("INTERPRETACION", 0) for r in results)
@@ -417,6 +477,12 @@ def calculate_aggregate_metrics(results: List[CaseEvaluationResult]) -> Aggregat
     overall_supported_rate = (total_supported_claims / total_claims * 100.0) if total_claims > 0 else 0.0
     overall_unsupported_rate = (total_unsupported_claims / total_claims * 100.0) if total_claims > 0 else 0.0
     overall_num_concordance = (total_matched_numbers / total_numbers_cited * 100.0) if total_numbers_cited > 0 else 100.0
+    overall_non_sql_concordance = (
+        (total_non_sql_matched / total_non_sql_cited * 100.0) if total_non_sql_cited > 0 else 100.0
+    )
+    overall_metric_coverage = (
+        (total_covered_metrics / total_expected_metrics * 100.0) if total_expected_metrics > 0 else 0.0
+    )
     overall_unsupported_interp = (total_unsupported_interpretations / total_interpretations * 100.0) if total_interpretations > 0 else 0.0
 
     type_distribution = {
@@ -435,6 +501,12 @@ def calculate_aggregate_metrics(results: List[CaseEvaluationResult]) -> Aggregat
         total_numbers_cited=total_numbers_cited,
         total_matched_numbers=total_matched_numbers,
         overall_numeric_concordance_pct=round(overall_num_concordance, 2),
+        total_non_sql_numbers_cited=total_non_sql_cited,
+        total_non_sql_matched_numbers=total_non_sql_matched,
+        overall_non_sql_numeric_concordance_pct=round(overall_non_sql_concordance, 2),
+        total_expected_metrics=total_expected_metrics,
+        total_covered_metrics=total_covered_metrics,
+        overall_metric_coverage_pct=round(overall_metric_coverage, 2),
         type_distribution_pct=type_distribution,
         total_interpretations=total_interpretations,
         total_unsupported_interpretations=total_unsupported_interpretations,

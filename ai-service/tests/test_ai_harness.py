@@ -227,3 +227,24 @@ async def test_harness_checkpoint_resumes_in_batches(tmp_path):
     )
     assert report.rag_metrics.total_cases == 2
     assert report.control_comparison is not None
+    assert len(report.control_case_results) == 2
+
+
+@pytest.mark.asyncio
+async def test_comparative_serialization_includes_control_cases_and_metric_coverage():
+    """El reporte serializa control_cases, conteos numéricos crudos y cobertura simétrica de métricas reales."""
+    from eval.run_ai_harness import _build_report_dict
+
+    settings = Settings(APP_ENV="dev", LLM_PROFILE="mock")
+    provider = MockProvider(settings)
+    harness = AiEvaluationHarness(settings=settings, provider=provider)
+    report = await harness.run_evaluation(include_control=True, limit=3)
+
+    payload = _build_report_dict(report)
+    assert len(payload["cases"]) == 3
+    assert len(payload["control_cases"]) == 3
+    cc = payload["control_comparison"]
+    assert cc["total_expected_metrics"] > 0
+    assert cc["rag_metric_coverage_pct"] >= cc["control_metric_coverage_pct"]
+    assert "control_total_numbers_cited" in cc
+    assert "control_non_sql_numeric_concordance_pct" in cc

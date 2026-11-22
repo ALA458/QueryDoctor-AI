@@ -8,8 +8,12 @@ import pytest
 from eval.manual_audit import (
     aggregate_case_verdict,
     compute_cohen_kappa,
+    compute_exact_mcnemar,
     prepare_blind_audit_bundle,
+    prepare_comparative_audit_bundle,
     render_audit_markdown,
+    render_comparative_audit_markdown,
+    score_comparative_audit,
     score_manual_audit,
     wilson_confidence_interval,
 )
@@ -79,13 +83,19 @@ def _fill_csv(path: Path, overrides: dict[tuple[str, int], str]) -> None:
 
 def test_prepare_and_score_end_to_end_pipeline(tmp_path: Path):
     """El flujo prepare -> planillas independientes -> score calcula kappa y falsos pasantes sin sesgo."""
+    import json
+
     repo_root = Path(__file__).resolve().parents[2]
     report_json = repo_root / "lab" / "results" / "ai_evaluation_report.json"
+    expected_claims = sum(
+        len(c["claims"]) for c in json.loads(report_json.read_text(encoding="utf-8"))["cases"]
+    )
     audit_dir = tmp_path / "auditoria"
 
     manifest = prepare_blind_audit_bundle(report_json, audit_dir, seed=12345)
     assert manifest["total_cases"] == 30
-    assert manifest["total_claims"] == 91
+    assert manifest["total_claims"] == expected_claims
+    assert manifest["total_claims"] >= 90
 
     notebook_text = (audit_dir / "cuaderno_evidencia_ciega.md").read_text(encoding="utf-8")
     assert "AUD-01" in notebook_text
@@ -139,3 +149,82 @@ def test_score_rejects_incomplete_reviewer_sheet(tmp_path: Path):
 
     with pytest.raises(ValueError, match="Veredicto inválido o vacío"):
         score_manual_audit(audit_dir / "audit_manifest.json", r1_csv, r2_csv)
+
+
+def test_exact_mcnemar_binomial_calculation():
+    """Valida la prueba exacta pareada de McNemar con pares discordantes conocidos."""
+    # 20 pares: 8 ambos pasan, 10 solo RAG pasa, 0 solo Control pasa, 2 ambos fallan -> p = 2 * 0.5^10 = 0.001953125
+    rag = [True] * 8 + [True] * 10 + [False] * 2
+    ctrl = [True] * 8 + [False] * 10 + [False] * 2
+    res = compute_exact_mcnemar(rag, ctrl)
+    assert res.total_pairs == 20
+    assert res.both_pass == 8
+    assert res.rag_only_pass == 10
+    assert res.control_only_pass == 0
+    assert res.both_fail == 2
+    assert res.p_value_exact == pytest.approx(2 * (0.5 ** 10), abs=1e-7)
+    assert res.significant_at_05 is True
+
+
+@pytest.mark.asyncio
+async def test_comparative_ab_prepare_and_score_end_to_end(tmp_path: Path):
+    """El flujo comparativo A/B oculta brazos e IDs internos y calcula Kappa por brazo y McNemar."""
+    import json
+    from eval.harness import AiEvaluationHarness
+    from eval.run_ai_harness import _build_report_dict
+    from src.config import Settings
+    from src.providers.mock import MockProvider
+
+    settings = Settings(APP_ENV="dev", LLM_PROFILE="mock")
+    provider = MockProvider(settings)
+    harness = AiEvaluationHarness(settings=settings, provider=provider)
+    eval_report = await harness.run_evaluation(include_control=True, limit=6)
+
+    report_json = tmp_path / "comparative_report.json"
+    report_json.write_text(json.dumps(_build_report_dict(eval_report), indent=2, ensure_ascii=False), encoding="utf-8")
+
+    audit_dir = tmp_path / "auditoria_cmp"
+    manifest = prepare_comparative_audit_bundle(report_json, audit_dir, seed=2026)
+    assert manifest["mode"] == "comparative_ab"
+    assert manifest["total_items"] == 12  # 6 RAG + 6 Control
+
+    notebook = (audit_dir / "cuaderno_evidencia_ciega.md").read_text(encoding="utf-8")
+    assert "CMP-01" in notebook
+    assert "CMP-12" in notebook
+    assert "TRAZADA" not in notebook
+    assert "NO_VERIFICADA" not in notebook
+    assert "find-conjetura-generica-001" not in notebook
+    assert "KB-NO-EXISTENTE-99" not in notebook
+
+    arms_by_audit = {e["audit_id"]: e["arm"] for e in manifest["entries"]}
+    for csv_name in ("planilla_revisor_1.csv", "planilla_revisor_2.csv"):
+        csv_path = audit_dir / csv_name
+        with csv_path.open("r", encoding="utf-8", newline="") as f:
+            rows = list(csv.DictReader(f))
+            fieldnames = list(rows[0].keys())
+        for row in rows:
+            arm = arms_by_audit[row["audit_id"]]
+            row["verdict"] = "verdadera" if arm == "rag" else "parcialmente_verdadera"
+            row["root_cause_match"] = "acierta" if arm == "rag" else "falla_o_especula"
+            row["adversarial_ok"] = "si"
+        with csv_path.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(rows)
+
+    scored = score_comparative_audit(
+        audit_dir / "audit_manifest.json",
+        audit_dir / "planilla_revisor_1.csv",
+        audit_dir / "planilla_revisor_2.csv",
+    )
+    assert scored.rag_total_cases == 6
+    assert scored.first_attempt_pass_count == eval_report.rag_metrics.trazada_cases_count
+    assert scored.strict_false_passer_ci.successes == 0
+    assert scored.rag_root_cause_ci.successes == 6
+    assert scored.control_root_cause_ci.successes == 0
+    assert scored.root_cause_mcnemar.p_value_exact < 0.05
+
+    md = render_comparative_audit_markdown(scored)
+    assert "Joel González" in md
+    assert "Maykol Madrid" in md
+    assert "McNemar" in md
