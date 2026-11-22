@@ -40,6 +40,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# La consola de medicion escribe en UTF-8; sin esto PowerShell 5.1 la lee con la pagina OEM y rompe los acentos.
+[Console]::OutputEncoding = New-Object Text.UTF8Encoding($false)
 $root = Split-Path -Parent $PSScriptRoot
 $perfSqlDir = Join-Path $PSScriptRoot 'sql\perf'
 $rawDir = Join-Path $PSScriptRoot 'results\raw\perf'
@@ -220,8 +222,10 @@ function Reset-PlatformDb {
     Invoke-Compose up -d --wait db api worker web | Out-Null
 }
 
-# La ingesta programada de QD_Lab corre en el minuto :05 de cada hora (intervalo de 60 min, supuesto S8). Antes de
-# cada fase medida se espera a estar lejos de ese minuto; si aun asi se cuela, la repeticion se anula.
+# La ingesta programada de QD_Lab corre en el minuto :05 de cada hora (intervalo de 60 min, supuesto S8) desde que se
+# registra la conexion. Se espera UNA vez, antes de levantar la plataforma; la repeticion completa (setup, completa,
+# segunda pasada e incremental) dura unos minutos y corre de seguido. Esperar entre la segunda pasada y la incremental
+# dejaba que la programada se comiera la pasada (corrida de prueba del 2026-11-21). Si aun asi se cuela, se anula.
 function Wait-SafeWindow {
     while ($true) {
         $m = [DateTime]::UtcNow.Minute
@@ -351,7 +355,6 @@ function Get-XeValue([string]$Summary, [string]$Key) {
 
 # Una fase medida (full | incremental): XE + carga concurrente + muestreo -> ingesta manual -> fin del trabajo.
 function Measure-IngestPhase([string]$Label, [string]$Phase, [Guid]$ConnectionId) {
-    Wait-SafeWindow
     Write-Host "  [$Label/$Phase] Extended Events, carga concurrente y muestreo de memoria" -ForegroundColor Cyan
     docker exec -u root $SqlContainer bash -c 'rm -f /var/opt/mssql/log/qd_perf_s307*.xel' | Out-Null
     Invoke-LabSqlFile (Join-Path $perfSqlDir '10-xe-start.sql') -Quiet | Out-Null
@@ -499,8 +502,12 @@ if ($Step -in 'ingest', 'all') {
     }
 
     Write-Host '== S3-07 ingest: resumen (el calentamiento se descarta en el informe)' -ForegroundColor Cyan
-    $rows | Format-Table repeticion, fase, valida, duracion_ejecucion_s, duracion_trabajo_s, filas_upsert, pg_consultas,
-        cpu_plataforma_pct, esperas_bloqueo_otras, bloqueos_por_plataforma, worker_mem_pico_mib -AutoSize
+    $rows | Format-Table -AutoSize -Property repeticion, fase, valida,
+        @{ n = 'ejec_s'; e = { $_.duracion_ejecucion_s } }, @{ n = 'trabajo_s'; e = { $_.duracion_trabajo_s } },
+        @{ n = 'filas'; e = { $_.filas_upsert } }, @{ n = 'pg_q'; e = { $_.pg_consultas } },
+        @{ n = 'cpu_pct'; e = { $_.cpu_plataforma_pct } }, @{ n = 'esperas'; e = { $_.esperas_bloqueo_otras } },
+        @{ n = 'bloq_plat'; e = { $_.bloqueos_por_plataforma } }, @{ n = 'mem_mib'; e = { $_.worker_mem_pico_mib } } |
+        Out-String -Width 160 | Write-Host
     $invalid = @($rows | Where-Object { -not $_.valida })
     if ($invalid.Count -gt 0) { Write-Warning "$($invalid.Count) fase(s) no validas (ingesta programada colada o estado distinto de Succeeded): repetir." }
     Write-Host '  Datos crudos en lab/results/raw/perf/ (ingest-*.json, -xe.txt, -stats.txt, ingest-summary.csv)'
