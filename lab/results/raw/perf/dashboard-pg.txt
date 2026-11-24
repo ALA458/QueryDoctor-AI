@@ -1,0 +1,1 @@
+consultas=5000 planes=5000 runtime_stats=5000 analisis=5000 hallazgos=0 scores=5000 trabajo=Succeeded

@@ -1,0 +1,896 @@
+{
+  "options": {
+    "connectionId": "f2542d82-4b1e-488b-92b2-5d28c9f5d9d4",
+    "requests": 500,
+    "warmup": 20,
+    "concurrency": [
+      1,
+      5
+    ],
+    "repetitions": 3,
+    "maxSecondsPerScenario": 300,
+    "seed": 3007,
+    "detailSample": 100
+  },
+  "queriesInList": 5000,
+  "detailIds": 100,
+  "planIds": 100,
+  "startedAtUtc": "2026-11-23T00:23:44.5048899+00:00",
+  "finishedAtUtc": "2026-11-23T00:51:03.6974328+00:00",
+  "results": [
+    {
+      "repetition": 1,
+      "concurrency": 1,
+      "scenario": "listado_score",
+      "goalMs": 2000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 191.8696211,
+      "requestsPerSecond": 2.6059362453184103,
+      "all": {
+        "count": 500,
+        "minMs": 271.9199,
+        "p50Ms": 353.7341,
+        "p95Ms": 562.7073,
+        "p99Ms": 719.5632,
+        "maxMs": 988.6479,
+        "meanMs": 383.73670740000045,
+        "stdDevMs": 94.65173409662626
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 271.9199,
+        "p50Ms": 353.7341,
+        "p95Ms": 562.7073,
+        "p99Ms": 719.5632,
+        "maxMs": 988.6479,
+        "meanMs": 383.73670740000045,
+        "stdDevMs": 94.65173409662626
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": true
+    },
+    {
+      "repetition": 1,
+      "concurrency": 1,
+      "scenario": "detalle",
+      "goalMs": 3000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 14.1186893,
+      "requestsPerSecond": 35.414052209506444,
+      "all": {
+        "count": 500,
+        "minMs": 22.8903,
+        "p50Ms": 26.6393,
+        "p95Ms": 36.1908,
+        "p99Ms": 45.773,
+        "maxMs": 100.992,
+        "meanMs": 28.236300799999995,
+        "stdDevMs": 5.635950483834278
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 22.8903,
+        "p50Ms": 26.6393,
+        "p95Ms": 36.1908,
+        "p99Ms": 45.773,
+        "maxMs": 100.992,
+        "meanMs": 28.236300799999995,
+        "stdDevMs": 5.635950483834278
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": true
+    },
+    {
+      "repetition": 1,
+      "concurrency": 1,
+      "scenario": "listado_consumo",
+      "goalMs": null,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 200.0040545,
+      "requestsPerSecond": 2.4999493197774147,
+      "all": {
+        "count": 500,
+        "minMs": 281.6968,
+        "p50Ms": 377.006,
+        "p95Ms": 566.9753,
+        "p99Ms": 741.665,
+        "maxMs": 952.093,
+        "meanMs": 400.0069289999996,
+        "stdDevMs": 89.59022461075467
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 281.6968,
+        "p50Ms": 377.006,
+        "p95Ms": 566.9753,
+        "p99Ms": 741.665,
+        "maxMs": 952.093,
+        "meanMs": 400.0069289999996,
+        "stdDevMs": 89.59022461075467
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": null
+    },
+    {
+      "repetition": 1,
+      "concurrency": 1,
+      "scenario": "arbol_plan",
+      "goalMs": null,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 4.740063,
+      "requestsPerSecond": 105.4838300672375,
+      "all": {
+        "count": 500,
+        "minMs": 5.9489,
+        "p50Ms": 8.3653,
+        "p95Ms": 15.9475,
+        "p99Ms": 26.8437,
+        "maxMs": 46.4708,
+        "meanMs": 9.4792378,
+        "stdDevMs": 4.312355691360439
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 5.9489,
+        "p50Ms": 8.3653,
+        "p95Ms": 15.9475,
+        "p99Ms": 26.8437,
+        "maxMs": 46.4708,
+        "meanMs": 9.4792378,
+        "stdDevMs": 4.312355691360439
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": null
+    },
+    {
+      "repetition": 1,
+      "concurrency": 5,
+      "scenario": "listado_score",
+      "goalMs": 2000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 224,
+      "stoppedByTime": false,
+      "wallSeconds": 90.4592859,
+      "requestsPerSecond": 5.5273485195619925,
+      "all": {
+        "count": 500,
+        "minMs": 364.7029,
+        "p50Ms": 872.2717,
+        "p95Ms": 1639.2399,
+        "p99Ms": 2887.7509,
+        "maxMs": 3706.5771,
+        "meanMs": 902.3882670000007,
+        "stdDevMs": 467.04088584148434
+      },
+      "ok": {
+        "count": 276,
+        "minMs": 524.7451,
+        "p50Ms": 1074.2766,
+        "p95Ms": 2092.6784,
+        "p99Ms": 3274.0818,
+        "maxMs": 3706.5771,
+        "meanMs": 1181.687664492753,
+        "stdDevMs": 444.76501222321605
+      },
+      "statusCounts": {
+        "200": 276,
+        "500": 224
+      },
+      "meetsGoal": false
+    },
+    {
+      "repetition": 1,
+      "concurrency": 5,
+      "scenario": "detalle",
+      "goalMs": 3000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 40,
+      "stoppedByTime": false,
+      "wallSeconds": 8.173483,
+      "requestsPerSecond": 61.1734312042981,
+      "all": {
+        "count": 500,
+        "minMs": 11.8742,
+        "p50Ms": 74.9139,
+        "p95Ms": 138.0928,
+        "p99Ms": 185.7125,
+        "maxMs": 301.052,
+        "meanMs": 81.55072240000004,
+        "stdDevMs": 36.32775530864449
+      },
+      "ok": {
+        "count": 460,
+        "minMs": 36.7113,
+        "p50Ms": 77.7156,
+        "p95Ms": 139.5047,
+        "p99Ms": 201.0754,
+        "maxMs": 301.052,
+        "meanMs": 86.57531347826094,
+        "stdDevMs": 33.27625337557229
+      },
+      "statusCounts": {
+        "200": 460,
+        "500": 40
+      },
+      "meetsGoal": false
+    },
+    {
+      "repetition": 2,
+      "concurrency": 1,
+      "scenario": "listado_score",
+      "goalMs": 2000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 204.249772,
+      "requestsPerSecond": 2.4479831487890227,
+      "all": {
+        "count": 500,
+        "minMs": 284.5073,
+        "p50Ms": 387.2399,
+        "p95Ms": 555.2673,
+        "p99Ms": 748.4906,
+        "maxMs": 1426.6242,
+        "meanMs": 408.4981785999999,
+        "stdDevMs": 94.5482788693734
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 284.5073,
+        "p50Ms": 387.2399,
+        "p95Ms": 555.2673,
+        "p99Ms": 748.4906,
+        "maxMs": 1426.6242,
+        "meanMs": 408.4981785999999,
+        "stdDevMs": 94.5482788693734
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": true
+    },
+    {
+      "repetition": 2,
+      "concurrency": 1,
+      "scenario": "detalle",
+      "goalMs": 3000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 16.6470039,
+      "requestsPerSecond": 30.03543478475427,
+      "all": {
+        "count": 500,
+        "minMs": 24.4599,
+        "p50Ms": 30.9281,
+        "p95Ms": 46.7492,
+        "p99Ms": 68.2111,
+        "maxMs": 83.7857,
+        "meanMs": 33.29288220000002,
+        "stdDevMs": 8.16231178007146
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 24.4599,
+        "p50Ms": 30.9281,
+        "p95Ms": 46.7492,
+        "p99Ms": 68.2111,
+        "maxMs": 83.7857,
+        "meanMs": 33.29288220000002,
+        "stdDevMs": 8.16231178007146
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": true
+    },
+    {
+      "repetition": 2,
+      "concurrency": 1,
+      "scenario": "listado_consumo",
+      "goalMs": null,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 186.0546169,
+      "requestsPerSecond": 2.6873829219123233,
+      "all": {
+        "count": 500,
+        "minMs": 293.7939,
+        "p50Ms": 361.8494,
+        "p95Ms": 436.394,
+        "p99Ms": 548.5509,
+        "maxMs": 695.2968,
+        "meanMs": 372.1081195999997,
+        "stdDevMs": 43.65167442528313
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 293.7939,
+        "p50Ms": 361.8494,
+        "p95Ms": 436.394,
+        "p99Ms": 548.5509,
+        "maxMs": 695.2968,
+        "meanMs": 372.1081195999997,
+        "stdDevMs": 43.65167442528313
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": null
+    },
+    {
+      "repetition": 2,
+      "concurrency": 1,
+      "scenario": "arbol_plan",
+      "goalMs": null,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 3.8858382,
+      "requestsPerSecond": 128.67236726428806,
+      "all": {
+        "count": 500,
+        "minMs": 5.8053,
+        "p50Ms": 7.3247,
+        "p95Ms": 10.5268,
+        "p99Ms": 14.8443,
+        "maxMs": 21.0034,
+        "meanMs": 7.7706038,
+        "stdDevMs": 1.6579232464102598
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 5.8053,
+        "p50Ms": 7.3247,
+        "p95Ms": 10.5268,
+        "p99Ms": 14.8443,
+        "maxMs": 21.0034,
+        "meanMs": 7.7706038,
+        "stdDevMs": 1.6579232464102598
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": null
+    },
+    {
+      "repetition": 2,
+      "concurrency": 5,
+      "scenario": "listado_score",
+      "goalMs": 2000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 216,
+      "stoppedByTime": false,
+      "wallSeconds": 72.2379124,
+      "requestsPerSecond": 6.921573220878404,
+      "all": {
+        "count": 500,
+        "minMs": 291.5232,
+        "p50Ms": 795.7608,
+        "p95Ms": 1084.7048,
+        "p99Ms": 1307.6404,
+        "maxMs": 1410.7514,
+        "meanMs": 721.1578177999999,
+        "stdDevMs": 252.28061462849075
+      },
+      "ok": {
+        "count": 284,
+        "minMs": 716.4137,
+        "p50Ms": 902.877,
+        "p95Ms": 1128.6097,
+        "p99Ms": 1402.1143,
+        "maxMs": 1410.7514,
+        "meanMs": 918.7620742957749,
+        "stdDevMs": 123.82149318922829
+      },
+      "statusCounts": {
+        "200": 284,
+        "500": 216
+      },
+      "meetsGoal": false
+    },
+    {
+      "repetition": 2,
+      "concurrency": 5,
+      "scenario": "detalle",
+      "goalMs": 3000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 27,
+      "stoppedByTime": false,
+      "wallSeconds": 4.9634615,
+      "requestsPerSecond": 100.73614956014063,
+      "all": {
+        "count": 500,
+        "minMs": 10.9908,
+        "p50Ms": 48.7295,
+        "p95Ms": 68.7744,
+        "p99Ms": 75.606,
+        "maxMs": 81.9989,
+        "meanMs": 49.61375959999999,
+        "stdDevMs": 11.965980754033485
+      },
+      "ok": {
+        "count": 473,
+        "minMs": 34.6156,
+        "p50Ms": 49.2246,
+        "p95Ms": 69.3059,
+        "p99Ms": 76.4093,
+        "maxMs": 81.9989,
+        "meanMs": 51.473020718816095,
+        "stdDevMs": 9.285765244274337
+      },
+      "statusCounts": {
+        "200": 473,
+        "500": 27
+      },
+      "meetsGoal": false
+    },
+    {
+      "repetition": 3,
+      "concurrency": 1,
+      "scenario": "listado_score",
+      "goalMs": 2000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 196.718203,
+      "requestsPerSecond": 2.54170682923532,
+      "all": {
+        "count": 500,
+        "minMs": 296.4098,
+        "p50Ms": 373.9239,
+        "p95Ms": 521.5411,
+        "p99Ms": 692.588,
+        "maxMs": 825.032,
+        "meanMs": 393.43532580000004,
+        "stdDevMs": 71.19681094575293
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 296.4098,
+        "p50Ms": 373.9239,
+        "p95Ms": 521.5411,
+        "p99Ms": 692.588,
+        "maxMs": 825.032,
+        "meanMs": 393.43532580000004,
+        "stdDevMs": 71.19681094575293
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": true
+    },
+    {
+      "repetition": 3,
+      "concurrency": 1,
+      "scenario": "detalle",
+      "goalMs": 3000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 16.6926881,
+      "requestsPerSecond": 29.953234434422814,
+      "all": {
+        "count": 500,
+        "minMs": 25.0736,
+        "p50Ms": 30.7981,
+        "p95Ms": 46.6751,
+        "p99Ms": 63.1576,
+        "maxMs": 98.5126,
+        "meanMs": 33.38440799999998,
+        "stdDevMs": 8.031082441550575
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 25.0736,
+        "p50Ms": 30.7981,
+        "p95Ms": 46.6751,
+        "p99Ms": 63.1576,
+        "maxMs": 98.5126,
+        "meanMs": 33.38440799999998,
+        "stdDevMs": 8.031082441550575
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": true
+    },
+    {
+      "repetition": 3,
+      "concurrency": 1,
+      "scenario": "listado_consumo",
+      "goalMs": null,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 193.7529336,
+      "requestsPerSecond": 2.5806060879173187,
+      "all": {
+        "count": 500,
+        "minMs": 304.4017,
+        "p50Ms": 376.5068,
+        "p95Ms": 485.5267,
+        "p99Ms": 574.4926,
+        "maxMs": 814.2063,
+        "meanMs": 387.5043531999999,
+        "stdDevMs": 52.84759850696451
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 304.4017,
+        "p50Ms": 376.5068,
+        "p95Ms": 485.5267,
+        "p99Ms": 574.4926,
+        "maxMs": 814.2063,
+        "meanMs": 387.5043531999999,
+        "stdDevMs": 52.84759850696451
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": null
+    },
+    {
+      "repetition": 3,
+      "concurrency": 1,
+      "scenario": "arbol_plan",
+      "goalMs": null,
+      "requested": 500,
+      "measured": 500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 4.1278777,
+      "requestsPerSecond": 121.12761964822747,
+      "all": {
+        "count": 500,
+        "minMs": 6.1727,
+        "p50Ms": 7.6134,
+        "p95Ms": 11.971,
+        "p99Ms": 14.8992,
+        "maxMs": 21.7033,
+        "meanMs": 8.254171999999999,
+        "stdDevMs": 1.854624323343538
+      },
+      "ok": {
+        "count": 500,
+        "minMs": 6.1727,
+        "p50Ms": 7.6134,
+        "p95Ms": 11.971,
+        "p99Ms": 14.8992,
+        "maxMs": 21.7033,
+        "meanMs": 8.254171999999999,
+        "stdDevMs": 1.854624323343538
+      },
+      "statusCounts": {
+        "200": 500
+      },
+      "meetsGoal": null
+    },
+    {
+      "repetition": 3,
+      "concurrency": 5,
+      "scenario": "listado_score",
+      "goalMs": 2000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 200,
+      "stoppedByTime": false,
+      "wallSeconds": 156.8527889,
+      "requestsPerSecond": 3.1877023258972477,
+      "all": {
+        "count": 500,
+        "minMs": 376.3805,
+        "p50Ms": 928.1993,
+        "p95Ms": 5472.1792,
+        "p99Ms": 10326.1195,
+        "maxMs": 17031.1206,
+        "meanMs": 1565.556808,
+        "stdDevMs": 2144.744065244323
+      },
+      "ok": {
+        "count": 300,
+        "minMs": 757.9814,
+        "p50Ms": 1314.4633,
+        "p95Ms": 8355.8772,
+        "p99Ms": 15080.1326,
+        "maxMs": 17031.1206,
+        "meanMs": 2224.6908270000004,
+        "stdDevMs": 2561.498372647845
+      },
+      "statusCounts": {
+        "200": 300,
+        "500": 200
+      },
+      "meetsGoal": false
+    },
+    {
+      "repetition": 3,
+      "concurrency": 5,
+      "scenario": "detalle",
+      "goalMs": 3000,
+      "requested": 500,
+      "measured": 500,
+      "errors": 42,
+      "stoppedByTime": false,
+      "wallSeconds": 6.1954661,
+      "requestsPerSecond": 80.70417817313212,
+      "all": {
+        "count": 500,
+        "minMs": 12.2955,
+        "p50Ms": 61.739,
+        "p95Ms": 85.8393,
+        "p99Ms": 96.244,
+        "maxMs": 103.6531,
+        "meanMs": 61.739397999999994,
+        "stdDevMs": 16.83123894489994
+      },
+      "ok": {
+        "count": 458,
+        "minMs": 42.5415,
+        "p50Ms": 62.8079,
+        "p95Ms": 86.7777,
+        "p99Ms": 97.1393,
+        "maxMs": 103.6531,
+        "meanMs": 65.39857358078602,
+        "stdDevMs": 11.885793967649914
+      },
+      "statusCounts": {
+        "200": 458,
+        "500": 42
+      },
+      "meetsGoal": false
+    }
+  ],
+  "pooled": [
+    {
+      "repetition": 0,
+      "concurrency": 1,
+      "scenario": "listado_score",
+      "goalMs": 2000,
+      "requested": 1500,
+      "measured": 1500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 592.8375961,
+      "requestsPerSecond": 2.5302039038478585,
+      "all": {
+        "count": 1500,
+        "minMs": 271.9199,
+        "p50Ms": 373.3482,
+        "p95Ms": 543.0221,
+        "p99Ms": 707.9201,
+        "maxMs": 1426.6242,
+        "meanMs": 395.2234039333324,
+        "stdDevMs": 88.0307502243737
+      },
+      "ok": {
+        "count": 1500,
+        "minMs": 271.9199,
+        "p50Ms": 373.3482,
+        "p95Ms": 543.0221,
+        "p99Ms": 707.9201,
+        "maxMs": 1426.6242,
+        "meanMs": 395.2234039333324,
+        "stdDevMs": 88.0307502243737
+      },
+      "statusCounts": {
+        "200": 1500
+      },
+      "meetsGoal": true
+    },
+    {
+      "repetition": 0,
+      "concurrency": 1,
+      "scenario": "detalle",
+      "goalMs": 3000,
+      "requested": 1500,
+      "measured": 1500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 47.4583813,
+      "requestsPerSecond": 31.606640574570125,
+      "all": {
+        "count": 1500,
+        "minMs": 22.8903,
+        "p50Ms": 29.3109,
+        "p95Ms": 44.2939,
+        "p99Ms": 65.1608,
+        "maxMs": 100.992,
+        "meanMs": 31.637863666666657,
+        "stdDevMs": 7.746826135935938
+      },
+      "ok": {
+        "count": 1500,
+        "minMs": 22.8903,
+        "p50Ms": 29.3109,
+        "p95Ms": 44.2939,
+        "p99Ms": 65.1608,
+        "maxMs": 100.992,
+        "meanMs": 31.637863666666657,
+        "stdDevMs": 7.746826135935938
+      },
+      "statusCounts": {
+        "200": 1500
+      },
+      "meetsGoal": true
+    },
+    {
+      "repetition": 0,
+      "concurrency": 1,
+      "scenario": "listado_consumo",
+      "goalMs": null,
+      "requested": 1500,
+      "measured": 1500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 579.811605,
+      "requestsPerSecond": 2.587047218552999,
+      "all": {
+        "count": 1500,
+        "minMs": 281.6968,
+        "p50Ms": 369.5106,
+        "p95Ms": 506.0275,
+        "p99Ms": 624.4885,
+        "maxMs": 952.093,
+        "meanMs": 386.5398005999996,
+        "stdDevMs": 66.07721726720312
+      },
+      "ok": {
+        "count": 1500,
+        "minMs": 281.6968,
+        "p50Ms": 369.5106,
+        "p95Ms": 506.0275,
+        "p99Ms": 624.4885,
+        "maxMs": 952.093,
+        "meanMs": 386.5398005999996,
+        "stdDevMs": 66.07721726720312
+      },
+      "statusCounts": {
+        "200": 1500
+      },
+      "meetsGoal": null
+    },
+    {
+      "repetition": 0,
+      "concurrency": 1,
+      "scenario": "arbol_plan",
+      "goalMs": null,
+      "requested": 1500,
+      "measured": 1500,
+      "errors": 0,
+      "stoppedByTime": false,
+      "wallSeconds": 12.7537789,
+      "requestsPerSecond": 117.61220041222448,
+      "all": {
+        "count": 1500,
+        "minMs": 5.8053,
+        "p50Ms": 7.65,
+        "p95Ms": 13.0119,
+        "p99Ms": 21.7033,
+        "maxMs": 46.4708,
+        "meanMs": 8.501337866666672,
+        "stdDevMs": 2.9610848543536483
+      },
+      "ok": {
+        "count": 1500,
+        "minMs": 5.8053,
+        "p50Ms": 7.65,
+        "p95Ms": 13.0119,
+        "p99Ms": 21.7033,
+        "maxMs": 46.4708,
+        "meanMs": 8.501337866666672,
+        "stdDevMs": 2.9610848543536483
+      },
+      "statusCounts": {
+        "200": 1500
+      },
+      "meetsGoal": null
+    },
+    {
+      "repetition": 0,
+      "concurrency": 5,
+      "scenario": "listado_score",
+      "goalMs": 2000,
+      "requested": 1500,
+      "measured": 1500,
+      "errors": 640,
+      "stoppedByTime": false,
+      "wallSeconds": 319.54998720000003,
+      "requestsPerSecond": 4.694101267671714,
+      "all": {
+        "count": 1500,
+        "minMs": 291.5232,
+        "p50Ms": 852.7576,
+        "p95Ms": 2188.931,
+        "p99Ms": 8355.8772,
+        "maxMs": 17031.1206,
+        "meanMs": 1063.0342976,
+        "stdDevMs": 1325.4767354375817
+      },
+      "ok": {
+        "count": 860,
+        "minMs": 524.7451,
+        "p50Ms": 1006.4459,
+        "p95Ms": 3458.6024,
+        "p99Ms": 9443.6694,
+        "maxMs": 17031.1206,
+        "meanMs": 1458.6993867441854,
+        "stdDevMs": 1636.5144401826237
+      },
+      "statusCounts": {
+        "200": 860,
+        "500": 640
+      },
+      "meetsGoal": false
+    },
+    {
+      "repetition": 0,
+      "concurrency": 5,
+      "scenario": "detalle",
+      "goalMs": 3000,
+      "requested": 1500,
+      "measured": 1500,
+      "errors": 109,
+      "stoppedByTime": false,
+      "wallSeconds": 19.3324106,
+      "requestsPerSecond": 77.58991007567364,
+      "all": {
+        "count": 1500,
+        "minMs": 10.9908,
+        "p50Ms": 60.1506,
+        "p95Ms": 114.1165,
+        "p99Ms": 147.1137,
+        "maxMs": 301.052,
+        "meanMs": 64.30129333333342,
+        "stdDevMs": 27.471366021578962
+      },
+      "ok": {
+        "count": 1391,
+        "minMs": 34.6156,
+        "p50Ms": 62.079,
+        "p95Ms": 117.0332,
+        "p99Ms": 151.7248,
+        "maxMs": 301.052,
+        "meanMs": 67.66637649173262,
+        "stdDevMs": 25.507431775451444
+      },
+      "statusCounts": {
+        "200": 1391,
+        "500": 109
+      },
+      "meetsGoal": false
+    }
+  ]
+}

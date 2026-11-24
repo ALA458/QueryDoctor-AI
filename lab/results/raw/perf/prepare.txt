@@ -1,0 +1,16 @@
+##### 01-perf-querystore.sql
+actual_state_desc desired_state_desc query_capture_mode_desc max_storage_size_mb current_storage_size_mb size_based_cleanup_mode_desc interval_length_minutes flush_interval_seconds
+----------------- ------------------ ----------------------- ------------------- ----------------------- ---------------------------- ----------------------- ----------------------
+READ_WRITE READ_WRITE ALL 2048 2 OFF 1 60
+##### 02-perf-workload.sql (pasada 1)
+##### 03-perf-count.sql
+Changed database context to 'QD_Lab'.
+actual_state_desc query_capture_mode_desc max_storage_size_mb current_storage_size_mb size_based_cleanup_mode_desc
+----------------- ----------------------- ------------------- ----------------------- ----------------------------
+READ_WRITE ALL 2048 22 OFF
+consultas_totales_query_store consultas_qd_perf textos_distintos_qd_perf qd_perf_ejecutadas_ultimas_24h
+----------------------------- ----------------- ------------------------ ------------------------------
+5140 5000 5000 5000
+resumen
+-------
+PERF_COUNT=5000 PERF_TEXTS=5000 PERF_RECENT=5000 QS_TOTAL=5140

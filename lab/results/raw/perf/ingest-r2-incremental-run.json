@@ -1,0 +1,36 @@
+{
+  "connectionId": "9dcb47e9-78a4-40ac-80a3-d5f66dfb2c31",
+  "requestedAtUtc": "2026-11-22T22:34:37.4968558+00:00",
+  "observedEndUtc": "2026-11-22T22:34:47.6972487+00:00",
+  "observedSeconds": 10.197468,
+  "run": {
+    "id": "844f1a49-af0a-4b48-ab34-5edd25ddf692",
+    "trigger": "Manual",
+    "status": "Succeeded",
+    "startedAt": "2026-11-22T22:34:47.245378+00:00",
+    "finishedAt": "2026-11-22T22:34:47.463333+00:00",
+    "rowsUpserted": 5010,
+    "cause": null
+  },
+  "otherNewRuns": [],
+  "allRuns": [
+    {
+      "id": "844f1a49-af0a-4b48-ab34-5edd25ddf692",
+      "trigger": "Manual",
+      "status": "Succeeded",
+      "startedAt": "2026-11-22T22:34:47.245378+00:00",
+      "finishedAt": "2026-11-22T22:34:47.463333+00:00",
+      "rowsUpserted": 5010,
+      "cause": null
+    },
+    {
+      "id": "09712949-4427-479d-9bef-0111f0a2c925",
+      "trigger": "Manual",
+      "status": "Succeeded",
+      "startedAt": "2026-11-22T22:33:04.402073+00:00",
+      "finishedAt": "2026-11-22T22:33:37.490602+00:00",
+      "rowsUpserted": 20000,
+      "cause": null
+    }
+  ]
+}

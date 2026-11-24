@@ -1,0 +1,13 @@
+event_name statement_head sentencias cpu_us duracion_us lecturas_logicas
+---------- -------------- ---------- ------ ----------- ----------------
+rpc_completed exec sp_executesql N'SELECT rs.plan_id, p.query_id, q.query_text_id, q 1 94000 108830 1868
+rpc_completed exec sp_executesql N'SELECT p.plan_id, p.query_id, p.query_plan FROM s 5 6000 9422 54
+rpc_completed exec sp_executesql N'SELECT qt.query_text_id, qt.query_sql_text FROM s 5 0 1141 10
+rpc_completed exec sp_reset_connection 12 0 159 0
+sql_batch_completed SELECT actual_state, actual_state_desc, desired_state_desc, readonly_r 1 0 1847 8
+sql_batch_completed SET LOCK_TIMEOUT 5000; SET DEADLOCK_PRIORITY LOW; 12 0 476 0
+event_name ts_utc wait_type duracion client_app session_id database_name blocking_app blocked_app
+---------- ------ --------- -------- ---------- ---------- ------------- ------------ -----------
+resumen
+-------
+XE_SUMMARY statements=36 cpu_us=100000 duration_us=121875 cpu_count=12 first_utc=2026-11-22T22:34:47.2480000 last_utc=2026-11-22T22:34:47.4610000 outside_window=0 platform_lock_waits=0 other_lock_waits=0 other_lock_wait_ms=0 blocked_reports=0 blocked_by_platform=0 dropped=0
