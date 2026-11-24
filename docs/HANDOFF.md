@@ -3,56 +3,49 @@
 > **Se sobrescribe, no se acumula.** Máximo ~50 líneas. Lo escribe quien cierra una
 > sesión (humano o agente). La historia vive en los PR y en git.
 
-**Actualizado:** 2026-11-15 · **Por:** Álvaro (con agente) · **Rama:** `feat/S2-13-retencion` (PR #67, con `main` en `26a8363` ya mergeado)
+**Actualizado:** 2026-11-24 · **Por:** Álvaro (con agente) · **Rama:** `feat/S3-07-rendimiento` (desde `main` en `6892788`)
 
 ## Estado
-- ✅ En `main`: S1-01 a S1-19 (salvo S1-20), S2-01 a S2-12 y lo de #65 (pre-Sprint 3).
-- 🔄 **S2-13** (Álvaro, PR #67): retención (RNF-SEG-10). El trabajo recurrente
-  `retention` del Worker purga a diario el texto SQL, los planes y la evidencia de sus hallazgos cuando vence
-  `Retention:SqlTextAndPlanDays` (30 por defecto). El DBA puede borrarlos a pedido con
-  `DELETE /queries/{id}/evidence` y `DELETE /connections/{id}/evidence`, y cada borrado queda en `/audit` como `DataDeleted`.
-  La Api expone "evidencia expirada". Migración `RetencionEvidencia` (`purged_at`).
-- El recorte del plan ("Solo borrado a pedido") **no** se aplicó: va contra SRS 5.3 punto 4 (D1).
-- Decisiones D1–D10, mecánica y deuda: `docs/ARCHITECTURE_PLAN.md` §S2-13. Contrato: `docs/CONTRATO_FRONT_CONSULTAS.md`
-  (sección S2-13).
-- Auditoría (`/audit`, sesión aparte) hecha: sin bloqueantes. Corregidos M1 (un recálculo concurrente podía dejar
-  evidencia con literales en un plan purgado) y B1 (un `TooLarge` salía expirado después de purgar), con pruebas.
-- #65 trajo a `main` otra implementación de S2-13 (`PurgeExpiredTelemetry`, `EfRetentionStore`, `RetentionPurgeJob`).
-  Duplicaba tipos y no compilaba junto a esta, así que se quitó. `DELETE /connections/{id}/data` sigue como alias del
-  borrado por conexión, con la misma respuesta con conteos. El Worker da de baja el trabajo `retention-purge` al
-  arrancar. `RetentionEndpointsTests` (de Joel) se adaptó a la purga que queda.
+- ✅ En `main`: S1-01 a S1-19 (salvo S1-20), S2-01 a S2-14, S3-01 a S3-03.
+- 🔄 **S3-07** (Álvaro, PR por abrir): pruebas de rendimiento con 5 000 consultas (RNF-RND-01, RNF-RND-02, CA-HU04.2).
+  Informe: `docs/rendimiento/S3-07-resultados.md`. Todas las metas son provisionales † (DA-06 abierta, S1-20 sin hacer).
+  - RNF-RND-01: CPU de la plataforma 0,85 % (completa) y 2,84 % (incremental) de la CPU total; 0 esperas de bloqueo.
+  - RNF-RND-02, concurrencia 1: listado p95 543 ms, detalle p95 44 ms → cumple.
+  - RNF-RND-02, concurrencia 5: **no cumple**. 43 % de HTTP 500 en el listado y 7 % en el detalle; el listado, aun
+    sin errores, tiene p95 de 3,5 s.
+- 🔄 S3-06 (aceptación) sigue en su rama: toca `lab/README.md`, `QueryDoctor.slnx`, `HANDOFF.md` y `SPRINTS.md`, igual
+  que S3-07. Quien mergee segundo resuelve conflictos (en `lab/README.md` S3-07 solo agrega filas a la tabla).
 
 ## Cómo probarla
-- `dotnet test tests/QueryDoctor.IntegrationTests --filter "FullyQualifiedName~RetentionTests"`.
-- Unitarias: `EvidenceRetentionTests`, `ExplainQueryTests.ConLaEvidenciaExpirada…`,
-  `RecalculateConnectionScoresTests.UnPlanPurgado…`, `GetQueryPlanTreeTests.PlanTooLarge…`.
-- Suite completa: `dotnet test -m:1`.
-- Rotura a propósito: si se quita el evento de auditoría de `EfEvidencePurgeStore.PurgeAsync`, las pruebas de
-  `RetentionTests` que miran la auditoría quedan en rojo.
-- Plazo en el compose: `QD_RETENTION_DAYS` (1–3650). Con 0, el Worker no arranca.
+- Medir: `lab/Run-Perf.ps1 -Step prepare | ingest | dashboard | all`. **No corre en la CI.** Necesita `secrets/` completo
+  más `secrets/perf_dba_password.txt` (12+ caracteres con mayúsculas, minúsculas, dígitos y símbolos).
+- ⚠️ `ingest` y `dashboard` borran el volumen local de PostgreSQL y vacían Query Store de QD_Lab. Después:
+  `lab/Run-Lab.ps1 -Step workload` antes de LabTests/AcceptanceTests. El DBA queda con la contraseña de la medición.
+- Pruebas unitarias de la herramienta: `dotnet test tests/QueryDoctor.UnitTests --filter "FullyQualifiedName~Perf"`.
+- Datos crudos: `lab/results/raw/perf/` (revisados: sin secretos).
 
 ## Lo que necesita saber cada uno
+**Maykol**
+- **D-1:** `SecretProtector` es singleton y comparte una instancia de `AesGcm` entre hilos. Con solicitudes simultáneas,
+  `Decrypt` falla (`AuthenticationTagMismatchException` → HTTP 500). Riesgo: dos `Encrypt` a la vez en el Worker
+  podrían guardar un cifrado que no se pueda descifrar (RNF-SEG-14). Hay un arreglo listo **sin commit** en la rama
+  `claude/kind-pare-dfa82e` (un `AesGcm` por operación, mismo formato de sobre, prueba de concurrencia). Revísalo tú.
 **Daniel**
-- `sqlExpired` y `planExpired` ahora salen de la marca de purga. Un plan `TooLarge` ya no aparece como expirado, y un
-  texto que nunca llegó muestra `"[Sin texto SQL]"`. Hay campos nuevos: `sqlExpiredAt`, `plans[].planExpired`/`expiredAt`,
-  `findings[].evidenceExpired`, `planExpiredAt` y la causa de explicación `EvidenceExpired`. **Falta en la web** marcar la
-  tarjeta del hallazgo con `evidenceExpired` y mostrar la causa nueva. Si quieres el botón de borrar (solo DBA), usa
-  los dos `DELETE …/evidence`.
-- Toqué contratos y casos de uso de `Application/Queries` (S2-09/S2-10, tuyos): solo agregué campos y cambié de dónde
-  sale "expirado". Las rutas nuevas están en un archivo aparte (`Api/Retention/EvidenceEndpoints.cs`).
-**Joel**
-- `RecalculateConnectionScores`: un plan purgado conserva sus hallazgos y no se vuelve a analizar.
-  `EfScoreRecalculationStore.SaveBatchAsync` ahora bloquea las filas de los planes (`FOR UPDATE`) y no escribe corrida
-  ni hallazgos en un plan que se purgó mientras corría el recálculo (auditoría M1).
+- **D-2:** `GET /queries` no pagina. Cada respuesta pesa ~2,1 MB y descifra y enmascara las 5 000 consultas. Con 5
+  usuarios, la Api llega a 7 núcleos y 2,3 GB. La arquitectura prevé paginación en servidor y un extracto enmascarado
+  precalculado. Sigue abierto, además, que `/queries` sea solo DBA (RNF-SEG-12).
 **Todos**
-- Nada borra en `audit.*`. La traza y la auditoría verifican después de la purga (`RetentionTests`).
+- `tests/QueryDoctor.PerfTests` es una consola, no un proyecto xUnit: la CI la compila pero no la ejecuta.
+- Durante la medición, QD_Lab usa intervalos de 60 min, porque con 1 min el sondeo programa una ingesta automática
+  cada minuto. Al terminar vuelve a 1 min.
 
 ## Deuda y límites conocidos
-- Web sin `evidenceExpired` (Daniel). Un texto compartido por varias consultas se purga para todas. Sin índice para la
-  búsqueda de lo vencido (medir en S3-07). Los conteos de la purga van solo al log.
-- Sigue abierto: `/queries` es solo DBA aunque RNF-SEG-12 deja al Desarrollador ver lo asignado (S2-09, decisión pendiente).
-- Heredado de S2-12: sin alta de Desarrolladores (D6) y sin RLS. DA-14, DA-06 y DA-13 siguen abiertas.
+- D-1 y D-2: repetir `Run-Perf.ps1 -Step dashboard` cuando entren los arreglos.
+- D-3: el índice para la búsqueda de lo vencido (S2-13) sigue sin medir. D-4: la meta de CPU es frágil para ingestas de
+  menos de 1 s (decide el tutor en DA-06).
+- Medido solo en SQL Server 2022, en una máquina con Docker Desktop; la base del tablero no tiene hallazgos (L-3).
+- Heredado: web sin `evidenceExpired` (Daniel); sin alta de Desarrolladores (D6) ni RLS; DA-06, DA-13 y DA-14 abiertas.
 
 ## Siguiente paso
-Revisión por ejes de S2-13 en una sesión aparte (`/audit`) y PR `feat/S2-13-retencion` → `main`. Repetir
-`dotnet list package --vulnerable`.
+`/audit` de S3-07 en una sesión aparte y PR `feat/S3-07-rendimiento` → `main`. Coordinar D-1 con Maykol y repetir la
+medición del tablero después de su arreglo. S1-20 (tutor) debe ratificar las metas † antes de la evaluación final.
