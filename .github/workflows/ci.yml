@@ -119,7 +119,7 @@ jobs:
 
             - name: Publicar resultados (trx con el trait Criterio por prueba)
               if: always()
-              uses: actions/upload-artifact@v4
+              uses: actions/upload-artifact@v7
               with:
                 name: acceptance-${{ matrix.platform }}
                 path: ${{ runner.temp }}/acceptance-results/*.trx
